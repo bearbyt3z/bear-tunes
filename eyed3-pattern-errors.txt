@@ -1,0 +1,4 @@
+year: %year%\,
+bpm: %bpm%\,
+ufid: %unique-file-ids%\,
+ufid: %unique-file-ids,output=#i%\,

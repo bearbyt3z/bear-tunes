@@ -1,0 +1,22 @@
+{
+    "artists": "%artist%"\,
+    "title": "%title%"\,
+    "released": "%release-date%"\,
+    "genre": "%genre%"\,
+    "url": "%audio-file-url%"\,
+    "comments": "%comments%"\,
+    "textFrames": {
+        %texts,output="#d": "#t"\,%
+    }\,
+    "musicCdId": "%music-cd-id%"\,
+    "publisher": {
+        "name": "%publisher%"\,
+        "url": "%publisher-url%"
+    }\,
+    "album": {
+        "title": "%album%"\,
+        "artist": "%album-artist%"\,
+        "trackNumber": "%track%"\,
+        "trackTotal": "%track-total%"
+    }
+}
