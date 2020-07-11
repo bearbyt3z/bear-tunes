@@ -86,7 +86,7 @@ module.exports = {
         if (genresLinks.length > 0) {
             return Array.from(genresLinks).reduce((result, link) => {
                 const genre = link.textContent.trim();
-                const separator = result && (link.href.indexOf('sub-genre') >= 0 ? ': ' : ', ');
+                const separator = result && (link.href.indexOf('sub-genre') >= 0 ? ': ' : ', ');  // only if result != ''
                 return result + separator + genre;
             }, '');
         }
