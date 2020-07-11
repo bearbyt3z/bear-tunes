@@ -203,7 +203,7 @@ const extractTrackData = async trackUrl => {
     const year = released.split('-')[0];
     const bpm = trackDoc.querySelector('.interior-track-content-item.interior-track-bpm .value').textContent.trim();
     const key = tools.createKey(trackDoc.querySelector('.interior-track-content-item.interior-track-key .value'));
-    const genre = trackDoc.querySelector('.interior-track-content-item.interior-track-genre .value').textContent.trim();
+    const genre = tools.createGenresList(trackDoc.querySelector('.interior-track-content-item.interior-track-genre'));
 
     const waveform = trackDoc.querySelector('#react-track-waveform.interior-track-waveform[data-src]').dataset.src;
 

@@ -80,6 +80,20 @@ module.exports = {
         // return (artistsLinks.length > 0) ? Array.from(artistsLinks).map(link => link.textContent.trim())).join(', ') : artistsNode.textContent.trim();
     },
 
+    createGenresList: (genresNode) => {
+        if (!genresNode) return '';  // '' => delete frame if there is no genre information
+        const genresLinks = genresNode.querySelectorAll('a');
+        if (genresLinks.length > 0) {
+            return Array.from(genresLinks).reduce((result, link) => {
+                const genre = link.textContent.trim();
+                const separator = result && (link.href.indexOf('sub-genre') >= 0 ? ': ' : ', ');
+                return result + separator + genre;
+            }, '');
+        }
+        return genresNode.textContent.trim();
+        // return (artistsLinks.length > 0) ? Array.from(artistsLinks).map(link => link.textContent.trim())).join(', ') : artistsNode.textContent.trim();
+    },
+
     createKey: keyNode => keyNode.textContent.trim().replace('♭ ', 'b').replace('♯ ', '#').replace('maj', 'M').replace('min', 'm'),
 
     isString: value => typeof value === 'string' || value instanceof String,
