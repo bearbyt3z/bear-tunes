@@ -288,7 +288,9 @@ const saveId3TagToFile = async (trackPath, trackData, { id3v2 = true, id3v1 = tr
 
   const trackFilename = path.basename(trackPath);
 
-  const colonEscapeChar = (process.platform === "win32") ? '\\' : '\\\\';
+  // const colonEscapeChar = (process.platform === "win32") ? '\\' : '\\\\';
+  const colonEscapeChar = '\\'; // the same on linux platform...
+
   const eyeD3Options = [
     '--verbose',
     '--artist', trackData.artists,
