@@ -1,6 +1,6 @@
 {
   "name": "mp3-tagger",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "mp3 tagging tool",
   "main": "index.js",
   "scripts": {
@@ -10,8 +10,8 @@
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "http": "0.0.0",
-    "jsdom": "^16.1.0",
-    "node-fetch": "^2.6.0",
-    "winston": "^3.2.1"
+    "jsdom": "^16.5.3",
+    "node-fetch": "^2.6.1",
+    "winston": "^3.3.3"
   }
 }
