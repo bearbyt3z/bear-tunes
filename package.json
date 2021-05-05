@@ -1,10 +1,12 @@
 {
   "name": "mp3-tagger",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "mp3 tagging tool",
-  "main": "index.js",
+  "main": "./src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node ./dist/index.js",
+    "build": "npx tsc"
   },
   "author": "bearbyt3z",
   "license": "GPL-3.0-or-later",
@@ -13,5 +15,8 @@
     "jsdom": "^16.5.3",
     "node-fetch": "^2.6.1",
     "winston": "^3.3.3"
+  },
+  "devDependencies": {
+    "typescript": "^4.2.4"
   }
 }
