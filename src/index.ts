@@ -15,12 +15,12 @@
 
 'use strict';
 
-const http = require('http');
-const url = require('url');
-const process = require('process');
-const childProcess = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import http = require('http');
+import url = require('url');
+import process = require('process');
+import childProcess = require('child_process');
+import fs = require('fs');
+import path = require('path');
 
 const tools = require('./tools');
 const logger = require('./logger');
@@ -53,6 +53,38 @@ if (!fs.statSync(tracksDirectory).isDirectory()) {
   process.exitCode = 2;
   return;
   // process.exit(2);
+}
+
+interface TrackInfo {
+  url: string,
+  artists: string, // TODO: change to array
+  title: string,
+  remixers: string,
+  released: string, // TODO: change to Date type
+  year: string, // TODO: change to number/bigint/Date?
+  genre: string,
+  bpm: string, // TODO: int?
+  key: string,
+  ufid: string,
+  waveform: string, // TODO: URL
+  publisher: PublisherInfo,
+  album: AlbumInfo,
+};
+
+interface AlbumInfo {
+  artists: string, // TODO: array
+  title: string,
+  catalogNumber: string, // TODO: int?
+  trackNumber: string, // TODO: int
+  trackTotal: string, // TODO: int
+  url: string, // TODO: URL
+  artwork: string, // TODO: URL
+};
+
+interface PublisherInfo {
+  name: string,
+  url: string, // TODO: URL
+  logotype: string, // TODO: URL
 }
 
 const processAllFilesInDirectory = async directory => {
@@ -191,7 +223,7 @@ const findBestMatchingTrack = async inputKeywords => {
 }
 
 
-const extractTrackData = async trackUrl => {
+const extractTrackData: (trackUrl: string) => Promise<TrackInfo> = async trackUrl => {
   const trackDoc = await tools.fetchWebPage(trackUrl);
   const title = tools.createTitle(
     trackDoc.querySelector('.interior-title h1:not(.remixed)'),
@@ -235,7 +267,7 @@ const extractTrackData = async trackUrl => {
   };
 };
 
-const extractAlbumData = async (albumUrl, trackId) => {
+const extractAlbumData: (albumUrl: string, trackId: string) => Promise<AlbumInfo> = async (albumUrl, trackId) => {
   const albumDoc = await tools.fetchWebPage(albumUrl);
   const artists = tools.createArtistsList(albumDoc.querySelector('.interior-release-chart-content .interior-release-chart-content-list .interior-release-chart-content-item .value'));
   const title = albumDoc.querySelector('.interior-release-chart-content h1').textContent;
@@ -254,7 +286,7 @@ const extractAlbumData = async (albumUrl, trackId) => {
   };
 };
 
-const extractPublisherData = async publisherUrl => {
+const extractPublisherData: (publisherUrl: string) => Promise<PublisherInfo> = async publisherUrl => {
   const publisherDoc = await tools.fetchWebPage(publisherUrl);
   const name = publisherDoc.querySelector('.interior-top-container .interior-title h1').textContent.trim();
   const logotype = publisherDoc.querySelector('.interior-top-container .interior-top-artwork-parent img.interior-top-artwork').src;

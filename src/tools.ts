@@ -1,7 +1,7 @@
-const fetch = require('node-fetch');
-const jsdom = require('jsdom');
-const fs = require('fs');
-const request = require('request');
+import fetch = require('node-fetch');
+import jsdom = require('jsdom');
+import fs = require('fs');
+import request = require('request');
 
 module.exports = {
   fetchWebPage: async url => {
