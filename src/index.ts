@@ -304,7 +304,7 @@ interface TrackArtworkFiles {
 };
 
 const saveId3TagToFile = async (trackPath, trackData, { id3v2 = true, id3v1 = true, verbose = false } = {}) => {
-  let imagePaths: TrackArtworkFiles;
+  const imagePaths: TrackArtworkFiles = {};
   await tools.downloadFile(trackData.publisher.logotype, null, filename => {
     if (verbose) {
       console.log(`Publisher logotype written to: ${filename}`);
