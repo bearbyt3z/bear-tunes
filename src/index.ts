@@ -298,9 +298,9 @@ const extractPublisherData: (publisherUrl: string) => Promise<PublisherInfo> = a
 };
 
 interface TrackArtworkFiles {
-  publisherLogotype?: string, // TODO: File?
-  albumCover?: string,
+  frontCover?: string, // TODO: File?
   waveform?: string,
+  publisherLogotype?: string,
 };
 
 const saveId3TagToFile = async (trackPath, trackData, { id3v2 = true, id3v1 = true, verbose = false } = {}) => {
@@ -315,7 +315,7 @@ const saveId3TagToFile = async (trackPath, trackData, { id3v2 = true, id3v1 = tr
     if (verbose) {
       console.log(`Album artwork written to: ${filename}`);
     }
-    imagePaths.albumCover = filename;
+    imagePaths.frontCover = filename;
   });
   await tools.downloadFile(trackData.waveform, null, filename => {
     if (verbose) {
@@ -359,7 +359,7 @@ const saveId3TagToFile = async (trackPath, trackData, { id3v2 = true, id3v1 = tr
     '--bpm', trackData.bpm,
     '--text-frame', `TKEY:${trackData.key}`, '--user-text-frame', `INITIALKEY:${trackData.key}`,  // TKEY is not recoginzed in foobar2000
     '--user-text-frame', `CATALOGNUMBER:${trackData.album.catalogNumber}`, '--user-text-frame', `CATALOG #:${trackData.album.catalogNumber}`,  // https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
-    '--add-image', `${imagePaths.albumCover}:FRONT_COVER:Front Cover`,  // front cover
+    '--add-image', `${imagePaths.frontCover}:FRONT_COVER:Front Cover`,  // front cover
     '--add-image', `${imagePaths.waveform}:BRIGHT_COLORED_FISH:Waveform`,  // waveform
     '--add-image', `${imagePaths.publisherLogotype}:PUBLISHER_LOGO:Publisher Logotype`,  // publisher logo
     '--genre', trackData.genre,
@@ -392,7 +392,7 @@ const saveId3TagToFile = async (trackPath, trackData, { id3v2 = true, id3v1 = tr
   //   console.log(`File was renamed to: ${correctedFilename}`);
   // });
 
-  fs.unlinkSync(imagePaths.albumCover);
+  fs.unlinkSync(imagePaths.frontCover);
   fs.unlinkSync(imagePaths.waveform);
   fs.unlinkSync(imagePaths.publisherLogotype);
 }
