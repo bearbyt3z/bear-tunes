@@ -36,39 +36,20 @@ const { combine, timestamp, label, printf } = format;
 
 const tracksDirectory = process.argv[2] || '.';
 
-if (!fs.existsSync(tracksDirectory)) {
-  // logger.silly(`Path specified doesn't exist: ${tracksDirectory}`);
-  // logger.verbose(`Path specified doesn't exist: ${tracksDirectory}`);
-  // logger.debug(`Path specified doesn't exist: ${tracksDirectory}`);
-  // logger.info(`Path specified doesn't exist: ${tracksDirectory}`);
-  // logger.warn(`Path specified doesn't exist: ${tracksDirectory}`);
-  logger.error(`Path specified doesn't exist: ${tracksDirectory}`);
-  process.exitCode = 1;
-  return;
-  // process.exit(1);
-}
-
-if (!fs.statSync(tracksDirectory).isDirectory()) {
-  logger.error(`Path specified isn't a directory: ${tracksDirectory}`);
-  process.exitCode = 2;
-  return;
-  // process.exit(2);
-}
-
 interface TrackInfo {
-  url: string,
-  artists: string, // TODO: change to array
-  title: string,
-  remixers: string,
-  released: string, // TODO: change to Date type
-  year: string, // TODO: change to number/bigint/Date?
-  genre: string,
-  bpm: string, // TODO: int?
-  key: string,
-  ufid: string,
-  waveform: string, // TODO: URL
-  publisher: PublisherInfo,
-  album: AlbumInfo,
+  url?: string,
+  artists?: string, // TODO: change to array
+  title?: string,
+  remixers?: string,
+  released?: string, // TODO: change to Date type
+  year?: string, // TODO: change to number/bigint/Date?
+  genre?: string,
+  bpm?: string, // TODO: int?
+  key?: string,
+  ufid?: string,
+  waveform?: string, // TODO: URL
+  publisher?: PublisherInfo,
+  album?: AlbumInfo,
 };
 
 interface AlbumInfo {
@@ -88,6 +69,25 @@ interface PublisherInfo {
 }
 
 const processAllFilesInDirectory = async directory => {
+  if (!fs.existsSync(tracksDirectory)) {
+    // logger.silly(`Path specified doesn't exist: ${tracksDirectory}`);
+    // logger.verbose(`Path specified doesn't exist: ${tracksDirectory}`);
+    // logger.debug(`Path specified doesn't exist: ${tracksDirectory}`);
+    // logger.info(`Path specified doesn't exist: ${tracksDirectory}`);
+    // logger.warn(`Path specified doesn't exist: ${tracksDirectory}`);
+    logger.error(`Path specified doesn't exist: ${tracksDirectory}`);
+    process.exitCode = 1;
+    return;
+    // process.exit(1);
+  }
+
+  if (!fs.statSync(tracksDirectory).isDirectory()) {
+    logger.error(`Path specified isn't a directory: ${tracksDirectory}`);
+    process.exitCode = 2;
+    return;
+    // process.exit(2);
+  }
+
   fs.readdir(directory, async (error, files) => {
     let noFilesWereProcessed = true;
     if (error) {
@@ -134,10 +134,10 @@ const processTrack = async trackPath => {
   } else {
     const bestMatchingTrack = await findBestMatchingTrack(trackFilenameKeywords);
     if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
-      logger.warn(`Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n${bestMatchingTrack.fullname}\nScore keywords: ${bestMatchingTrack.scoreKeywords}\nName  keywords: ${trackFilenameKeywords}`);
+      logger.warn(`Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n${bestMatchingTrack.fullName}\nScore keywords: ${bestMatchingTrack.scoreKeywords}\nName  keywords: ${trackFilenameKeywords}`);
       return;
     }
-    logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullname}`);
+    logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullName}`);
     trackUrl = bestMatchingTrack.url;
   }
   const trackData = await extractTrackData(trackUrl);
@@ -171,10 +171,16 @@ const extractId3Tag = trackPath => {
   return id3TagJson;
 };
 
-const findBestMatchingTrack = async inputKeywords => {
+interface MatchingTrack extends TrackInfo {
+  score?: number,
+  scoreKeywords?: Array<string>,
+  fullName?: string,
+}
+
+const findBestMatchingTrack: (inputKeywords: Array<string>) => Promise<MatchingTrack> = async inputKeywords => {
   const searchDoc = await tools.fetchWebPage(SEARCH_URL + encodeURIComponent(inputKeywords.join('+')));
 
-  let winner = {
+  let winner: MatchingTrack = {
     score: -1,
     released: '2999-12-12',  // some far away date...
   };
@@ -206,7 +212,7 @@ const findBestMatchingTrack = async inputKeywords => {
     const score = keywordsIntersection.length;
     if ((score > winner.score) || ((score === winner.score) && (Date.parse(trackReleased) < Date.parse(winner.released)))) {
       winner = {
-        node: trackNode,
+        // node: trackNode,
         score: score,
         scoreKeywords: keywordsIntersection,
         released: trackReleased,
@@ -218,7 +224,7 @@ const findBestMatchingTrack = async inputKeywords => {
       // if (score === inputKeywords.length) break;  // winner has been found (but maybe not the earier release!)
     }
   }
-  winner.fullname = `${winner.artists} - ${winner.title}`;
+  winner.fullName = `${winner.artists} - ${winner.title}`;
   return winner;
 }
 

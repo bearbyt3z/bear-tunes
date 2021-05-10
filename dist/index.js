@@ -67,27 +67,27 @@ var DISPLAY_PLUGIN_PATTERN_FILE = 'eyed3-pattern.txt';
 var _a = require('winston'), createLogger = _a.createLogger, format = _a.format, transports = _a.transports;
 var combine = format.combine, timestamp = format.timestamp, label = format.label, printf = format.printf;
 var tracksDirectory = process.argv[2] || '.';
-if (!fs.existsSync(tracksDirectory)) {
-    // logger.silly(`Path specified doesn't exist: ${tracksDirectory}`);
-    // logger.verbose(`Path specified doesn't exist: ${tracksDirectory}`);
-    // logger.debug(`Path specified doesn't exist: ${tracksDirectory}`);
-    // logger.info(`Path specified doesn't exist: ${tracksDirectory}`);
-    // logger.warn(`Path specified doesn't exist: ${tracksDirectory}`);
-    logger.error("Path specified doesn't exist: " + tracksDirectory);
-    process.exitCode = 1;
-    return;
-    // process.exit(1);
-}
-if (!fs.statSync(tracksDirectory).isDirectory()) {
-    logger.error("Path specified isn't a directory: " + tracksDirectory);
-    process.exitCode = 2;
-    return;
-    // process.exit(2);
-}
 ;
 ;
 var processAllFilesInDirectory = function (directory) { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
+        if (!fs.existsSync(tracksDirectory)) {
+            // logger.silly(`Path specified doesn't exist: ${tracksDirectory}`);
+            // logger.verbose(`Path specified doesn't exist: ${tracksDirectory}`);
+            // logger.debug(`Path specified doesn't exist: ${tracksDirectory}`);
+            // logger.info(`Path specified doesn't exist: ${tracksDirectory}`);
+            // logger.warn(`Path specified doesn't exist: ${tracksDirectory}`);
+            logger.error("Path specified doesn't exist: " + tracksDirectory);
+            process.exitCode = 1;
+            return [2 /*return*/];
+            // process.exit(1);
+        }
+        if (!fs.statSync(tracksDirectory).isDirectory()) {
+            logger.error("Path specified isn't a directory: " + tracksDirectory);
+            process.exitCode = 2;
+            return [2 /*return*/];
+            // process.exit(2);
+        }
         fs.readdir(directory, function (error, files) { return __awaiter(void 0, void 0, void 0, function () {
             var noFilesWereProcessed, _i, files_1, file, filePath;
             return __generator(this, function (_a) {
@@ -151,10 +151,10 @@ var processTrack = function (trackPath) { return __awaiter(void 0, void 0, void 
             case 2:
                 bestMatchingTrack = _a.sent();
                 if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
-                    logger.warn("Couldn't match any track, the higgest score was " + bestMatchingTrack.score + " for track:\n" + bestMatchingTrack.fullname + "\nScore keywords: " + bestMatchingTrack.scoreKeywords + "\nName  keywords: " + trackFilenameKeywords);
+                    logger.warn("Couldn't match any track, the higgest score was " + bestMatchingTrack.score + " for track:\n" + bestMatchingTrack.fullName + "\nScore keywords: " + bestMatchingTrack.scoreKeywords + "\nName  keywords: " + trackFilenameKeywords);
                     return [2 /*return*/];
                 }
-                logger.info("Matched  [" + bestMatchingTrack.score + "]: " + bestMatchingTrack.fullname);
+                logger.info("Matched  [" + bestMatchingTrack.score + "]: " + bestMatchingTrack.fullName);
                 trackUrl = bestMatchingTrack.url;
                 _a.label = 3;
             case 3: return [4 /*yield*/, extractTrackData(trackUrl)];
@@ -219,7 +219,7 @@ var findBestMatchingTrack = function (inputKeywords) { return __awaiter(void 0, 
                     score = keywordsIntersection.length;
                     if ((score > winner.score) || ((score === winner.score) && (Date.parse(trackReleased) < Date.parse(winner.released)))) {
                         winner = {
-                            node: trackNode,
+                            // node: trackNode,
                             score: score,
                             scoreKeywords: keywordsIntersection,
                             released: trackReleased,
@@ -231,7 +231,7 @@ var findBestMatchingTrack = function (inputKeywords) { return __awaiter(void 0, 
                         // if (score === inputKeywords.length) break;  // winner has been found (but maybe not the earier release!)
                     }
                 }
-                winner.fullname = winner.artists + " - " + winner.title;
+                winner.fullName = winner.artists + " - " + winner.title;
                 return [2 /*return*/, winner];
         }
     });
@@ -344,7 +344,7 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                             if (verbose) {
                                 console.log("Album artwork written to: " + filename);
                             }
-                            imagePaths.albumCover = filename;
+                            imagePaths.frontCover = filename;
                         })];
                 case 2:
                     _f.sent();
@@ -406,7 +406,7 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                         '--user-text-frame',
                         "CATALOG #:" + trackData.album.catalogNumber,
                         '--add-image',
-                        imagePaths.albumCover + ":FRONT_COVER:Front Cover",
+                        imagePaths.frontCover + ":FRONT_COVER:Front Cover",
                         '--add-image',
                         imagePaths.waveform + ":BRIGHT_COLORED_FISH:Waveform",
                         '--add-image',
@@ -438,7 +438,7 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                     //   }
                     //   console.log(`File was renamed to: ${correctedFilename}`);
                     // });
-                    fs.unlinkSync(imagePaths.albumCover);
+                    fs.unlinkSync(imagePaths.frontCover);
                     fs.unlinkSync(imagePaths.waveform);
                     fs.unlinkSync(imagePaths.publisherLogotype);
                     return [2 /*return*/];
