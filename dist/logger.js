@@ -1,8 +1,8 @@
 'use strict';
+Object.defineProperty(exports, "__esModule", { value: true });
 // TODO: CREATE DIRECTORIES FOR LOGS !!!!!!!!!!!!!
-var winston = require('winston');
-var process = require('process');
-var fs = require('fs');
+var winston = require("winston");
+var process = require("process");
 var level = process.env.LOG_LEVEL || 'debug';
 var colorizer = winston.format.colorize();
 // const loggerFormat = winston.format.printf(({ level, message, timestamp }) => {

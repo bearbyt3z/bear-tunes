@@ -51,12 +51,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
         to[j] = from[i];
     return to;
 };
-var http = require('http');
-var url = require('url');
-var process = require('process');
-var childProcess = require('child_process');
-var fs = require('fs');
-var path = require('path');
+Object.defineProperty(exports, "__esModule", { value: true });
+var url = require("url");
+var process = require("process");
+var childProcess = require("child_process");
+var fs = require("fs");
+var path = require("path");
 var tools = require('./tools');
 var logger = require('./logger');
 var DOMAIN_URL = 'https://www.beatport.com';
@@ -84,6 +84,8 @@ if (!fs.statSync(tracksDirectory).isDirectory()) {
     return;
     // process.exit(2);
 }
+;
+;
 var processAllFilesInDirectory = function (directory) { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
         fs.readdir(directory, function (error, files) { return __awaiter(void 0, void 0, void 0, function () {
@@ -321,6 +323,7 @@ var extractPublisherData = function (publisherUrl) { return __awaiter(void 0, vo
         }
     });
 }); };
+;
 var saveId3TagToFile = function (trackPath, trackData, _a) {
     var _b = _a === void 0 ? {} : _a, _c = _b.id3v2, id3v2 = _c === void 0 ? true : _c, _d = _b.id3v1, id3v1 = _d === void 0 ? true : _d, _e = _b.verbose, verbose = _e === void 0 ? false : _e;
     return __awaiter(void 0, void 0, void 0, function () {
@@ -341,7 +344,7 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                             if (verbose) {
                                 console.log("Album artwork written to: " + filename);
                             }
-                            imagePaths.albumArtwork = filename;
+                            imagePaths.albumCover = filename;
                         })];
                 case 2:
                     _f.sent();
@@ -403,7 +406,7 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                         '--user-text-frame',
                         "CATALOG #:" + trackData.album.catalogNumber,
                         '--add-image',
-                        imagePaths.albumArtwork + ":FRONT_COVER:Front Cover",
+                        imagePaths.albumCover + ":FRONT_COVER:Front Cover",
                         '--add-image',
                         imagePaths.waveform + ":BRIGHT_COLORED_FISH:Waveform",
                         '--add-image',
@@ -435,7 +438,7 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                     //   }
                     //   console.log(`File was renamed to: ${correctedFilename}`);
                     // });
-                    fs.unlinkSync(imagePaths.albumArtwork);
+                    fs.unlinkSync(imagePaths.albumCover);
                     fs.unlinkSync(imagePaths.waveform);
                     fs.unlinkSync(imagePaths.publisherLogotype);
                     return [2 /*return*/];
