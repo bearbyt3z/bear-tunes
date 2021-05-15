@@ -4,6 +4,7 @@ module.exports = {
   mode: 'development',
   target: 'node',
   entry: './src/index.ts',
+  devtool: 'inline-source-map',
   output: {
     filename: 'main.js',
     path: path.resolve(__dirname, 'dist'),
