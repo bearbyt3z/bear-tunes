@@ -15,12 +15,12 @@
 
 'use strict';
 
-import http = require('http');
-import url = require('url');
-import process = require('process');
-import childProcess = require('child_process');
-import fs = require('fs');
-import path = require('path');
+import * as http from 'http';
+import * as url from 'url';
+import 'process'; // to assign process.exitCode (if imported with "* as process" => TS2540: Cannot assign to 'exitCode' because it is a read-only property.)
+import * as childProcess from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const tools = require('./tools');
 const logger = require('./logger');

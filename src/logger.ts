@@ -4,9 +4,9 @@
 // TODO: CREATE DIRECTORIES FOR LOGS !!!!!!!!!!!!!
 
 
-import winston = require('winston');
-import process = require('process');
-import fs = require('fs');
+import * as winston from 'winston';
+import * as process from 'process';
+import * as fs from 'fs';
 
 const level = process.env.LOG_LEVEL || 'debug';
 const colorizer = winston.format.colorize();

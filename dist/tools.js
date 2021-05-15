@@ -37,7 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUrlFromFile = exports.leaveOnlyFirstLine = exports.replacePathForbiddenChars = exports.isString = exports.regExpEscape = exports.createKey = exports.createGenresList = exports.createArtistsList = exports.createTitle = exports.splitTrackNameToKeywords = exports.downloadFile = exports.arrayToLowerCase = exports.arrayIntersection = exports.arrayDifference = exports.fetchWebPage = void 0;
-var fetch = require("node-fetch");
+var node_fetch_1 = require("node-fetch");
 var jsdom = require("jsdom");
 var fs = require("fs");
 var request = require("request");
@@ -46,12 +46,12 @@ function fetchWebPage(url) {
         var response;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, fetch(url)
+                case 0: return [4, node_fetch_1.default(url)
                         .then(function (response) { return response.text(); })
                         .catch(function (error) { return console.error(error); })];
                 case 1:
                     response = _a.sent();
-                    return [2 /*return*/, (new jsdom.JSDOM(response)).window.document];
+                    return [2, (new jsdom.JSDOM(response)).window.document];
             }
         });
     });
@@ -71,20 +71,16 @@ function arrayToLowerCase(array) {
 exports.arrayToLowerCase = arrayToLowerCase;
 function downloadFile(uri, filename, callback) {
     return new Promise(function (resolve, reject) {
-        //request.head(uri, async (error, response, body) => {
-        // console.log('content-type:', response.headers['content-type']);
-        // console.log('content-length:', response.headers['content-length']);
         var uriSplit = uri.split('/');
         var uriFilename = uriSplit[uriSplit.length - 1];
         if (!filename || filename.length < 1) {
             filename = uriFilename;
         }
-        else if (filename.split('.').length < 2) { // no extension
+        else if (filename.split('.').length < 2) {
             var uriFilenameSplit = uriFilename.split('.');
             var uriFilenameExtension = uriFilenameSplit[uriFilenameSplit.length - 1];
             filename = filename + uriFilenameExtension;
         }
-        // request(uri).pipe(fs.createWriteStream(filename)).on('close', callback(filename));
         request(uri).pipe(fs.createWriteStream(filename))
             .on('close', function () {
             resolve("File created successfully: " + filename);
@@ -94,28 +90,23 @@ function downloadFile(uri, filename, callback) {
             console.log(error);
             reject(error);
         });
-        // request(uri).pipe(fs.WriteSync(filename)).on('close', callback(filename));
     });
 }
 exports.downloadFile = downloadFile;
-// replaceFilenameExtension: filename => filename.replace(/\.[^\\/.]+$/, ''),  // it's easier to use path module
 function splitTrackNameToKeywords(name) {
     if (name instanceof Array)
         name = name.join(' ');
-    name = name.trim(); // remove spaces at the beggining & end
+    name = name.trim();
     name = name.replace(/\s+[-–&]\s+|\s+/mgi, ' ');
-    // name = name.replace(/[\(\)\[\],]|\.[\w\d]+?$/mgi, '');  // +? => non-greedy for file extension match  // don't work with: Lust 2.1.mp3
-    name = name.replace(/[\(\)\[\],]|\.mp3$/mgi, ''); // +? => non-greedy for file extension match
-    // console.log(name);
-    return Array.from(new Set(name.split(' '))); // set to avoid repetitions
-    // return name.match(/\b([\w\d]+)\b/mgi);
+    name = name.replace(/[\(\)\[\],]|\.mp3$/mgi, '');
+    return Array.from(new Set(name.split(' ')));
 }
 exports.splitTrackNameToKeywords = splitTrackNameToKeywords;
 function createTitle(titleNode, remixedNode) {
     var title = titleNode.textContent.trim();
     if (title.match(/\bfeat\b/i)) {
-        title = title.replace(/\bfeat\.? /i, 'feat. '); // add missing dot after "feat" shortcut, and replace "Feat" with "feat"
-        if (title.indexOf('(feat') < 0) { // if "feat" isn't in parentheses add them
+        title = title.replace(/\bfeat\.? /i, 'feat. ');
+        if (title.indexOf('(feat') < 0) {
             title = title.replace(/\bfeat. /, '(feat. ') + ')';
         }
     }
@@ -127,33 +118,31 @@ exports.createTitle = createTitle;
 function createArtistsList(artistsNode, title) {
     if (title === void 0) { title = ''; }
     if (!artistsNode)
-        return ''; // '' => delete frame if there is no artist information
+        return '';
     var artistsLinks = artistsNode.querySelectorAll('a');
     if (artistsLinks.length > 0) {
         return Array.from(artistsLinks).reduce(function (result, link) {
             var artist = link.textContent.trim();
-            if (title.search(new RegExp("(feat|ft).+" + module.exports.regExpEscape(artist), 'i')) < 0) // we have to search for feat/ft before artist name
+            if (title.search(new RegExp("(feat|ft).+" + module.exports.regExpEscape(artist), 'i')) < 0)
                 result.push(artist);
             return result;
         }, []).join(', ');
     }
     return artistsNode.textContent.trim();
-    // return (artistsLinks.length > 0) ? Array.from(artistsLinks).map(link => link.textContent.trim())).join(', ') : artistsNode.textContent.trim();
 }
 exports.createArtistsList = createArtistsList;
 function createGenresList(genresNode) {
     if (!genresNode)
-        return ''; // '' => delete frame if there is no genre information
+        return '';
     var genresLinks = genresNode.querySelectorAll('a');
     if (genresLinks.length > 0) {
         return Array.from(genresLinks).reduce(function (result, link) {
             var genre = link.textContent.trim();
-            var separator = result && (link.href.indexOf('sub-genre') >= 0 ? ': ' : ', '); // only if result != ''
+            var separator = result && (link.href.indexOf('sub-genre') >= 0 ? ': ' : ', ');
             return result + separator + genre;
         }, '');
     }
     return genresNode.textContent.trim();
-    // return (artistsLinks.length > 0) ? Array.from(artistsLinks).map(link => link.textContent.trim())).join(', ') : artistsNode.textContent.trim();
 }
 exports.createGenresList = createGenresList;
 function createKey(keyNode) {
@@ -172,7 +161,6 @@ var replaceRegEx = /[\/\\\*\?\<\>|:"]/gm;
 function replacePathForbiddenChars(stringOrArray) {
     if (isString(stringOrArray))
         return stringOrArray.replace(replaceRegEx, '-');
-    // otherwise it's an array
     return stringOrArray.map(function (str) { return str.replace(replaceRegEx, '-'); });
 }
 exports.replacePathForbiddenChars = replacePathForbiddenChars;

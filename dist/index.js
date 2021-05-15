@@ -1,14 +1,3 @@
-// https://github.com/aadsm/JavaScript-ID3-Reader
-// ID3 tags reader in JavaScript (ID3v1, ID3v2 and AAC) http://www.aadsm.net/libraries/id3/
-// https://antimatter15.com/wp/2010/07/a-bright-coloured-fish-parsing-id3v2-tags-in-javascript-and-extensionfm/
-// https://github.com/antimatter15/js-id3v2
-// https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
-// http://id3.org/id3v2.4.0-frames
-// https://eyed3.readthedocs.io/en/latest/plugins/classic_plugin.html
-// https://eyed3.readthedocs.io/en/latest/_modules/eyed3/id3/frames.html
-// https://readthedocs.org/projects/eyed3/downloads/pdf/latest/
-// display plugin of eyeD3 requires grako:
-// $pip install grako
 'use strict';
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -53,16 +42,14 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var url = require("url");
-var process = require("process");
+require("process");
 var childProcess = require("child_process");
 var fs = require("fs");
 var path = require("path");
 var tools = require('./tools');
 var logger = require('./logger');
 var DOMAIN_URL = 'https://www.beatport.com';
-var SEARCH_URL = DOMAIN_URL + '/search/tracks?per-page=150&q='; // we want tracks only
-// const SEARCH_URL = DOMAIN_URL + '/search/tracks?q=';  // we want tracks only
-// const SEARCH_URL = DOMAIN_URL + '/search?q=';
+var SEARCH_URL = DOMAIN_URL + '/search/tracks?per-page=150&q=';
 var DISPLAY_PLUGIN_PATTERN_FILE = 'eyed3-pattern.txt';
 var _a = require('winston'), createLogger = _a.createLogger, format = _a.format, transports = _a.transports;
 var combine = format.combine, timestamp = format.timestamp, label = format.label, printf = format.printf;
@@ -72,21 +59,14 @@ var tracksDirectory = process.argv[2] || '.';
 var processAllFilesInDirectory = function (directory) { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
         if (!fs.existsSync(tracksDirectory)) {
-            // logger.silly(`Path specified doesn't exist: ${tracksDirectory}`);
-            // logger.verbose(`Path specified doesn't exist: ${tracksDirectory}`);
-            // logger.debug(`Path specified doesn't exist: ${tracksDirectory}`);
-            // logger.info(`Path specified doesn't exist: ${tracksDirectory}`);
-            // logger.warn(`Path specified doesn't exist: ${tracksDirectory}`);
             logger.error("Path specified doesn't exist: " + tracksDirectory);
             process.exitCode = 1;
-            return [2 /*return*/];
-            // process.exit(1);
+            return [2];
         }
         if (!fs.statSync(tracksDirectory).isDirectory()) {
             logger.error("Path specified isn't a directory: " + tracksDirectory);
             process.exitCode = 2;
-            return [2 /*return*/];
-            // process.exit(2);
+            return [2];
         }
         fs.readdir(directory, function (error, files) { return __awaiter(void 0, void 0, void 0, function () {
             var noFilesWereProcessed, _i, files_1, file, filePath;
@@ -97,39 +77,38 @@ var processAllFilesInDirectory = function (directory) { return __awaiter(void 0,
                         if (error) {
                             logger.error("Couldn't read directory: " + tracksDirectory);
                             process.exitCode = 3;
-                            return [2 /*return*/];
-                            // process.exit(3);
+                            return [2];
                         }
                         _i = 0, files_1 = files;
                         _a.label = 1;
                     case 1:
-                        if (!(_i < files_1.length)) return [3 /*break*/, 4];
+                        if (!(_i < files_1.length)) return [3, 4];
                         file = files_1[_i];
                         filePath = directory + path.sep + file;
                         if (fs.statSync(filePath).isDirectory()) {
                             processAllFilesInDirectory(filePath);
-                            return [3 /*break*/, 3];
+                            return [3, 3];
                         }
-                        if (!(path.extname(file) === '.mp3')) return [3 /*break*/, 3];
+                        if (!(path.extname(file) === '.mp3')) return [3, 3];
                         noFilesWereProcessed = false;
-                        return [4 /*yield*/, processTrack(filePath)];
+                        return [4, processTrack(filePath)];
                     case 2:
                         _a.sent();
                         _a.label = 3;
                     case 3:
                         _i++;
-                        return [3 /*break*/, 1];
+                        return [3, 1];
                     case 4:
                         if (noFilesWereProcessed) {
                             logger.error("There are no suitable files in directory: " + directory);
                             process.exitCode = 1;
-                            return [2 /*return*/];
+                            return [2];
                         }
-                        return [2 /*return*/];
+                        return [2];
                 }
             });
         }); });
-        return [2 /*return*/];
+        return [2];
     });
 }); };
 var processTrack = function (trackPath) { return __awaiter(void 0, void 0, void 0, function () {
@@ -143,29 +122,27 @@ var processTrack = function (trackPath) { return __awaiter(void 0, void 0, void 
                 console.log('########################################');
                 logger.info("Filename [" + trackFilenameKeywords.length + "]: " + trackFilename);
                 trackUrlFilename = path.join(path.dirname(trackPath), trackFilenameWithourExtension + ".url");
-                if (!fs.existsSync(trackUrlFilename)) return [3 /*break*/, 1];
+                if (!fs.existsSync(trackUrlFilename)) return [3, 1];
                 trackUrl = tools.getUrlFromFile(trackUrlFilename);
                 logger.info("Using URL: " + trackUrl);
-                return [3 /*break*/, 3];
-            case 1: return [4 /*yield*/, findBestMatchingTrack(trackFilenameKeywords)];
+                return [3, 3];
+            case 1: return [4, findBestMatchingTrack(trackFilenameKeywords)];
             case 2:
                 bestMatchingTrack = _a.sent();
                 if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
                     logger.warn("Couldn't match any track, the higgest score was " + bestMatchingTrack.score + " for track:\n" + bestMatchingTrack.fullName + "\nScore keywords: " + bestMatchingTrack.scoreKeywords + "\nName  keywords: " + trackFilenameKeywords);
-                    return [2 /*return*/];
+                    return [2];
                 }
                 logger.info("Matched  [" + bestMatchingTrack.score + "]: " + bestMatchingTrack.fullName);
                 trackUrl = bestMatchingTrack.url;
                 _a.label = 3;
-            case 3: return [4 /*yield*/, extractTrackData(trackUrl)];
+            case 3: return [4, extractTrackData(trackUrl)];
             case 4:
                 trackData = _a.sent();
-                // await saveId3TagToFile(trackPath, trackData, { verbose: true });
-                return [4 /*yield*/, saveId3TagToFile(trackPath, trackData)];
+                return [4, saveId3TagToFile(trackPath, trackData)];
             case 5:
-                // await saveId3TagToFile(trackPath, trackData, { verbose: true });
                 _a.sent();
-                return [2 /*return*/];
+                return [2];
         }
     });
 }); };
@@ -178,16 +155,14 @@ var extractId3Tag = function (trackPath) {
         encoding: 'utf-8',
     });
     if (displayPluginOutput.stderr) {
-        logger.warn("Cannot read ID3 tag of " + path.basename(trackPath) + ":\n" + tools.leaveOnlyFirstLine(displayPluginOutput.stderr)); // show only first line of error from plugin (ommit traceback)
+        logger.warn("Cannot read ID3 tag of " + path.basename(trackPath) + ":\n" + tools.leaveOnlyFirstLine(displayPluginOutput.stderr));
         return {};
     }
-    // console.log(displayPluginOutput.stdout);
     var id3TagJson;
     try {
         id3TagJson = JSON.parse(displayPluginOutput.stdout
-            .replace(//mgi, '') // replace unicode characters that break parse() (e.g. Beatoprt's heart before links!)
-            .replace(/,\s*\}/mgi, '}') // remove trailing commas that comes from plugin pattern (text-fields)
-        );
+            .replace(//mgi, '')
+            .replace(/,\s*\}/mgi, '}'));
     }
     catch (error) {
         logger.warn("Cannot parse ID3 tag output from display plugin: " + error);
@@ -199,12 +174,12 @@ var findBestMatchingTrack = function (inputKeywords) { return __awaiter(void 0, 
     var searchDoc, winner, trackNodes, _i, trackNodes_1, trackNode, trackTitle, trackArtists, trackRemixers, trackReleased, trackKeywords, keywordsIntersection, score;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, tools.fetchWebPage(SEARCH_URL + encodeURIComponent(inputKeywords.join('+')))];
+            case 0: return [4, tools.fetchWebPage(SEARCH_URL + encodeURIComponent(inputKeywords.join('+')))];
             case 1:
                 searchDoc = _a.sent();
                 winner = {
                     score: -1,
-                    released: '2999-12-12', // some far away date...
+                    released: '2999-12-12',
                 };
                 trackNodes = searchDoc.querySelectorAll('.bucket-item.ec-item.track');
                 for (_i = 0, trackNodes_1 = trackNodes; _i < trackNodes_1.length; _i++) {
@@ -219,7 +194,6 @@ var findBestMatchingTrack = function (inputKeywords) { return __awaiter(void 0, 
                     score = keywordsIntersection.length;
                     if ((score > winner.score) || ((score === winner.score) && (Date.parse(trackReleased) < Date.parse(winner.released)))) {
                         winner = {
-                            // node: trackNode,
                             score: score,
                             scoreKeywords: keywordsIntersection,
                             released: trackReleased,
@@ -228,11 +202,10 @@ var findBestMatchingTrack = function (inputKeywords) { return __awaiter(void 0, 
                             remixers: trackRemixers,
                             url: DOMAIN_URL + trackNode.querySelector('.buk-track-title a[href*="/track/"]').href,
                         };
-                        // if (score === inputKeywords.length) break;  // winner has been found (but maybe not the earier release!)
                     }
                 }
                 winner.fullName = winner.artists + " - " + winner.title;
-                return [2 /*return*/, winner];
+                return [2, winner];
         }
     });
 }); };
@@ -240,7 +213,7 @@ var extractTrackData = function (trackUrl) { return __awaiter(void 0, void 0, vo
     var trackDoc, title, remixers, artists, released, year, bpm, key, genre, waveform, trackUrlPathnameArray, trackId, trackUfid, publisherUrl, publisher, albumUrl, album;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, tools.fetchWebPage(trackUrl)];
+            case 0: return [4, tools.fetchWebPage(trackUrl)];
             case 1:
                 trackDoc = _a.sent();
                 title = tools.createTitle(trackDoc.querySelector('.interior-title h1:not(.remixed)'), trackDoc.querySelector('.interior-title h1.remixed'));
@@ -256,14 +229,14 @@ var extractTrackData = function (trackUrl) { return __awaiter(void 0, void 0, vo
                 trackId = trackUrlPathnameArray[trackUrlPathnameArray.length - 1];
                 trackUfid = "track-" + trackId;
                 publisherUrl = DOMAIN_URL + trackDoc.querySelector('.interior-track-content-item.interior-track-labels .value a').href;
-                return [4 /*yield*/, extractPublisherData(publisherUrl)];
+                return [4, extractPublisherData(publisherUrl)];
             case 2:
                 publisher = _a.sent();
                 albumUrl = DOMAIN_URL + trackDoc.querySelector('.interior-track-release-artwork-link[href*="/release/"]').href;
-                return [4 /*yield*/, extractAlbumData(albumUrl, trackId)];
+                return [4, extractAlbumData(albumUrl, trackId)];
             case 3:
                 album = _a.sent();
-                return [2 /*return*/, {
+                return [2, {
                         url: trackUrl,
                         artists: artists,
                         title: title,
@@ -285,7 +258,7 @@ var extractAlbumData = function (albumUrl, trackId) { return __awaiter(void 0, v
     var albumDoc, artists, title, catalogNumber, trackNumber, trackTotal, artwork;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, tools.fetchWebPage(albumUrl)];
+            case 0: return [4, tools.fetchWebPage(albumUrl)];
             case 1:
                 albumDoc = _a.sent();
                 artists = tools.createArtistsList(albumDoc.querySelector('.interior-release-chart-content .interior-release-chart-content-list .interior-release-chart-content-item .value'));
@@ -294,7 +267,7 @@ var extractAlbumData = function (albumUrl, trackId) { return __awaiter(void 0, v
                 trackNumber = albumDoc.querySelector(".interior-release-chart-content .bucket-item.ec-item.track[data-ec-id=\"" + trackId + "\"] .buk-track-num").textContent;
                 trackTotal = albumDoc.querySelectorAll('.interior-release-chart-content .bucket-item.ec-item.track').length;
                 artwork = albumDoc.querySelector('.interior-release-chart-artwork-parent .interior-release-chart-artwork').src;
-                return [2 /*return*/, {
+                return [2, {
                         artists: artists,
                         title: title,
                         catalogNumber: catalogNumber,
@@ -310,12 +283,12 @@ var extractPublisherData = function (publisherUrl) { return __awaiter(void 0, vo
     var publisherDoc, name, logotype;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, tools.fetchWebPage(publisherUrl)];
+            case 0: return [4, tools.fetchWebPage(publisherUrl)];
             case 1:
                 publisherDoc = _a.sent();
                 name = publisherDoc.querySelector('.interior-top-container .interior-title h1').textContent.trim();
                 logotype = publisherDoc.querySelector('.interior-top-container .interior-top-artwork-parent img.interior-top-artwork').src;
-                return [2 /*return*/, {
+                return [2, {
                         name: name,
                         url: publisherUrl,
                         logotype: logotype,
@@ -332,7 +305,7 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
             switch (_f.label) {
                 case 0:
                     imagePaths = {};
-                    return [4 /*yield*/, tools.downloadFile(trackData.publisher.logotype, null, function (filename) {
+                    return [4, tools.downloadFile(trackData.publisher.logotype, null, function (filename) {
                             if (verbose) {
                                 console.log("Publisher logotype written to: " + filename);
                             }
@@ -340,7 +313,7 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                         })];
                 case 1:
                     _f.sent();
-                    return [4 /*yield*/, tools.downloadFile(trackData.album.artwork, null, function (filename) {
+                    return [4, tools.downloadFile(trackData.album.artwork, null, function (filename) {
                             if (verbose) {
                                 console.log("Album artwork written to: " + filename);
                             }
@@ -348,7 +321,7 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                         })];
                 case 2:
                     _f.sent();
-                    return [4 /*yield*/, tools.downloadFile(trackData.waveform, null, function (filename) {
+                    return [4, tools.downloadFile(trackData.waveform, null, function (filename) {
                             if (verbose) {
                                 console.log("Waveform written to: " + filename);
                             }
@@ -361,7 +334,6 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                     eyeD3Options = [
                         '--verbose',
                         '--artist', trackData.artists,
-                        // '--artist', trackData.artists.replace('ø', 'o'),
                         '--title', trackData.title,
                         '--text-frame',
                         "TPE4:" + trackData.remixers,
@@ -369,13 +341,6 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                         '--album-artist', trackData.album.artists,
                         '--text-frame',
                         "TRCK:" + trackData.album.trackNumber + "/" + trackData.album.trackTotal,
-                        // '--track', trackData.album.trackNumber,
-                        // '--track-total', trackData.album.trackTotal,
-                        // '--no-zero-padding',  // there is no such option in eyeD3 anymore?
-                        // '--disc-num', '???',  // there is no disc information on beatport? (and other streaming like Amazon?)
-                        // '--disc-total', '???',
-                        // '--release-year', trackData.year,
-                        // '--text-frame', `TDRC:${trackData.year}`,
                         '--text-frame',
                         "TYER:" + trackData.year,
                         '--text-frame',
@@ -390,8 +355,6 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                         "TDOR:" + trackData.released,
                         '--text-frame',
                         "TDRL:" + trackData.released,
-                        // '--release-date', trackData.released,
-                        // '--orig-release-date', trackData.released,
                         '--url-frame',
                         "WOAF:" + trackData.url.replace(':', colonEscapeChar + ":"),
                         '--url-frame',
@@ -414,7 +377,6 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                         '--genre', trackData.genre,
                         '--publisher', trackData.publisher.name, '--text-frame',
                         "TIT1:" + trackData.publisher.name,
-                        // '--unique-file-id', `http${colonEscapeChar}://www.id3.org/dummy/ufid.html:${trackData.ufid}`,
                         '--unique-file-id',
                         DOMAIN_URL.replace(':', colonEscapeChar + ":") + ":" + trackData.ufid,
                         '--remove-frame', 'PRIV', '--remove-all-comments',
@@ -431,17 +393,10 @@ var saveId3TagToFile = function (trackPath, trackData, _a) {
                     correctedFilename = tools.replacePathForbiddenChars(trackData.artists + " - " + trackData.title + path.extname(trackPath));
                     fs.renameSync(trackPath, path.dirname(trackPath) + path.sep + correctedFilename);
                     console.log("File was renamed to: " + correctedFilename);
-                    // fs.rename(trackPath, path.dirname(trackPath) + path.sep + correctedFilename, (error) => {
-                    //   if (error) {
-                    //     console.error(`Couldn't rename ${trackFilename}`);
-                    //     return;
-                    //   }
-                    //   console.log(`File was renamed to: ${correctedFilename}`);
-                    // });
                     fs.unlinkSync(imagePaths.frontCover);
                     fs.unlinkSync(imagePaths.waveform);
                     fs.unlinkSync(imagePaths.publisherLogotype);
-                    return [2 /*return*/];
+                    return [2];
             }
         });
     });
@@ -463,8 +418,6 @@ var executeEyeD3Tool = function (version, options, filename, verbose) {
     }
     else if (child.status !== 0) {
         logger.error("ERROR: Child process (v" + version + ") exited with code " + child.status + ":\n" + tools.leaveOnlyFirstLine(child.stderr));
-        // } else if (child.stderr) {
-        //   console.error(`Error occured when saving ID3v${version} tag:`);
     }
     else {
         console.log(verbose ? child.stdout : "ID3v" + version + " tag was saved to " + filename);

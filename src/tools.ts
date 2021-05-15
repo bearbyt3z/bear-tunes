@@ -1,7 +1,7 @@
-import fetch = require('node-fetch');
-import jsdom = require('jsdom');
-import fs = require('fs');
-import request = require('request');
+import fetch from 'node-fetch';
+import * as jsdom from 'jsdom';
+import * as fs from 'fs';
+import * as request from 'request';
 
 export async function fetchWebPage(url: string): Promise<HTMLDocument> {
   const response = await fetch(url)
