@@ -1,7 +1,7 @@
 {
-  "name": "mp3-tagger",
-  "version": "0.3.0",
-  "description": "mp3 tagging tool",
+  "name": "bear-tunes",
+  "version": "0.3.1",
+  "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
