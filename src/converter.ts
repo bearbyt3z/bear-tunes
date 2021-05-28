@@ -152,45 +152,5 @@ export class BearTunesConverter {
     result.lameStderr = childResult.stderr?.toString();
 
     return result;
-
-    // if (child.error) {
-    //   logger.error(`ERROR: Failed to start child process: ${child.error}`);
-    // } else if (child.status !== 0) {
-    //   logger.error(`ERROR: Child process (v${version}) exited with code ${child.status}:\n${tools.leaveOnlyFirstLine(child.stderr)}`);
-    // // } else if (child.stderr) {
-    // //   console.error(`Error occured when saving ID3v${version} tag:`);
-    // } else {
-    //   console.log(verbose ? child.stdout : `ID3v${version} tag was saved to ${filename}`);
-    // }
-
-
-    // const flacProcess = childProcess.spawn('flac', [
-    //   '--decode',
-    //   '--stdout',
-    //   `"${flacFilePath}"`,
-    // ]);
-    // const lameProcess = childProcess.spawn('lame', [
-    //   '--preset',
-    //   'extreme',
-    //   '-',
-    //   'flac/output.mp3'
-    // ]);
-    // // ], {
-    // //   encoding: 'utf8',
-    // // });
-    // // flacProcess.stdout.pipe(lameProcess.stdin);
-    // // lameProcess.stdout.pipe(process.stdout)
-    // for await (const data of flacProcess.stdout)
-    //   console.log(data);
-
-    // if (child.error) {
-    //   logger.error(`ERROR: Failed to start child process: ${child.error}`);
-    // } else if (child.status !== 0) {
-    //   logger.error(`ERROR: Child process (v${version}) exited with code ${child.status}:\n${tools.leaveOnlyFirstLine(child.stderr)}`);
-    // // } else if (child.stderr) {
-    // //   console.error(`Error occured when saving ID3v${version} tag:`);
-    // } else {
-    //   console.log(verbose ? child.stdout : `ID3v${version} tag was saved to ${filename}`);
-    // }
   }
 }
