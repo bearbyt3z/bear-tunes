@@ -24,6 +24,7 @@ import * as path from 'path';
 
 const tools = require('./tools');
 const logger = require('./logger');
+import { BearTunesConverter, ConverterResult } from './converter';
 
 const DOMAIN_URL = 'https://www.beatport.com';
 const SEARCH_URL = DOMAIN_URL + '/search/tracks?per-page=150&q=';  // we want tracks only
@@ -89,6 +90,7 @@ const processAllFilesInDirectory = async directory => {
   }
 
   fs.readdir(directory, async (error, files) => {
+    const directoryWithSeparator: string = directory.replace(/\/+$/, path.sep);
     let noFilesWereProcessed = true;
     if (error) {
       logger.error(`Couldn't read directory: ${tracksDirectory}`);
@@ -100,15 +102,35 @@ const processAllFilesInDirectory = async directory => {
     //   console.error(`There are no files in a directory: ${tracksDirectory}`);
     //   process.exit(4);  // breaks process when no files in subdirectory!!!
     // }
+    const flacFiles: Array<string> = [];
+    const converter: BearTunesConverter = new BearTunesConverter({}, true);
+
     for (const file of files) {
-      const filePath = directory + path.sep + file;
+      const filePath = directoryWithSeparator + file;
       if (fs.statSync(filePath).isDirectory()) {
         processAllFilesInDirectory(filePath);
         continue;
       }
       if (path.extname(file) === '.mp3') {
+        const flacIndex = flacFiles.indexOf(filePath);
+        if (flacIndex > -1) {
+          flacFiles.splice(flacIndex, 1);
+          continue;
+        }
         noFilesWereProcessed = false;
         await processTrack(filePath);
+      }
+      else if (path.extname(file) === '.flac') {
+        noFilesWereProcessed = false;
+        logger.info(`Converting flac to mp3: ${filePath}`);
+        const result: ConverterResult = converter.flacToMp3(filePath);
+        if (result.status === 0) {
+          logger.info(`File ${filePath} was converted to mp3: ${result.outputPath}`);
+          flacFiles.push(result.outputPath);
+          await processTrack(result.outputPath);
+        } else {
+          logger.warn(`Converting file ${filePath} failed with code ${result.status} and message:\n${result.error?.message}:\nstderr: ${result.lameStderr}`);
+        }
       }
     }
     if (noFilesWereProcessed) {
