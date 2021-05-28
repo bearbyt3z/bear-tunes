@@ -8,7 +8,8 @@
     "start": "node ./dist/main.js",
     "tsc": "npx tsc",
     "build": "webpack --config webpack.config.prod.js",
-    "build-dev": "webpack --config webpack.config.dev.js"
+    "build-dev": "webpack --config webpack.config.dev.js",
+    "build-start": "npm run build-dev && npm run start"
   },
   "author": "bearbyt3z",
   "license": "GPL-3.0-or-later",
