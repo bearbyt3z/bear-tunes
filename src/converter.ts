@@ -154,7 +154,12 @@ export class BearTunesConverter {
       `--tl "${flacTrackInfo.album.title}"`,
       `--tn "${flacTrackInfo.album.trackNumber}/${flacTrackInfo.album.trackTotal}"`,
       `--tg "${flacTrackInfo.genre}"`,
+      `--ty "${flacTrackInfo.year}"`,
     ];
+
+    if (flacTrackInfo.released && flacTrackInfo.released.length > 0) {
+      tagOptions.push(`--tv TORY=${flacTrackInfo.released}`);
+    }
 
     const flacImages = this.extractArtworkFromFlac(flacFilePath, [FlacImageBlockType.CoverFront]); // lame supports only front cover
     if (flacImages.length > 0) {
@@ -209,11 +214,20 @@ export class BearTunesConverter {
     }
 
     const metaflacOutput = metaflacResult.stdout.toString();
+    const dateTag = this.extractFlacTagFromString(metaflacOutput, 'date');
+    let year, released;
+    if (dateTag && dateTag.length > 0) {
+      year = dateTag.match(/\d{4}/);
+      year = (year.length > 0) ? year[0] : undefined;
+      released = dateTag; // TODO: check if it is a real date
+    }
 
     const result: TrackInfo = {
       artists: this.extractFlacTagFromString(metaflacOutput, 'artist', true),
       title: this.extractFlacTagFromString(metaflacOutput, 'title'),
       genre: this.extractFlacTagFromString(metaflacOutput, 'genre'),
+      year: year,
+      released: released,
       album: {
         artists: this.extractFlacTagFromString(metaflacOutput, 'albumartist', true),
         title: this.extractFlacTagFromString(metaflacOutput, 'album'),
@@ -225,14 +239,14 @@ export class BearTunesConverter {
     return result;
   }
 
-  extractFlacTagFromString(inputText: string, tagName: string, multiOccurrence: boolean = false): string | null {
+  extractFlacTagFromString(inputText: string, tagName: string, multiOccurrence: boolean = false): string | undefined {
     let regexFlags = 'm', joinString = '';
     if (multiOccurrence) {
       regexFlags += 'g';
       joinString = ', ';
     }
     const matchArray = inputText.match(new RegExp(`(?<=^${tagName}=).*$`, regexFlags));
-    return (matchArray.length > 0) ? matchArray.join(joinString) : null;
+    return (matchArray.length > 0) ? matchArray.join(joinString) : undefined;
   }
 
   extractArtworkFromFlac(flacFilePath: string, imageBlockTypes: Array<FlacImageBlockType>): Array<FlacImageBlockExport> {
