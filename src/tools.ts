@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import * as jsdom from 'jsdom';
 import * as fs from 'fs';
 import * as request from 'request';
+import * as crypto from 'crypto';
 
 export async function fetchWebPage(url: string): Promise<HTMLDocument> {
   const response = await fetch(url)
@@ -135,4 +136,8 @@ export function getUrlFromFile(filePath: string): string {
   const urlIndex = fileContent.indexOf('URL=');
   if (!urlIndex) return null;
   return fileContent.substring(urlIndex + 4).split('\n')[0];
+}
+
+export function getRandomString(length = 20): string {
+  return crypto.randomBytes(length).toString('hex');
 }

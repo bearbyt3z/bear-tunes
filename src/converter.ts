@@ -140,10 +140,12 @@ export class BearTunesConverter {
       this.converterOptions.replayGain.toString(),
     ];
 
+    const lameOptionsJoined = lameOptions.join(' ');
+
     if (this.verbose) {
-      logger.info(`Using following lame options: ${lameOptions.join(' ')}`);
+      logger.info(`Using following lame options: ${lameOptionsJoined}`);
     }
-    
+
     const flacTrackInfo = this.extractTagsFromFlac(flacFilePath);
     const tagOptions = [
       '--add-id3v2',
@@ -154,14 +156,25 @@ export class BearTunesConverter {
       `--tg "${flacTrackInfo.genre}"`,
     ];
 
+    const flacImages = this.extractArtworkFromFlac(flacFilePath, [FlacImageBlockType.CoverFront]); // lame supports only front cover
+    if (flacImages.length > 0) {
+      tagOptions.push(`--ti "${flacImages[0].imagePath}"`);
+    }
+
+    const tagOptionsJoined = tagOptions.join(' ');
+
     if (this.verbose) {
-      logger.info(`Using following tag options: ${tagOptions.join(' ')}`);
+      logger.info(`Using following tag options: ${tagOptionsJoined}`);
     }
     
     const childResult = childProcess.spawnSync(
-      `flac --decode --stdout "${flacFilePath}" | lame ${lameOptions.join(' ')} ${tagOptions.join(' ')} - "${outputPath}"`,
+      `flac --decode --stdout "${flacFilePath}" | lame ${lameOptionsJoined} ${tagOptionsJoined} - "${outputPath}"`,
       { shell: true, stdio: 'inherit' }
     );
+
+    for (const imageInfo of flacImages) {
+      fs.unlinkSync(imageInfo.imagePath);
+    }
 
     result.status = childResult.status;
     result.error = childResult.error;
@@ -221,4 +234,86 @@ export class BearTunesConverter {
     const matchArray = inputText.match(new RegExp(`(?<=^${tagName}=).*$`, regexFlags));
     return (matchArray.length > 0) ? matchArray.join(joinString) : null;
   }
+
+  extractArtworkFromFlac(flacFilePath: string, imageBlockTypes: Array<FlacImageBlockType>): Array<FlacImageBlockExport> {
+    const result: Array<FlacImageBlockExport> = [];
+
+    const flacImageBlocks = this.getFlacImageBlockExport(flacFilePath);
+    if (flacImageBlocks.length < 1) {
+      return result;
+    }
+
+    const matchingImageBlocks = flacImageBlocks.filter(info => imageBlockTypes.includes(info.blockType));
+    if (matchingImageBlocks.length < 1) {
+      return result;
+    }
+
+    for (const imageBlockInfo of matchingImageBlocks) {
+      const imageFileExtension = imageBlockInfo.mimeType.replace('image/', '');
+      const imageFilePath = tools.getRandomString() + '.' + imageFileExtension;
+
+      const metaflacResult = childProcess.spawnSync('metaflac', [
+        `--block-number=${imageBlockInfo.blockType.toString()}`,
+        `--export-picture-to=${imageFilePath}`,
+        flacFilePath
+      ]);
+
+      if (metaflacResult.status === 0) {
+        imageBlockInfo.imagePath = imageFilePath;
+        result.push(imageBlockInfo);
+      }
+    }
+
+    return result;
+  }
+
+  getFlacImageBlockExport(flacFilePath: string): Array<FlacImageBlockExport> {
+    const result: Array<FlacImageBlockExport> = [];
+
+    const metaflacResult = childProcess.spawnSync(
+      `metaflac --list --block-type=PICTURE "${flacFilePath}" | grep -A8 -i metadata`,
+      { shell: true }
+    );
+
+    if (metaflacResult.status !== 0) {
+      return result;
+    }
+    
+    const stdoutAsString = metaflacResult.stdout.toString();
+    const blockNumbers = stdoutAsString.match(/(?<=METADATA block #)\d/gi);
+    const mimeTypes = stdoutAsString.match(/(?<=MIME type: )[a-z]*\/[a-z]*/gi);
+
+    const minLength = Math.min(blockNumbers.length, mimeTypes.length);
+
+    if (minLength === 0) { // no images found
+      return result;
+    }
+
+    if (blockNumbers.length !== mimeTypes.length)
+      logger.warn(`Amount of block numbers different than amount of mime types: only ${minLength} will be used`)
+
+    for (let i = 0; i < minLength; i++) {
+      result.push({
+        blockType: <FlacImageBlockType>Number(blockNumbers[i]),
+        mimeType: mimeTypes[i],
+      });
+    }
+
+    return result;
+  }
+}
+
+interface FlacImageBlockExport {
+  blockType: FlacImageBlockType,
+  mimeType: string,
+  imagePath?: string,
+}
+
+// https://xiph.org/flac/format.html
+enum FlacImageBlockType {
+  FileIcon = 1, // 32x32 PNG only
+  CoverFront = 3,
+  CoverBack = 4,
+  BrightColouredFish = 17,
+  PublisherLogotype = 20,
 }
