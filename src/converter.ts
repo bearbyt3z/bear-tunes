@@ -5,58 +5,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { TrackInfo, AlbumInfo, PublisherInfo } from './types';
+import { ConverterResult, ConverterOptions, BitrateMethod, Quality, ChannelMode, ReplayGain, FlacImageBlockExport, FlacImageBlockType } from './converter.types';
+
+// exporting types, so they will be included in the converter import
+export { ConverterResult, ConverterOptions, BitrateMethod, Quality, ChannelMode, ReplayGain, FlacImageBlockExport, FlacImageBlockType };
 
 const logger = require('./logger');
 const tools = require('./tools');
-
-export interface ConverterResult {
-  status: number,
-  error: Error|null,
-  lameStdout: string|null,
-  lameStderr: string|null,
-  outputPath: string,
-};
-
-enum BitrateMethod {
-  CBR = '--cbr',
-  VBR = '--vbr-new',
-  ABR = '--abr',
-}
-
-enum Quality {
-  Q0 = '-q0',
-  Q1 = '-q1',
-  Q2 = '-q2',
-  Q3 = '-q3',
-  Q4 = '-q4',
-  Q5 = '-q5',
-  Q6 = '-q6',
-  Q7 = '-q7',
-  Q8 = '-q8',
-  Q9 = '-q9',
-}
-
-enum ChannelMode {
-  JointStereo = 'j',
-  Stereo = 's',
-  Mono = 'm',
-}
-
-enum ReplayGain {
-  Accurate = '--replaygain-accurate',
-  Fast = '--replaygain-fast',
-  None = '--noreplaygain',
-}
-
-interface ConverterOptions {
-  bitrateMethod?: BitrateMethod,
-  bitrateValue?: number, // for CBR & ABR
-  bitrateValueMinimum?: number, // for VBR
-  bitrateValueMaximum?: number, // for VBR
-  quality?: Quality,
-  channelMode?: ChannelMode,
-  replayGain?: ReplayGain,
-};
 
 const defaultConverterOptions: ConverterOptions = {
   bitrateMethod: BitrateMethod.CBR,
@@ -315,19 +270,4 @@ export class BearTunesConverter {
 
     return result;
   }
-}
-
-interface FlacImageBlockExport {
-  blockType: FlacImageBlockType,
-  mimeType: string,
-  imagePath?: string,
-}
-
-// https://xiph.org/flac/format.html
-enum FlacImageBlockType {
-  FileIcon = 1, // 32x32 PNG only
-  CoverFront = 3,
-  CoverBack = 4,
-  BrightColouredFish = 17,
-  PublisherLogotype = 20,
 }
