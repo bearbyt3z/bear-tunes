@@ -4,7 +4,10 @@ import * as childProcess from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { TrackInfo, AlbumInfo, PublisherInfo } from './types';
+
 const logger = require('./logger');
+const tools = require('./tools');
 
 export interface ConverterResult {
   status: number,
@@ -117,8 +120,7 @@ export class BearTunesConverter {
       return result;
     }
     
-    let bitrateOption: string = BitrateMethod.CBR.toString();
-    
+    let bitrateOption = this.converterOptions.bitrateMethod.toString();
     switch (this.converterOptions.bitrateMethod) {
       case BitrateMethod.CBR:
         bitrateOption += ` -b${this.converterOptions.bitrateValue.toString()}`;
@@ -131,18 +133,33 @@ export class BearTunesConverter {
         break;
     }
 
-    const lameOptions: Array<string> = [
+    const lameOptions = [
       bitrateOption,
       `-m ${this.converterOptions.channelMode.toString()}`,
       this.converterOptions.quality.toString(),
       this.converterOptions.replayGain.toString(),
     ];
 
-    if (this.verbose)
+    if (this.verbose) {
       logger.info(`Using following lame options: ${lameOptions.join(' ')}`);
+    }
     
-    const childResult: childProcess.SpawnSyncReturns<Buffer> = childProcess.spawnSync(
-      `flac --decode --stdout "${flacFilePath}" | lame ${lameOptions.join(' ')} - "${outputPath}"`,
+    const flacTrackInfo = this.extractTagsFromFlac(flacFilePath);
+    const tagOptions = [
+      '--add-id3v2',
+      `--tt "${flacTrackInfo.title}"`,
+      `--ta "${flacTrackInfo.artists}"`,
+      `--tl "${flacTrackInfo.album.title}"`,
+      `--tn "${flacTrackInfo.album.trackNumber}/${flacTrackInfo.album.trackTotal}"`,
+      `--tg "${flacTrackInfo.genre}"`,
+    ];
+
+    if (this.verbose) {
+      logger.info(`Using following tag options: ${tagOptions.join(' ')}`);
+    }
+    
+    const childResult = childProcess.spawnSync(
+      `flac --decode --stdout "${flacFilePath}" | lame ${lameOptions.join(' ')} ${tagOptions.join(' ')} - "${outputPath}"`,
       { shell: true, stdio: 'inherit' }
     );
 
@@ -152,5 +169,56 @@ export class BearTunesConverter {
     result.lameStderr = childResult.stderr?.toString();
 
     return result;
+  }
+
+  extractTagsFromFlac(flacFilePath: string): TrackInfo {
+    const metaflacResult = childProcess.spawnSync('metaflac', [
+      '--show-tag=artist',
+      '--show-tag=title',
+      '--show-tag=album',
+      '--show-tag=albumartist',
+      '--show-tag=tracknumber',
+      '--show-tag=tracktotal',
+      '--show-tag=discnumber',
+      '--show-tag=disctotal',
+      '--show-tag=genre',
+      '--show-tag=date',
+      '--show-tag=composer',
+      '--show-tag=isrc',
+      flacFilePath
+    ]);
+
+    if (metaflacResult.status !== 0) {
+      if (this.verbose) {
+        logger.error(`metaflac process returned with ${metaflacResult.status} code and stderr: ${metaflacResult.stderr.toString()}`);
+      }
+      return {};
+    }
+
+    const metaflacOutput = metaflacResult.stdout.toString();
+
+    const result: TrackInfo = {
+      artists: this.extractFlacTagFromString(metaflacOutput, 'artist', true),
+      title: this.extractFlacTagFromString(metaflacOutput, 'title'),
+      genre: this.extractFlacTagFromString(metaflacOutput, 'genre'),
+      album: {
+        artists: this.extractFlacTagFromString(metaflacOutput, 'albumartist', true),
+        title: this.extractFlacTagFromString(metaflacOutput, 'album'),
+        trackNumber: this.extractFlacTagFromString(metaflacOutput, 'tracknumber'),
+        trackTotal: this.extractFlacTagFromString(metaflacOutput, 'tracktotal'),
+      }
+    };
+
+    return result;
+  }
+
+  extractFlacTagFromString(inputText: string, tagName: string, multiOccurrence: boolean = false): string | null {
+    let regexFlags = 'm', joinString = '';
+    if (multiOccurrence) {
+      regexFlags += 'g';
+      joinString = ', ';
+    }
+    const matchArray = inputText.match(new RegExp(`(?<=^${tagName}=).*$`, regexFlags));
+    return (matchArray.length > 0) ? matchArray.join(joinString) : null;
   }
 }

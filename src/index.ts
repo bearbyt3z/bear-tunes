@@ -22,6 +22,8 @@ import * as childProcess from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { TrackInfo, AlbumInfo, PublisherInfo } from './types';
+
 const tools = require('./tools');
 const logger = require('./logger');
 import { BearTunesConverter, ConverterResult } from './converter';
@@ -30,44 +32,12 @@ const DOMAIN_URL = 'https://www.beatport.com';
 const SEARCH_URL = DOMAIN_URL + '/search/tracks?per-page=150&q=';  // we want tracks only
 // const SEARCH_URL = DOMAIN_URL + '/search/tracks?q=';  // we want tracks only
 // const SEARCH_URL = DOMAIN_URL + '/search?q=';
-const DISPLAY_PLUGIN_PATTERN_FILE = 'eyed3-pattern.txt';
+const EYED3_DISPLAY_PLUGIN_PATTERN_FILE = 'eyed3-pattern.txt';
 
 const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, label, printf } = format;
 
 const tracksDirectory = process.argv[2] || '.';
-
-interface TrackInfo {
-  url?: string,
-  artists?: string, // TODO: change to array
-  title?: string,
-  remixers?: string,
-  released?: string, // TODO: change to Date type
-  year?: string, // TODO: change to number/bigint/Date?
-  genre?: string,
-  bpm?: string, // TODO: int?
-  key?: string,
-  ufid?: string,
-  waveform?: string, // TODO: URL
-  publisher?: PublisherInfo,
-  album?: AlbumInfo,
-};
-
-interface AlbumInfo {
-  artists: string, // TODO: array
-  title: string,
-  catalogNumber: string, // TODO: int?
-  trackNumber: string, // TODO: int
-  trackTotal: string, // TODO: int
-  url: string, // TODO: URL
-  artwork: string, // TODO: URL
-};
-
-interface PublisherInfo {
-  name: string,
-  url: string, // TODO: URL
-  logotype: string, // TODO: URL
-}
 
 const processAllFilesInDirectory = async directory => {
   if (!fs.existsSync(tracksDirectory)) {
@@ -170,7 +140,7 @@ const processTrack = async trackPath => {
 const extractId3Tag = trackPath => {
   const displayPluginOutput = childProcess.spawnSync('eyeD3', [
     '--plugin', 'display',
-    '--pattern-file', DISPLAY_PLUGIN_PATTERN_FILE,
+    '--pattern-file', EYED3_DISPLAY_PLUGIN_PATTERN_FILE,
     trackPath
   ], {
     encoding: 'utf-8',
