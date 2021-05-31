@@ -13,9 +13,6 @@
 // display plugin of eyeD3 requires grako:
 // $pip install grako
 
-'use strict';
-
-import * as http from 'http';
 import * as url from 'url';
 import 'process'; // to assign process.exitCode (if imported with "* as process" => TS2540: Cannot assign to 'exitCode' because it is a read-only property.)
 import * as childProcess from 'child_process';
@@ -23,23 +20,23 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { TrackInfo, AlbumInfo, PublisherInfo } from './types';
+import { BearTunesConverter, ConverterResult } from './converter';
 
 const tools = require('./tools');
 const logger = require('./logger');
-import { BearTunesConverter, ConverterResult } from './converter';
 
 const DOMAIN_URL = 'https://www.beatport.com';
-const SEARCH_URL = DOMAIN_URL + '/search/tracks?per-page=150&q=';  // we want tracks only
-// const SEARCH_URL = DOMAIN_URL + '/search/tracks?q=';  // we want tracks only
-// const SEARCH_URL = DOMAIN_URL + '/search?q=';
+const SEARCH_URL = `${DOMAIN_URL}/search/tracks?per-page=150&q=`; // we want tracks only
+// const SEARCH_URL = `${DOMAIN_URL}/search/tracks?q=`; // we want tracks only
+// const SEARCH_URL = `${DOMAIN_URL}/search?q=`;
 const EYED3_DISPLAY_PLUGIN_PATTERN_FILE = 'eyed3-pattern.txt';
 
-const { createLogger, format, transports } = require('winston');
-const { combine, timestamp, label, printf } = format;
+// const { createLogger, format, transports } = require('winston');
+// const { combine, timestamp, label, printf } = format;
 
 const tracksDirectory = process.argv[2] || '.';
 
-const processAllFilesInDirectory = async directory => {
+const processAllFilesInDirectory = async (directory) => {
   if (!fs.existsSync(tracksDirectory)) {
     // logger.silly(`Path specified doesn't exist: ${tracksDirectory}`);
     // logger.verbose(`Path specified doesn't exist: ${tracksDirectory}`);
@@ -79,43 +76,43 @@ const processAllFilesInDirectory = async directory => {
       const filePath = directoryWithSeparator + file;
       if (fs.statSync(filePath).isDirectory()) {
         processAllFilesInDirectory(filePath);
-        continue;
-      }
-      if (path.extname(file) === '.mp3') {
+      } else if (path.extname(file) === '.mp3') {
         const flacIndex = flacFiles.indexOf(filePath);
         if (flacIndex > -1) {
           flacFiles.splice(flacIndex, 1);
-          continue;
+        } else {
+          noFilesWereProcessed = false;
+          await processTrack(filePath);
         }
+      } else if (path.extname(file) === '.flac') {
         noFilesWereProcessed = false;
-        await processTrack(filePath);
-      }
-      else if (path.extname(file) === '.flac') {
-        noFilesWereProcessed = false;
+        logger.silly('########################################');
         logger.info(`Converting flac to mp3: ${filePath}`);
         const result: ConverterResult = converter.flacToMp3(filePath);
         if (result.status === 0) {
-          logger.info(`File ${filePath} was converted to mp3: ${result.outputPath}`);
+          logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
           flacFiles.push(result.outputPath);
           await processTrack(result.outputPath);
         } else {
-          logger.warn(`Converting file ${filePath} failed with code ${result.status} and message:\n${result.error?.message}:\nstderr: ${result.lameStderr}`);
+          logger.warn(
+            `Converting file ${filePath} failed with code ${result.status} and message:\n${result.error?.message}:\nstderr: ${result.lameStderr}`,
+          );
         }
       }
     }
+
     if (noFilesWereProcessed) {
       logger.error(`There are no suitable files in directory: ${directory}`);
       process.exitCode = 1;
-      return;
     }
   });
 };
 
-const processTrack = async trackPath => {
+const processTrack = async (trackPath) => {
   const trackFilename = path.basename(trackPath);
   const trackFilenameWithourExtension = trackFilename.replace(new RegExp(`${path.extname(trackFilename)}$`), '');
   const trackFilenameKeywords = tools.splitTrackNameToKeywords(trackFilenameWithourExtension);
-  console.log('########################################');
+  logger.silly('########################################');
   logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
   // console.log(extractId3Tag(trackPath));
   const trackUrlFilename = path.join(path.dirname(trackPath), `${trackFilenameWithourExtension}.url`);
@@ -126,7 +123,9 @@ const processTrack = async trackPath => {
   } else {
     const bestMatchingTrack = await findBestMatchingTrack(trackFilenameKeywords);
     if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
-      logger.warn(`Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n${bestMatchingTrack.fullName}\nScore keywords: ${bestMatchingTrack.scoreKeywords}\nName  keywords: ${trackFilenameKeywords}`);
+      let warnMessage = `Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n${bestMatchingTrack.fullName}\n`;
+      warnMessage += `Score keywords: ${bestMatchingTrack.scoreKeywords}\nName  keywords: ${trackFilenameKeywords}`;
+      logger.warn(warnMessage);
       return;
     }
     logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullName}`);
@@ -135,27 +134,27 @@ const processTrack = async trackPath => {
   const trackData = await extractTrackData(trackUrl);
   // await saveId3TagToFile(trackPath, trackData, { verbose: true });
   await saveId3TagToFile(trackPath, trackData);
-}
+};
 
-const extractId3Tag = trackPath => {
+const extractId3Tag = (trackPath) => {
   const displayPluginOutput = childProcess.spawnSync('eyeD3', [
     '--plugin', 'display',
     '--pattern-file', EYED3_DISPLAY_PLUGIN_PATTERN_FILE,
-    trackPath
+    trackPath,
   ], {
     encoding: 'utf-8',
   });
   if (displayPluginOutput.stderr) {
-    logger.warn(`Cannot read ID3 tag of ${path.basename(trackPath)}:\n${tools.leaveOnlyFirstLine(displayPluginOutput.stderr)}`);  // show only first line of error from plugin (ommit traceback)
+    logger.warn(`Cannot read ID3 tag of ${path.basename(trackPath)}:\n${tools.leaveOnlyFirstLine(displayPluginOutput.stderr)}`); // show only first line of error from plugin (ommit traceback)
     return {};
   }
   // console.log(displayPluginOutput.stdout);
   let id3TagJson;
   try {
     id3TagJson = JSON.parse(displayPluginOutput.stdout
-      .replace(//mgi, '')  // replace unicode characters that break parse() (e.g. Beatoprt's heart before links!)
-      .replace(/,\s*\}/mgi, '}')  // remove trailing commas that comes from plugin pattern (text-fields)
-    );
+      // eslint-disable-next-line no-control-regex
+      .replace(//mgi, '') // replace unicode characters that break parse() (e.g. Beatoprt's heart before links!)
+      .replace(/,\s*\}/mgi, '}')); // remove trailing commas that comes from plugin pattern (text-fields)
   } catch (error) {
     logger.warn(`Cannot parse ID3 tag output from display plugin: ${error}`);
     return {};
@@ -169,18 +168,18 @@ interface MatchingTrack extends TrackInfo {
   fullName?: string,
 }
 
-const findBestMatchingTrack: (inputKeywords: Array<string>) => Promise<MatchingTrack> = async inputKeywords => {
+const findBestMatchingTrack: (inputKeywords: Array<string>) => Promise<MatchingTrack> = async (inputKeywords) => {
   const searchDoc = await tools.fetchWebPage(SEARCH_URL + encodeURIComponent(inputKeywords.join('+')));
 
   let winner: MatchingTrack = {
     score: -1,
-    released: '2999-12-12',  // some far away date...
+    released: '2999-12-12', // some far away date...
   };
   const trackNodes = searchDoc.querySelectorAll('.bucket-item.ec-item.track');
   for (const trackNode of trackNodes) {
     const trackTitle = tools.createTitle(
       trackNode.querySelector('.buk-track-primary-title'),
-      trackNode.querySelector('.buk-track-remixed')
+      trackNode.querySelector('.buk-track-remixed'),
     );
     const trackArtists = tools.createArtistsList(trackNode.querySelector('.buk-track-artists'), trackTitle);
     const trackRemixers = tools.createArtistsList(trackNode.querySelector('.buk-track-remixers'));
@@ -197,7 +196,7 @@ const findBestMatchingTrack: (inputKeywords: Array<string>) => Promise<MatchingT
 
     const keywordsIntersection = tools.arrayIntersection(
       tools.arrayToLowerCase(inputKeywords),
-      tools.replacePathForbiddenChars(tools.arrayToLowerCase(trackKeywords))
+      tools.replacePathForbiddenChars(tools.arrayToLowerCase(trackKeywords)),
     );
     // console.log(`Track: ${trackArtists} - ${trackTitle} + (${trackRemixed})`);
     // console.log('Intersection:', keywordsIntersection);
@@ -205,7 +204,7 @@ const findBestMatchingTrack: (inputKeywords: Array<string>) => Promise<MatchingT
     if ((score > winner.score) || ((score === winner.score) && (Date.parse(trackReleased) < Date.parse(winner.released)))) {
       winner = {
         // node: trackNode,
-        score: score,
+        score,
         scoreKeywords: keywordsIntersection,
         released: trackReleased,
         title: trackTitle,
@@ -218,14 +217,13 @@ const findBestMatchingTrack: (inputKeywords: Array<string>) => Promise<MatchingT
   }
   winner.fullName = `${winner.artists} - ${winner.title}`;
   return winner;
-}
+};
 
-
-const extractTrackData: (trackUrl: string) => Promise<TrackInfo> = async trackUrl => {
+const extractTrackData: (trackUrl: string) => Promise<TrackInfo> = async (trackUrl) => {
   const trackDoc = await tools.fetchWebPage(trackUrl);
   const title = tools.createTitle(
     trackDoc.querySelector('.interior-title h1:not(.remixed)'),
-    trackDoc.querySelector('.interior-title h1.remixed')
+    trackDoc.querySelector('.interior-title h1.remixed'),
   );
   const remixers = tools.createArtistsList(trackDoc.querySelector('.interior-track-artists:nth-of-type(2) .value'));
   const artists = tools.createArtistsList(trackDoc.querySelector('.interior-track-artists .value'), title);
@@ -284,7 +282,7 @@ const extractAlbumData: (albumUrl: string, trackId: string) => Promise<AlbumInfo
   };
 };
 
-const extractPublisherData: (publisherUrl: string) => Promise<PublisherInfo> = async publisherUrl => {
+const extractPublisherData: (publisherUrl: string) => Promise<PublisherInfo> = async (publisherUrl) => {
   const publisherDoc = await tools.fetchWebPage(publisherUrl);
   const name = publisherDoc.querySelector('.interior-top-container .interior-title h1').textContent.trim();
   const logotype = publisherDoc.querySelector('.interior-top-container .interior-top-artwork-parent img.interior-top-artwork').src;
@@ -299,25 +297,25 @@ interface TrackArtworkFiles {
   frontCover?: string, // TODO: File?
   waveform?: string,
   publisherLogotype?: string,
-};
+}
 
 const saveId3TagToFile = async (trackPath, trackData, { id3v2 = true, id3v1 = true, verbose = false } = {}) => {
   const imagePaths: TrackArtworkFiles = {};
-  await tools.downloadFile(trackData.publisher.logotype, null, filename => {
+  await tools.downloadFile(trackData.publisher.logotype, null, (filename) => {
     if (verbose) {
-      console.log(`Publisher logotype written to: ${filename}`);
+      logger.debug(`Publisher logotype written to: ${filename}`);
     }
     imagePaths.publisherLogotype = filename;
   });
-  await tools.downloadFile(trackData.album.artwork, null, filename => {
+  await tools.downloadFile(trackData.album.artwork, null, (filename) => {
     if (verbose) {
-      console.log(`Album artwork written to: ${filename}`);
+      logger.debug(`Album artwork written to: ${filename}`);
     }
     imagePaths.frontCover = filename;
   });
-  await tools.downloadFile(trackData.waveform, null, filename => {
+  await tools.downloadFile(trackData.waveform, null, (filename) => {
     if (verbose) {
-      console.log(`Waveform written to: ${filename}`);
+      logger.debug(`Waveform written to: ${filename}`);
     }
     imagePaths.waveform = filename;
   });
@@ -325,17 +323,17 @@ const saveId3TagToFile = async (trackPath, trackData, { id3v2 = true, id3v1 = tr
   const trackFilename = path.basename(trackPath);
 
   // const colonEscapeChar = (process.platform === "win32") ? '\\' : '\\\\';
-  const colonEscapeChar = '\\'; // the same on linux platform...
+  const colonEscapeChar = '\\'; // the same on windows & linux platform...
 
   const eyeD3Options = [
     '--verbose',
     '--artist', trackData.artists,
     // '--artist', trackData.artists.replace('ø', 'o'),
     '--title', trackData.title,
-    '--text-frame', `TPE4:${trackData.remixers}`,  // TPE4 => REMIXEDBY
+    '--text-frame', `TPE4:${trackData.remixers}`, // TPE4 => REMIXEDBY
     '--album', trackData.album.title,
     '--album-artist', trackData.album.artists,
-    '--text-frame', `TRCK:${trackData.album.trackNumber}/${trackData.album.trackTotal}`,  // eyeD3 adds leading 0 when using --track & --track-total
+    '--text-frame', `TRCK:${trackData.album.trackNumber}/${trackData.album.trackTotal}`, // eyeD3 adds leading 0 when using --track & --track-total
     // '--track', trackData.album.trackNumber,
     // '--track-total', trackData.album.trackTotal,
     // '--no-zero-padding',  // there is no such option in eyeD3 anymore?
@@ -352,22 +350,22 @@ const saveId3TagToFile = async (trackPath, trackData, { id3v2 = true, id3v1 = tr
     '--text-frame', `TDRL:${trackData.released}`,
     // '--release-date', trackData.released,
     // '--orig-release-date', trackData.released,
-    '--url-frame', `WOAF:${trackData.url.replace(':', `${colonEscapeChar}:`)}`,  // file webpage
-    '--url-frame', `WPUB:${trackData.publisher.url.replace(':', `${colonEscapeChar}:`)}`,  // publisher webpage
+    '--url-frame', `WOAF:${trackData.url.replace(':', `${colonEscapeChar}:`)}`, // file webpage
+    '--url-frame', `WPUB:${trackData.publisher.url.replace(':', `${colonEscapeChar}:`)}`, // publisher webpage
     '--bpm', trackData.bpm,
-    '--text-frame', `TKEY:${trackData.key}`, '--user-text-frame', `INITIALKEY:${trackData.key}`,  // TKEY is not recoginzed in foobar2000
-    '--user-text-frame', `CATALOGNUMBER:${trackData.album.catalogNumber}`, '--user-text-frame', `CATALOG #:${trackData.album.catalogNumber}`,  // https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
-    '--add-image', `${imagePaths.frontCover}:FRONT_COVER:Front Cover`,  // front cover
-    '--add-image', `${imagePaths.waveform}:BRIGHT_COLORED_FISH:Waveform`,  // waveform
-    '--add-image', `${imagePaths.publisherLogotype}:PUBLISHER_LOGO:Publisher Logotype`,  // publisher logo
+    '--text-frame', `TKEY:${trackData.key}`, '--user-text-frame', `INITIALKEY:${trackData.key}`, // TKEY is not recoginzed in foobar2000
+    '--user-text-frame', `CATALOGNUMBER:${trackData.album.catalogNumber}`, '--user-text-frame', `CATALOG #:${trackData.album.catalogNumber}`, // https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
+    '--add-image', `${imagePaths.frontCover}:FRONT_COVER:Front Cover`, // front cover
+    '--add-image', `${imagePaths.waveform}:BRIGHT_COLORED_FISH:Waveform`, // waveform
+    '--add-image', `${imagePaths.publisherLogotype}:PUBLISHER_LOGO:Publisher Logotype`, // publisher logo
     '--genre', trackData.genre,
-    '--publisher', trackData.publisher.name, '--text-frame', `TIT1:${trackData.publisher.name}`,  // TIT1 => CONTENTGROUP
+    '--publisher', trackData.publisher.name, '--text-frame', `TIT1:${trackData.publisher.name}`, // TIT1 => CONTENTGROUP
     // '--unique-file-id', `http${colonEscapeChar}://www.id3.org/dummy/ufid.html:${trackData.ufid}`,
     '--unique-file-id', `${DOMAIN_URL.replace(':', `${colonEscapeChar}:`)}:${trackData.ufid}`,
-    '--remove-frame', 'PRIV', '--remove-all-comments',  // remove personal info: https://aaronk.me/removing-personal-information-from-mp3s-bought-off-amazon/
-    '--text-frame', 'TAUT:',  // remove frame incompatible with v2.4
-    '--preserve-file-times',  // do not update file modification times
-    trackPath
+    '--remove-frame', 'PRIV', '--remove-all-comments', // remove personal info: https://aaronk.me/removing-personal-information-from-mp3s-bought-off-amazon/
+    '--text-frame', 'TAUT:', // remove frame incompatible with v2.4
+    '--preserve-file-times', // do not update file modification times
+    trackPath,
   ];
 
   if (id3v2) {
@@ -381,7 +379,7 @@ const saveId3TagToFile = async (trackPath, trackData, { id3v2 = true, id3v1 = tr
   // Correct filename to match ID3 tag info:
   const correctedFilename = tools.replacePathForbiddenChars(`${trackData.artists} - ${trackData.title}${path.extname(trackPath)}`);
   fs.renameSync(trackPath, path.dirname(trackPath) + path.sep + correctedFilename);
-  console.log(`File was renamed to: ${correctedFilename}`);
+  logger.info(`File was renamed to: ${correctedFilename}`);
   // fs.rename(trackPath, path.dirname(trackPath) + path.sep + correctedFilename, (error) => {
   //   if (error) {
   //     console.error(`Couldn't rename ${trackFilename}`);
@@ -393,16 +391,16 @@ const saveId3TagToFile = async (trackPath, trackData, { id3v2 = true, id3v1 = tr
   fs.unlinkSync(imagePaths.frontCover);
   fs.unlinkSync(imagePaths.waveform);
   fs.unlinkSync(imagePaths.publisherLogotype);
-}
+};
 
 const executeEyeD3Tool = (version, options, filename, verbose = false) => {
   if (!['1.0', '1.1', '2.3', '2.4'].includes(version)) {
-    console.error(`Wrong version of ID3 tag was specified: ${version}`);
+    logger.error(`Wrong version of ID3 tag was specified: ${version}`);
     return -1;
   }
   const child = childProcess.spawnSync('eyeD3', [
     '--v2',
-    `--to-v${version}`,  // overwrite other versions of id3
+    `--to-v${version}`, // overwrite other versions of id3
     ...options,
   ], {
     encoding: 'utf8',
@@ -415,8 +413,10 @@ const executeEyeD3Tool = (version, options, filename, verbose = false) => {
   // } else if (child.stderr) {
   //   console.error(`Error occured when saving ID3v${version} tag:`);
   } else {
-    console.log(verbose ? child.stdout : `ID3v${version} tag was saved to ${filename}`);
+    logger.info(verbose ? child.stdout : `ID3v${version} tag was saved to ${filename}`);
   }
+
+  return 0;
 };
 
 processAllFilesInDirectory(tracksDirectory);
