@@ -1,15 +1,10 @@
-'use strict';
-
-
 // TODO: CREATE DIRECTORIES FOR LOGS !!!!!!!!!!!!!
-
 
 import * as winston from 'winston';
 import * as process from 'process';
-import * as fs from 'fs';
 
 const level = process.env.LOG_LEVEL || 'debug';
-const colorizer = winston.format.colorize();
+// const colorizer = winston.format.colorize();
 
 // const loggerFormat = winston.format.printf(({ level, message, timestamp }) => {
 //   // return `${new Date(timestamp).toLocaleTimeString()} ${level.toUpperCase()}: ${message}`;
@@ -17,14 +12,14 @@ const colorizer = winston.format.colorize();
 // });
 
 const options = {
-  level: level,
+  level,
   // format: winston.format.json(),
   transports: [
     new winston.transports.Console({
       level: 'info',
       format: winston.format.combine(
         // winston.format.printf(info => `${info.level.toUpperCase()}: ${info.message}`),
-        winston.format.printf(info => info.message),
+        winston.format.printf((info) => info.message),
         winston.format.colorize({ all: true }),
       ),
     }),
@@ -38,16 +33,16 @@ const options = {
         // // winston.format.json(),
         // winston.format.align(),
         winston.format.timestamp({ format: 'YY.MM.DD HH:MM:SS' }),
-        winston.format.printf(info => `${info.timestamp} ${info.level.toUpperCase()}: ${info.message}`),
+        winston.format.printf((info) => `${info.timestamp} ${info.level.toUpperCase()}: ${info.message}`),
         // winston.format.colorize({ all: true }),
-      )
+      ),
     }),
     new winston.transports.File({ filename: './logs/combined.log' }),
   ],
   exceptionHandlers: [
-    new winston.transports.File({ filename: './logs/exceptions.log' })
+    new winston.transports.File({ filename: './logs/exceptions.log' }),
   ],
-}
+};
 
 // winston.addColors({
 //   error: 'red',
