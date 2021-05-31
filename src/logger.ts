@@ -16,7 +16,7 @@ const options = {
   // format: winston.format.json(),
   transports: [
     new winston.transports.Console({
-      level: 'info',
+      level: 'silly',
       format: winston.format.combine(
         // winston.format.printf(info => `${info.level.toUpperCase()}: ${info.message}`),
         winston.format.printf((info) => info.message),
