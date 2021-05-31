@@ -62,8 +62,7 @@ export function splitTrackNameToKeywords(name: string | Array<string>): Array<st
   let nameComputed = (name instanceof Array) ? name.join(' ') : name;
   nameComputed = nameComputed.trim(); // remove spaces at the beggining & end
   nameComputed = nameComputed.replace(/\s+[-–&]\s+|\s+/mgi, ' ');
-  // nameComputed = nameComputed.replace(/[\(\)\[\],]|\.[\w\d]+?$/mgi, ''); // +? => non-greedy for file extension match
-  // => don't work with: Lust 2.1.mp3
+  // nameComputed = nameComputed.replace(/[\(\)\[\],]|\.[\w\d]+?$/mgi, ''); // +? => non-greedy for file extension match // => don't work with: Lust 2.1.mp3
   nameComputed = nameComputed.replace(/[()[\],]|\.mp3$/mgi, ''); // +? => non-greedy for file extension match
   return Array.from(new Set(nameComputed.split(' '))); // set to avoid repetitions
   // return name.match(/\b([\w\d]+)\b/mgi);

@@ -11,7 +11,7 @@
     "airbnb-typescript/base"
   ],
   "rules": {
-    "max-len": ["error", { "code": 150 }],
+    "max-len": ["error", { "code": 150, "comments": 200 }],
     "no-restricted-syntax": ["error",
       {
         "selector": "ForInStatement",
