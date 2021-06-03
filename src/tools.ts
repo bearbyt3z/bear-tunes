@@ -162,7 +162,7 @@ export function getRandomString(length = 20): string {
   return crypto.randomBytes(length).toString('hex');
 }
 
-export function isInteger(value: unknown) {
+export function isInteger(value: unknown): boolean {
   return !Number.isNaN(value) && parseInt(Number(value).toString(), 10) === value && !Number.isNaN(parseInt(value.toString(), 10));
 }
 

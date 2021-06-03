@@ -30,7 +30,7 @@ const tracksDirectory = process.argv[2] || '.';
 const converter = new BearTunesConverter({ verbose: true });
 const tagger = new BearTunesTagger({ verbose: false });
 
-const processAllFilesInDirectory = async (directory: string) => {
+const processAllFilesInDirectory = async (directory: string): Promise<void> => {
   if (!fs.existsSync(tracksDirectory)) {
     // logger.silly(`Path specified doesn't exist: ${tracksDirectory}`);
     // logger.verbose(`Path specified doesn't exist: ${tracksDirectory}`);

@@ -225,7 +225,7 @@ export class BearTunesTagger {
     };
   }
 
-  async saveId3TagToFile(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}) {
+  async saveId3TagToFile(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}): Promise<void> {
     const imagePaths: TrackArtworkFiles = {};
     await tools.downloadFile(trackData.publisher?.logotype, null, (filename: string) => {
       if (verbose) {
@@ -365,7 +365,7 @@ export class BearTunesTagger {
     Object.values(imagePaths).forEach((imagePath) => path && fs.unlinkSync(imagePath));
   }
 
-  static executeEyeD3Tool(version: ID3Version, options: string[], filename: string, verbose: boolean = false) {
+  static executeEyeD3Tool(version: ID3Version, options: string[], filename: string, verbose: boolean = false): number {
     // if (!['1.0', '1.1', '2.3', '2.4'].includes(version)) {
     //   logger.error(`Wrong version of ID3 tag was specified: ${version}`);
     //   return -1;
