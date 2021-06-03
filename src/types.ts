@@ -1,33 +1,33 @@
 // type definitions
 
 export interface TrackInfo {
-  url?: string,
+  url?: URL,
   artists?: string, // TODO: change to array
   title?: string,
   remixers?: string,
   released?: string, // TODO: change to Date type
-  year?: string, // TODO: change to number/bigint/Date?
+  year?: number,
   genre?: string,
-  bpm?: string, // TODO: int?
+  bpm?: number,
   key?: string,
   ufid?: string,
-  waveform?: string, // TODO: URL
+  waveform?: URL,
   publisher?: PublisherInfo,
   album?: AlbumInfo,
 }
 
 export interface AlbumInfo {
   artists?: string, // TODO: array
-  title: string,
+  title?: string,
   catalogNumber?: string, // TODO: int?
-  trackNumber?: string, // TODO: int
-  trackTotal?: string, // TODO: int
-  url?: string, // TODO: URL
-  artwork?: string, // TODO: URL
+  trackNumber?: number,
+  trackTotal?: number,
+  url?: URL,
+  artwork?: URL,
 }
 
 export interface PublisherInfo {
   name: string,
-  url?: string, // TODO: URL
-  logotype?: string, // TODO: URL
+  url?: URL,
+  logotype?: URL,
 }

@@ -1,19 +1,20 @@
-export interface ConverterResult {
-  status: number,
-  error: Error | null,
-  lameStdout: string | null,
-  lameStderr: string | null,
-  outputPath: string,
+export interface BearTunesConverterResult {
+  status: number | null,
+  error: Error | undefined,
+  lameStdout: string | undefined,
+  lameStderr: string | undefined,
+  outputPath: string | undefined,
 }
 
-export interface ConverterOptions {
-  bitrateMethod?: BitrateMethod,
-  bitrateValue?: number, // for CBR & ABR
-  bitrateValueMinimum?: number, // for VBR
-  bitrateValueMaximum?: number, // for VBR
-  quality?: Quality,
-  channelMode?: ChannelMode,
-  replayGain?: ReplayGain,
+export interface BearTunesConverterOptions {
+  bitrateMethod: BitrateMethod,
+  bitrateValue: number, // for CBR & ABR
+  bitrateValueMinimum: number, // for VBR
+  bitrateValueMaximum: number, // for VBR
+  quality: Quality,
+  channelMode: ChannelMode,
+  replayGain: ReplayGain,
+  verbose: boolean,
 }
 
 export enum BitrateMethod {

@@ -17,7 +17,7 @@ import 'process'; // to assign process.exitCode (if imported with "* as process"
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { BearTunesConverter, ConverterResult } from './converter';
+import { BearTunesConverter } from './converter';
 import { BearTunesTagger } from './tagger';
 
 const logger = require('./logger');
@@ -27,10 +27,10 @@ const logger = require('./logger');
 
 const tracksDirectory = process.argv[2] || '.';
 
-const converter = new BearTunesConverter({}, true);
-const tagger = new BearTunesTagger();
+const converter = new BearTunesConverter({ verbose: true });
+const tagger = new BearTunesTagger({ verbose: false });
 
-const processAllFilesInDirectory = async (directory) => {
+const processAllFilesInDirectory = async (directory: string) => {
   if (!fs.existsSync(tracksDirectory)) {
     // logger.silly(`Path specified doesn't exist: ${tracksDirectory}`);
     // logger.verbose(`Path specified doesn't exist: ${tracksDirectory}`);
@@ -81,15 +81,15 @@ const processAllFilesInDirectory = async (directory) => {
         noFilesWereProcessed = false;
         logger.silly('########################################');
         logger.info(`Converting flac to mp3: ${filePath}`);
-        const result: ConverterResult = converter.flacToMp3(filePath);
-        if (result.status === 0) {
+        const result = converter.flacToMp3(filePath);
+        if (result.status === 0 && result.outputPath) {
           logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
           flacFiles.push(result.outputPath);
           await tagger.processTrack(result.outputPath);
         } else {
-          logger.warn(
-            `Converting file ${filePath} failed with code ${result.status} and message:\n${result.error?.message}:\nstderr: ${result.lameStderr}`,
-          );
+          let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
+          warnMessage = `${result.error?.message}:\nLame stderr: ${result.lameStderr}`;
+          logger.warn(warnMessage);
         }
       }
     }

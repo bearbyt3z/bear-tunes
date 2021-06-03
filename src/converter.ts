@@ -4,14 +4,14 @@ import * as path from 'path';
 
 import { TrackInfo } from './types';
 import {
-  ConverterResult, ConverterOptions,
+  BearTunesConverterResult, BearTunesConverterOptions,
   BitrateMethod, Quality, ChannelMode, ReplayGain,
   FlacImageBlockExport, FlacImageBlockType,
 } from './converter.types';
 
 // exporting types, so they will be included in the converter import
 export {
-  ConverterResult, ConverterOptions,
+  BearTunesConverterResult, BearTunesConverterOptions,
   BitrateMethod, Quality, ChannelMode, ReplayGain,
   FlacImageBlockExport, FlacImageBlockType,
 };
@@ -19,7 +19,7 @@ export {
 const logger = require('./logger');
 const tools = require('./tools');
 
-const defaultConverterOptions: ConverterOptions = {
+const defaultConverterOptions: BearTunesConverterOptions = {
   bitrateMethod: BitrateMethod.CBR,
   bitrateValue: 320,
   bitrateValueMinimum: 256,
@@ -27,25 +27,24 @@ const defaultConverterOptions: ConverterOptions = {
   quality: Quality.Q1,
   channelMode: ChannelMode.JointStereo,
   replayGain: ReplayGain.Accurate,
-};
+  verbose: false,
+} as const;
 
 export class BearTunesConverter {
-  converterOptions: ConverterOptions;
+  options: BearTunesConverterOptions;
 
-  verbose: boolean;
-
-  constructor(options: ConverterOptions = {}, verbose: boolean = false) {
-    this.converterOptions = Object.assign(options, defaultConverterOptions);
-    this.verbose = verbose;
+  constructor(options: Partial<BearTunesConverterOptions> = {}) {
+    this.options = defaultConverterOptions;
+    Object.assign(this.options, options);
   }
 
-  flacToMp3(flacFilePath: string, outputPath: string | null = null, deleteFlacAfterConvertion: boolean = false): ConverterResult {
-    const result: ConverterResult = {
+  flacToMp3(flacFilePath: string, outputPath: string | undefined = undefined, deleteFlacAfterConvertion: boolean = false): BearTunesConverterResult {
+    const result: BearTunesConverterResult = {
       status: 0,
-      error: null,
-      lameStdout: null,
-      lameStderr: null,
-      outputPath: '',
+      error: undefined,
+      lameStdout: undefined,
+      lameStderr: undefined,
+      outputPath: undefined,
     };
 
     try {
@@ -58,14 +57,14 @@ export class BearTunesConverter {
       result.error = new ReferenceError(`${this.constructor.name}: Cannot access file ${flacFilePath} (incorrect path?)`);
     }
 
-    let outputPathComputed;
+    let outputPathComputed = outputPath;
 
     try {
-      if (outputPath === null) {
+      if (outputPathComputed === undefined) {
         outputPathComputed = flacFilePath.replace(/\.flac$/, '.mp3');
-      } else if (fs.lstatSync(outputPath).isDirectory()) {
-        outputPathComputed = outputPath.replace(/\/+$/, path.sep) + path.basename(flacFilePath).replace(/\.flac$/, '.mp3');
-      } else if (fs.lstatSync(outputPath).isFile() && !flacFilePath.match(/\.mp3$/)) {
+      } else if (fs.lstatSync(outputPathComputed).isDirectory()) {
+        outputPathComputed = outputPathComputed.replace(/\/+$/, path.sep) + path.basename(flacFilePath).replace(/\.flac$/, '.mp3');
+      } else if (fs.lstatSync(outputPathComputed).isFile() && !flacFilePath.match(/\.mp3$/)) {
         result.status = 103;
         result.error = new TypeError(`${this.constructor.name}: Specified output path ${outputPath} is a file but does not have *.mp3 extension`);
       } else {
@@ -77,52 +76,68 @@ export class BearTunesConverter {
       result.error = new ReferenceError(`${this.constructor.name}: Cannot access file ${outputPath} (incorrect path?)`);
     }
 
-    result.outputPath = outputPathComputed;
-
     if (result.status !== 0) {
       return result;
     }
 
-    let bitrateOption = this.converterOptions.bitrateMethod.toString();
-    switch (this.converterOptions.bitrateMethod) {
+    result.outputPath = outputPathComputed;
+
+    let bitrateOption = this.options.bitrateMethod.toString();
+    switch (this.options.bitrateMethod) {
       default:
       case BitrateMethod.CBR:
-        bitrateOption += ` -b${this.converterOptions.bitrateValue.toString()}`;
+        bitrateOption += ` -b${this.options.bitrateValue.toString()}`;
         break;
       case BitrateMethod.VBR:
-        bitrateOption += ` -b${this.converterOptions.bitrateValueMinimum.toString()} -B${this.converterOptions.bitrateValueMaximum.toString()}`;
+        bitrateOption += ` -b${this.options.bitrateValueMinimum.toString()} -B${this.options.bitrateValueMaximum.toString()}`;
         break;
       case BitrateMethod.ABR:
-        bitrateOption += ` ${this.converterOptions.bitrateValue.toString()}`;
+        bitrateOption += ` ${this.options.bitrateValue.toString()}`;
         break;
     }
 
     const lameOptions = [
       bitrateOption,
-      `-m ${this.converterOptions.channelMode.toString()}`,
-      this.converterOptions.quality.toString(),
-      this.converterOptions.replayGain.toString(),
+      `-m ${this.options.channelMode.toString()}`,
+      this.options.quality.toString(),
+      this.options.replayGain.toString(),
     ];
 
     const lameOptionsJoined = lameOptions.join(' ');
 
-    if (this.verbose) {
+    if (this.options.verbose) {
       logger.info(`Using following lame options: ${lameOptionsJoined}`);
     }
 
     const flacTrackInfo = this.extractTagsFromFlac(flacFilePath);
-    const tagOptions = [
-      '--add-id3v2',
-      `--tt "${flacTrackInfo.title}"`,
-      `--ta "${flacTrackInfo.artists}"`,
-      `--tl "${flacTrackInfo.album.title}"`,
-      `--tn "${flacTrackInfo.album.trackNumber}/${flacTrackInfo.album.trackTotal}"`,
-      `--tg "${flacTrackInfo.genre}"`,
-      `--ty "${flacTrackInfo.year}"`,
-    ];
-
-    if (flacTrackInfo.released && flacTrackInfo.released.length > 0) {
+    const tagOptions = ['--add-id3v2'];
+    if (flacTrackInfo.title) {
+      tagOptions.push(`--tt "${flacTrackInfo.title}"`);
+    }
+    if (flacTrackInfo.artists) {
+      tagOptions.push(`--ta "${flacTrackInfo.artists}"`);
+    }
+    if (flacTrackInfo.genre) {
+      tagOptions.push(`--tg "${flacTrackInfo.genre}"`);
+    }
+    if (flacTrackInfo.year) {
+      tagOptions.push(`--ty "${flacTrackInfo.year}"`);
+    }
+    if (flacTrackInfo.released) {
       tagOptions.push(`--tv TORY=${flacTrackInfo.released}`);
+    }
+
+    if (flacTrackInfo.album) {
+      if (flacTrackInfo.album.title) {
+        tagOptions.push(`--tl "${flacTrackInfo.album.title}"`);
+      }
+      if (flacTrackInfo.album.trackNumber) {
+        let albumNumbers = flacTrackInfo.album.trackNumber.toString();
+        if (flacTrackInfo.album.trackTotal) {
+          albumNumbers += `/${flacTrackInfo.album.trackTotal.toString()}`;
+        }
+        tagOptions.push(`--tn "${albumNumbers}"`);
+      }
     }
 
     // lame codec supports only front cover option:
@@ -131,9 +146,9 @@ export class BearTunesConverter {
       tagOptions.push(`--ti "${flacImages[0].imagePath}"`);
     }
 
-    const tagOptionsJoined = tagOptions.join(' ');
+    const tagOptionsJoined = (tagOptions.length > 1) ? tagOptions.join(' ') : ''; // length > 1 means there is at least one tag entry to set (the fist one is --add-id3v2)
 
-    if (this.verbose) {
+    if (this.options.verbose) {
       logger.info(`Using following tag options: ${tagOptionsJoined}`);
     }
 
@@ -142,7 +157,13 @@ export class BearTunesConverter {
       { shell: true, stdio: 'inherit' },
     );
 
-    flacImages.forEach((imageInfo) => fs.unlinkSync(imageInfo.imagePath));
+    flacImages.forEach((imageInfo) => imageInfo.imagePath && fs.unlinkSync(imageInfo.imagePath));
+
+    if (childResult.status === null) {
+      result.status = 106;
+      result.error = new Error(`Convertion failed due to a signal: ${childResult.signal ? childResult.signal : 'signal is null'}`);
+      return result;
+    }
 
     if (deleteFlacAfterConvertion) {
       fs.unlinkSync(flacFilePath);
@@ -174,19 +195,22 @@ export class BearTunesConverter {
     ]);
 
     if (metaflacResult.status !== 0) {
-      if (this.verbose) {
-        logger.error(`metaflac process returned with ${metaflacResult.status} code and stderr: ${metaflacResult.stderr.toString()}`);
+      if (this.options.verbose) {
+        logger.warn(`metaflac process returned with ${metaflacResult.status} code and stderr: ${metaflacResult.stderr.toString()}`);
       }
       return {};
     }
 
     const metaflacOutput = metaflacResult.stdout.toString();
     const dateTag = BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'date');
-    let year;
-    let released;
+    let year: number | undefined;
+    let released: string | undefined;
     if (dateTag && dateTag.length > 0) {
-      year = dateTag.match(/\d{4}/);
-      year = (year.length > 0) ? year[0] : undefined;
+      const yearMatch = dateTag.match(/\d{4}/);
+      if (yearMatch !== null && yearMatch.length > 0) {
+        year = Number(yearMatch[0]);
+        if (Number.isNaN(year)) year = undefined;
+      }
       released = dateTag; // TODO: check if it is a real date
     }
 
@@ -199,8 +223,8 @@ export class BearTunesConverter {
       album: {
         artists: BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'albumartist', true),
         title: BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'album'),
-        trackNumber: BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'tracknumber'),
-        trackTotal: BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'tracktotal'),
+        trackNumber: tools.getPositiveIntegerOrUndefined(BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'tracknumber')),
+        trackTotal: tools.getPositiveIntegerOrUndefined(BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'tracktotal')),
       },
     };
 
@@ -214,12 +238,12 @@ export class BearTunesConverter {
       regexFlags += 'g';
       joinString = ', ';
     }
-    const matchArray = inputText.match(new RegExp(`(?<=^${tagName}=).*$`, regexFlags));
-    return (matchArray.length > 0) ? matchArray.join(joinString) : undefined;
+    const matchArray = inputText.match(new RegExp(`(?<=^${tagName}=).+$`, regexFlags));
+    return (matchArray !== null && matchArray.length > 0) ? matchArray.join(joinString) : undefined;
   }
 
-  static extractArtworkFromFlac(flacFilePath: string, imageBlockTypes: Array<FlacImageBlockType>): Array<FlacImageBlockExport> {
-    const result: Array<FlacImageBlockExport> = [];
+  static extractArtworkFromFlac(flacFilePath: string, imageBlockTypes: FlacImageBlockType[]): FlacImageBlockExport[] {
+    const result: FlacImageBlockExport[] = [];
 
     const flacImageBlocks = BearTunesConverter.getFlacImageBlockExport(flacFilePath);
     if (flacImageBlocks.length < 1) {
@@ -250,8 +274,8 @@ export class BearTunesConverter {
     return result;
   }
 
-  static getFlacImageBlockExport(flacFilePath: string): Array<FlacImageBlockExport> {
-    const result: Array<FlacImageBlockExport> = [];
+  static getFlacImageBlockExport(flacFilePath: string): FlacImageBlockExport[] {
+    const result: FlacImageBlockExport[] = [];
 
     const metaflacResult = childProcess.spawnSync(
       `metaflac --list --block-type=PICTURE "${flacFilePath}" | grep -A8 -i metadata`,
@@ -263,8 +287,8 @@ export class BearTunesConverter {
     }
 
     const stdoutAsString = metaflacResult.stdout.toString();
-    const blockNumbers = stdoutAsString.match(/(?<=METADATA block #)\d/gi);
-    const mimeTypes = stdoutAsString.match(/(?<=MIME type: )[a-z]*\/[a-z]*/gi);
+    const blockNumbers = stdoutAsString.match(/(?<=METADATA block #)\d/gi) ?? [];
+    const mimeTypes = stdoutAsString.match(/(?<=MIME type: )[a-z]*\/[a-z]*/gi) ?? [];
 
     const minLength = Math.min(blockNumbers.length, mimeTypes.length);
 
