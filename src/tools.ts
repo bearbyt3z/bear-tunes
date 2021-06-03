@@ -93,21 +93,28 @@ export function regExpEscape(str: string): string {
 }
 
 // if title provided => remove featuring artists from artist list
-export function createArtistsList(artistsNode: HTMLElement | null, title?: string): string {
-  if (!artistsNode) return ''; // '' => delete frame if there is no artist information
+export function createArtistsArray(artistsNode: HTMLElement | null, title?: string): string[] {
+  const result: string[] = []; // => delete frame if there is no artist information
+
+  if (!artistsNode) return result;
 
   const artistsLinks = artistsNode.querySelectorAll('a');
   if (artistsLinks.length > 0) {
-    return Array.from(artistsLinks).reduce((result: string[], link) => {
+    Array.from(artistsLinks).forEach((link) => {
       const artist = link.textContent?.trim();
       if (artist && artist.length > 0
         && (title === undefined || title.search(new RegExp(`(feat|ft).+${regExpEscape(artist)}`, 'i')) < 0)) { // we have to search for feat/ft before artist name
         result.push(artist);
       }
-      return result;
-    }, []).join(', ');
+    });
+  } else {
+    const artistsNodeContent = artistsNode.textContent?.trim();
+    if (artistsNodeContent && artistsNodeContent.length > 0) {
+      result.push(artistsNodeContent);
+    }
   }
-  return artistsNode.textContent?.trim() ?? '';
+
+  return result;
   // return (artistsLinks.length > 0) ? Array.from(artistsLinks).map(link => link.textContent.trim())).join(', ') : artistsNode.textContent.trim();
 }
 

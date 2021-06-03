@@ -2,9 +2,9 @@
 
 export interface TrackInfo {
   url?: URL,
-  artists?: string, // TODO: change to array
+  artists?: string[],
   title?: string,
-  remixers?: string,
+  remixers?: string[],
   released?: string, // TODO: change to Date type
   year?: number,
   genre?: string,
@@ -17,7 +17,7 @@ export interface TrackInfo {
 }
 
 export interface AlbumInfo {
-  artists?: string, // TODO: array
+  artists?: string[],
   title?: string,
   catalogNumber?: string, // TODO: int?
   trackNumber?: number,

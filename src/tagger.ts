@@ -116,8 +116,8 @@ export class BearTunesTagger {
         trackNode.querySelector('.buk-track-primary-title'),
         trackNode.querySelector('.buk-track-remixed'),
       );
-      const trackArtists = tools.createArtistsList(trackNode.querySelector('.buk-track-artists'), trackTitle);
-      const trackRemixers = tools.createArtistsList(trackNode.querySelector('.buk-track-remixers'));
+      const trackArtists = tools.createArtistsArray(trackNode.querySelector('.buk-track-artists'), trackTitle);
+      const trackRemixers = tools.createArtistsArray(trackNode.querySelector('.buk-track-remixers'));
       let trackReleased = trackNode.querySelector('.buk-track-released');
       trackReleased = trackReleased && trackReleased.textContent;
 
@@ -157,8 +157,8 @@ export class BearTunesTagger {
       trackDoc.querySelector('.interior-title h1:not(.remixed)'),
       trackDoc.querySelector('.interior-title h1.remixed'),
     );
-    const remixers = tools.createArtistsList(trackDoc.querySelector('.interior-track-artists:nth-of-type(2) .value'));
-    const artists = tools.createArtistsList(trackDoc.querySelector('.interior-track-artists .value'), title);
+    const remixers = tools.createArtistsArray(trackDoc.querySelector('.interior-track-artists:nth-of-type(2) .value'));
+    const artists = tools.createArtistsArray(trackDoc.querySelector('.interior-track-artists .value'), title);
     const released = trackDoc.querySelector('.interior-track-content-item.interior-track-released .value').textContent.trim();
     const year = tools.getPositiveIntegerOrUndefined(released.match(/\d{4}/));
     const bpm = tools.getPositiveIntegerOrUndefined(trackDoc.querySelector('.interior-track-content-item.interior-track-bpm .value').textContent.trim());
@@ -197,7 +197,7 @@ export class BearTunesTagger {
 
   static async extractAlbumData(albumUrl: URL, trackId: string): Promise<AlbumInfo> {
     const albumDoc = await tools.fetchWebPage(albumUrl);
-    const artists = tools.createArtistsList(albumDoc.querySelector('.interior-release-chart-content .interior-release-chart-content-list .interior-release-chart-content-item .value'));
+    const artists = tools.createArtistsArray(albumDoc.querySelector('.interior-release-chart-content .interior-release-chart-content-list .interior-release-chart-content-item .value'));
     const title = albumDoc.querySelector('.interior-release-chart-content h1').textContent;
     const catalogNumber = albumDoc.querySelector('.interior-release-chart-content-item--desktop .interior-release-chart-content-item:nth-of-type(3) .value').textContent;
     const trackNumber = tools.getPositiveIntegerOrUndefined(albumDoc.querySelector(`.interior-release-chart-content .bucket-item.ec-item.track[data-ec-id="${trackId}"] .buk-track-num`).textContent);
@@ -258,21 +258,21 @@ export class BearTunesTagger {
       '--preserve-file-times', // do not update file modification times
     ];
 
-    if (trackData.artists) {
-      eyeD3Options.push('--artist', trackData.artists);
+    if (trackData.artists && trackData.artists.length > 0) {
+      eyeD3Options.push('--artist', trackData.artists.join(', '));
       // '--artist', trackData.artists.replace('ø', 'o'),
     }
     if (trackData.title) {
       eyeD3Options.push('--title', trackData.title);
     }
-    if (trackData.remixers) {
-      eyeD3Options.push('--text-frame', `TPE4:${trackData.remixers}`); // TPE4 => REMIXEDBY
+    if (trackData.remixers && trackData.remixers.length > 0) {
+      eyeD3Options.push('--text-frame', `TPE4:${trackData.remixers.join(', ')}`); // TPE4 => REMIXEDBY
     }
     if (trackData.album?.title) {
       eyeD3Options.push('--album', trackData.album.title);
     }
-    if (trackData.album?.artists) {
-      eyeD3Options.push('--album-artist', trackData.album.artists);
+    if (trackData.album && trackData.album.artists && trackData.album.artists.length > 0) {
+      eyeD3Options.push('--album-artist', trackData.album.artists.join(', '));
     }
     if (trackData.album?.trackNumber) {
       let albumNumbers = trackData.album.trackNumber.toString();

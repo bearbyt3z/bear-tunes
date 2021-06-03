@@ -114,8 +114,8 @@ export class BearTunesConverter {
     if (flacTrackInfo.title) {
       tagOptions.push(`--tt "${flacTrackInfo.title}"`);
     }
-    if (flacTrackInfo.artists) {
-      tagOptions.push(`--ta "${flacTrackInfo.artists}"`);
+    if (flacTrackInfo.artists && flacTrackInfo.artists.length > 0) {
+      tagOptions.push(`--ta "${flacTrackInfo.artists.join(', ')}"`);
     }
     if (flacTrackInfo.genre) {
       tagOptions.push(`--tg "${flacTrackInfo.genre}"`);
@@ -202,7 +202,7 @@ export class BearTunesConverter {
     }
 
     const metaflacOutput = metaflacResult.stdout.toString();
-    const dateTag = BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'date');
+    const dateTag = BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'date');
     let year: number | undefined;
     let released: string | undefined;
     if (dateTag && dateTag.length > 0) {
@@ -215,31 +215,34 @@ export class BearTunesConverter {
     }
 
     const result: TrackInfo = {
-      artists: BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'artist', true),
-      title: BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'title'),
-      genre: BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'genre'),
+      artists: BearTunesConverter.extractMultiTagFromMetaflacOutput(metaflacOutput, 'artist'),
+      title: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'title'),
+      genre: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'genre'),
       year,
       released,
       album: {
-        artists: BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'albumartist', true),
-        title: BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'album'),
-        trackNumber: tools.getPositiveIntegerOrUndefined(BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'tracknumber')),
-        trackTotal: tools.getPositiveIntegerOrUndefined(BearTunesConverter.extractFlacTagFromString(metaflacOutput, 'tracktotal')),
+        artists: BearTunesConverter.extractMultiTagFromMetaflacOutput(metaflacOutput, 'albumartist'),
+        title: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'album'),
+        trackNumber: tools.getPositiveIntegerOrUndefined(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracknumber')),
+        trackTotal: tools.getPositiveIntegerOrUndefined(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracktotal')),
       },
     };
 
     return result;
   }
 
-  static extractFlacTagFromString(inputText: string, tagName: string, multiOccurrence: boolean = false): string | undefined {
-    let regexFlags = 'm';
-    let joinString = '';
-    if (multiOccurrence) {
-      regexFlags += 'g';
-      joinString = ', ';
-    }
-    const matchArray = inputText.match(new RegExp(`(?<=^${tagName}=).+$`, regexFlags));
-    return (matchArray !== null && matchArray.length > 0) ? matchArray.join(joinString) : undefined;
+  static extractSingleTagFromMetaflacOutput(metaflacOutput: string, tagName: string): string | undefined {
+    const matchArray = BearTunesConverter.getMetaflacTagEntries(metaflacOutput, tagName, false);
+    return (matchArray !== null && matchArray.length > 0) ? matchArray[0] : undefined;
+  }
+
+  static extractMultiTagFromMetaflacOutput(metaflacOutput: string, tagName: string): string[] | undefined {
+    const matchArray = BearTunesConverter.getMetaflacTagEntries(metaflacOutput, tagName, true);
+    return (matchArray !== null && matchArray.length > 0) ? matchArray : undefined;
+  }
+
+  static getMetaflacTagEntries(metaflacOutput: string, tagName: string, multi: boolean = false): string[] | null {
+    return metaflacOutput.match(new RegExp(`(?<=^${tagName}=).+$`, multi ? 'gm' : 'm'));
   }
 
   static extractArtworkFromFlac(flacFilePath: string, imageBlockTypes: FlacImageBlockType[]): FlacImageBlockExport[] {
