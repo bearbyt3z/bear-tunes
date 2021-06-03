@@ -1,15 +1,15 @@
 {
   "name": "bear-tunes",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node ./dist/main.js",
     "tsc": "npx tsc",
-    "build": "webpack --config webpack.config.prod.js",
-    "build-dev": "webpack --config webpack.config.dev.js",
-    "build-start": "npm run build-dev && npm run start"
+    "build-prod": "webpack --config webpack.config.prod.js",
+    "build": "webpack --config webpack.config.dev.js",
+    "build-start": "npm run build && npm run start"
   },
   "author": "bearbyt3z",
   "license": "GPL-3.0-or-later",
