@@ -11,6 +11,7 @@
     "airbnb-typescript/base"
   ],
   "rules": {
+    "@typescript-eslint/no-explicit-any": "error",
     "max-len": ["error", {
       "code": 150,
       "ignoreComments": true,

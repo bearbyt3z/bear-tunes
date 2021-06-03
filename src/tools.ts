@@ -133,7 +133,7 @@ export function createKey(keyNode: HTMLElement): string | undefined {
     .replace('min', 'm');
 }
 
-export function isString(value: any): boolean {
+export function isString(value: unknown): boolean {
   return typeof value === 'string' || value instanceof String;
 }
 
