@@ -5,7 +5,7 @@ export interface TrackInfo {
   artists?: string[],
   title?: string,
   remixers?: string[],
-  released?: string, // TODO: change to Date type
+  released?: Date,
   year?: number,
   genre?: string,
   bpm?: number,
@@ -19,7 +19,7 @@ export interface TrackInfo {
 export interface AlbumInfo {
   artists?: string[],
   title?: string,
-  catalogNumber?: string, // TODO: int?
+  catalogNumber?: string,
   trackNumber?: number,
   trackTotal?: number,
   url?: URL,

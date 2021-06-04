@@ -102,7 +102,7 @@ export class BearTunesTagger {
     const winner: MatchingTrack = {
       score: -1,
       scoreKeywords: [],
-      released: '2999-12-12', // some far away date...
+      // released: new Date('2999-12-12'), // some far away date...
       // title: '',
       // artists: '',
       // remixers: '',
@@ -118,8 +118,7 @@ export class BearTunesTagger {
       );
       const trackArtists = tools.createArtistsArray(trackNode.querySelector('.buk-track-artists'), trackTitle);
       const trackRemixers = tools.createArtistsArray(trackNode.querySelector('.buk-track-remixers'));
-      let trackReleased = trackNode.querySelector('.buk-track-released');
-      trackReleased = trackReleased && trackReleased.textContent;
+      const trackReleased = new Date(trackNode.querySelector('.buk-track-released')?.textContent);
 
       const trackKeywords = tools.splitTrackNameToKeywords([trackArtists, trackTitle]);
       // const trackKeywords = Array.from(new Set([
@@ -136,7 +135,7 @@ export class BearTunesTagger {
       // console.log(`Track: ${trackArtists} - ${trackTitle} + (${trackRemixed})`);
       // console.log('Intersection:', keywordsIntersection);
       const score = keywordsIntersection.length;
-      if ((score > winner.score) || ((score === winner.score) && (Date.parse(trackReleased) < Date.parse(winner.released ?? '')))) {
+      if ((score > winner.score) || ((score === winner.score) && (!winner.released || trackReleased < winner.released))) {
         // winner.node = trackNode;
         winner.score = score;
         winner.scoreKeywords = keywordsIntersection;
@@ -159,8 +158,8 @@ export class BearTunesTagger {
     );
     const remixers = tools.createArtistsArray(trackDoc.querySelector('.interior-track-artists:nth-of-type(2) .value'));
     const artists = tools.createArtistsArray(trackDoc.querySelector('.interior-track-artists .value'), title);
-    const released = trackDoc.querySelector('.interior-track-content-item.interior-track-released .value').textContent.trim();
-    const year = tools.getPositiveIntegerOrUndefined(released.match(/\d{4}/));
+    const released = new Date(trackDoc.querySelector('.interior-track-content-item.interior-track-released .value').textContent.trim());
+    const year = tools.getPositiveIntegerOrUndefined(released.getFullYear());
     const bpm = tools.getPositiveIntegerOrUndefined(trackDoc.querySelector('.interior-track-content-item.interior-track-bpm .value').textContent.trim());
     const key = tools.createKey(trackDoc.querySelector('.interior-track-content-item.interior-track-key .value'));
     const genre = tools.createGenresList(trackDoc.querySelector('.interior-track-content-item.interior-track-genre'));
@@ -292,12 +291,13 @@ export class BearTunesTagger {
       eyeD3Options.push('--text-frame', `TYER:${trackData.year}`);
     }
     if (trackData.released) {
-      eyeD3Options.push('--text-frame', `TORY:${trackData.released}`);
-      eyeD3Options.push('--text-frame', `TRDA:${trackData.released}`);
-      eyeD3Options.push('--text-frame', `TDAT:${trackData.released}`);
-      eyeD3Options.push('--text-frame', `TDRC:${trackData.released}`);
-      eyeD3Options.push('--text-frame', `TDOR:${trackData.released}`);
-      eyeD3Options.push('--text-frame', `TDRL:${trackData.released}`);
+      const releasedString = tools.convertDateToString(trackData.released);
+      eyeD3Options.push('--text-frame', `TORY:${releasedString}`);
+      eyeD3Options.push('--text-frame', `TRDA:${releasedString}`);
+      eyeD3Options.push('--text-frame', `TDAT:${releasedString}`);
+      eyeD3Options.push('--text-frame', `TDRC:${releasedString}`);
+      eyeD3Options.push('--text-frame', `TDOR:${releasedString}`);
+      eyeD3Options.push('--text-frame', `TDRL:${releasedString}`);
       // '--release-date', trackData.released,
       // '--orig-release-date', trackData.released,
     }

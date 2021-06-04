@@ -124,7 +124,7 @@ export class BearTunesConverter {
       tagOptions.push(`--ty "${flacTrackInfo.year}"`);
     }
     if (flacTrackInfo.released) {
-      tagOptions.push(`--tv TORY=${flacTrackInfo.released}`);
+      tagOptions.push(`--tv TORY=${tools.convertDateToString(flacTrackInfo.released)}`);
     }
 
     if (flacTrackInfo.album) {
@@ -204,14 +204,14 @@ export class BearTunesConverter {
     const metaflacOutput = metaflacResult.stdout.toString();
     const dateTag = BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'date');
     let year: number | undefined;
-    let released: string | undefined;
+    let released: Date | undefined;
     if (dateTag && dateTag.length > 0) {
       const yearMatch = dateTag.match(/\d{4}/);
       if (yearMatch !== null && yearMatch.length > 0) {
         year = Number(yearMatch[0]);
         if (Number.isNaN(year)) year = undefined;
       }
-      released = dateTag; // TODO: check if it is a real date
+      released = new Date(dateTag);
     }
 
     const result: TrackInfo = {

@@ -177,3 +177,11 @@ export function getPositiveIntegerOrUndefined(str: string): number | undefined {
   const result = Number(str);
   return (isInteger(result) && result > 0) ? result : undefined;
 }
+
+function zeroPad(number: number): string {
+  return (number < 10) ? `0${number}` : number.toString();
+}
+
+export function convertDateToString(date: Date): string {
+  return `${date.getFullYear()}-${zeroPad(date.getMonth() + 1)}-${date.getDate()}`;
+}
