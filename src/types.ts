@@ -14,6 +14,7 @@ export interface TrackInfo {
   waveform?: URL,
   publisher?: PublisherInfo,
   album?: AlbumInfo,
+  details?: TrackDetails,
 }
 
 export interface AlbumInfo {
@@ -30,4 +31,8 @@ export interface PublisherInfo {
   name: string,
   url?: URL,
   logotype?: URL,
+}
+
+export interface TrackDetails {
+  duration: string, // seconds
 }

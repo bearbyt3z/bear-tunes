@@ -38,38 +38,43 @@ export class BearTunesTagger {
     Object.assign(this.options, options);
   }
 
-  async processTrack(trackPath: string): Promise<void> {
+  async processTrack(trackPath: string): Promise<TrackInfo> {
     const trackFilename = path.basename(trackPath);
     const trackFilenameWithoutExtension = trackFilename.replace(new RegExp(`${path.extname(trackFilename)}$`), '');
     const trackFilenameKeywords = tools.splitTrackNameToKeywords(trackFilenameWithoutExtension);
     logger.silly('########################################');
     logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
-    // console.log(this.extractId3Tag(trackPath));
     const trackUrlFilename = path.join(path.dirname(trackPath), `${trackFilenameWithoutExtension}.url`);
     let trackUrl: URL | null;
     if (fs.existsSync(trackUrlFilename)) {
       trackUrl = tools.getUrlFromFile(trackUrlFilename);
       if (trackUrl === null) {
         logger.warn(`URL file is present but no URL found inside (skipping): ${trackUrlFilename}`);
-        return;
+        return {};
       }
       logger.info(`Using URL from file: ${trackUrl}`);
     } else {
-      const bestMatchingTrack = await this.findBestMatchingTrack(trackFilenameKeywords);
+      const trackInfo = {}; // this.extractId3Tag(trackPath); // see: extractId3Tag()
+      const bestMatchingTrack = await this.findBestMatchingTrack(trackInfo, trackFilenameKeywords);
+      trackUrl = bestMatchingTrack.url ?? null;
       if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
         let warnMessage = `Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n${bestMatchingTrack.fullName}\n`;
         warnMessage += `Score keywords: ${bestMatchingTrack.scoreKeywords}\nName  keywords: ${trackFilenameKeywords}`;
+        if (trackUrl) warnMessage += `\nURL: ${trackUrl}`;
         logger.warn(warnMessage);
-        return;
+        return {};
       }
       logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullName}`);
-      trackUrl = bestMatchingTrack.url ?? null;
     }
-    if (!trackUrl) return;
+    if (!trackUrl) return {};
     const trackData = await this.extractTrackData(trackUrl);
     await this.saveId3TagToFile(trackPath, trackData);
+    return trackData;
   }
 
+  // Unfortunately display plugin is not available anymore in eyeD3 v0.9.7: https://github.com/nicfit/eyeD3/pull/585
+  // This is mentioned also in history file: https://github.com/nicfit/eyeD3/blob/6ae155405770afbc1446432e71782d761218baa4/HISTORY.rst
+  // "Changes: Removed display-plugin due to Grako EOL (#585)"
   extractId3Tag(trackPath: string): TrackInfo {
     const displayPluginOutput = childProcess.spawnSync('eyeD3', [
       '--plugin', 'display',
@@ -96,7 +101,7 @@ export class BearTunesTagger {
     return id3TagJson;
   }
 
-  async findBestMatchingTrack(inputKeywords: string[]): Promise<MatchingTrack> {
+  async findBestMatchingTrack(trackInfo: TrackInfo, inputKeywords: string[]): Promise<MatchingTrack> {
     const searchDoc = await tools.fetchWebPage(this.options.searchURL + encodeURIComponent(inputKeywords.join('+')));
 
     const winner: MatchingTrack = {
@@ -107,7 +112,7 @@ export class BearTunesTagger {
       // artists: '',
       // remixers: '',
       // url: undefined,
-      get fullName() { return `${this.artists} - ${this.title}`; },
+      get fullName() { return `${this.artists?.join(', ')} - ${this.title}`; },
     };
 
     const trackNodes = searchDoc.querySelectorAll('.bucket-item.ec-item.track');
@@ -120,7 +125,7 @@ export class BearTunesTagger {
       const trackRemixers = tools.createArtistsArray(trackNode.querySelector('.buk-track-remixers'));
       const trackReleased = new Date(trackNode.querySelector('.buk-track-released')?.textContent);
 
-      const trackKeywords = tools.splitTrackNameToKeywords([trackArtists, trackTitle]);
+      const trackKeywords = tools.splitTrackNameToKeywords([trackArtists.join(' '), trackTitle]);
       // const trackKeywords = Array.from(new Set([
       //   ...trackTitle.split(/\s+/),
       //   ...trackRemixed.split(/\s+/),
@@ -164,6 +169,8 @@ export class BearTunesTagger {
     const key = tools.createKey(trackDoc.querySelector('.interior-track-content-item.interior-track-key .value'));
     const genre = tools.createGenresList(trackDoc.querySelector('.interior-track-content-item.interior-track-genre'));
 
+    const duration = trackDoc.querySelector('.interior-track-content-item.interior-track-length .value').textContent.trim();
+
     const waveform = new URL(trackDoc.querySelector('#react-track-waveform.interior-track-waveform[data-src]').dataset.src);
 
     const trackUrlPathnameArray = trackUrl.pathname.split('/');
@@ -191,6 +198,9 @@ export class BearTunesTagger {
       waveform,
       publisher,
       album,
+      details: {
+        duration,
+      },
     };
   }
 
@@ -350,10 +360,11 @@ export class BearTunesTagger {
       BearTunesTagger.executeEyeD3Tool(ID3Version.ID3v1_1, eyeD3Options, trackFilename, this.options.verbose);
     }
 
+    // Moved to separate module BearTunesRenamer:
     // Correct filename to match ID3 tag info:
-    const correctedFilename = tools.replacePathForbiddenChars(`${trackData.artists} - ${trackData.title}${path.extname(trackPath)}`);
-    fs.renameSync(trackPath, path.dirname(trackPath) + path.sep + correctedFilename);
-    logger.info(`File was renamed to: ${correctedFilename}`);
+    // const correctedFilename = tools.replacePathForbiddenChars(`${trackData.artists} - ${trackData.title}${path.extname(trackPath)}`);
+    // fs.renameSync(trackPath, path.dirname(trackPath) + path.sep + correctedFilename);
+    // logger.info(`File was renamed to: ${correctedFilename}`);
     // fs.rename(trackPath, path.dirname(trackPath) + path.sep + correctedFilename, (error) => {
     //   if (error) {
     //     console.error(`Couldn't rename ${trackFilename}`);

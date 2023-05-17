@@ -19,48 +19,51 @@ import * as path from 'path';
 
 import { BearTunesConverter } from './converter';
 import { BearTunesTagger } from './tagger';
+import { BearTunesRenamer } from './renamer';
 
 const logger = require('./logger');
 
 // const { createLogger, format, transports } = require('winston');
 // const { combine, timestamp, label, printf } = format;
 
-const tracksDirectory = process.argv[2] || '.';
+const inputDirectory = process.argv[2] ?? '.';
+const outputDirectory = process.argv[3] ?? undefined;
 
 const converter = new BearTunesConverter({ verbose: true });
 const tagger = new BearTunesTagger({ verbose: false });
+const renamer = new BearTunesRenamer({ verbose: true });
 
-const processAllFilesInDirectory = async (directory: string): Promise<void> => {
-  if (!fs.existsSync(tracksDirectory)) {
-    // logger.silly(`Path specified doesn't exist: ${tracksDirectory}`);
-    // logger.verbose(`Path specified doesn't exist: ${tracksDirectory}`);
-    // logger.debug(`Path specified doesn't exist: ${tracksDirectory}`);
-    // logger.info(`Path specified doesn't exist: ${tracksDirectory}`);
-    // logger.warn(`Path specified doesn't exist: ${tracksDirectory}`);
-    logger.error(`Path specified doesn't exist: ${tracksDirectory}`);
+const processAllFilesInDirectory = async (inputDirectory: string, outputDirectory?: string): Promise<void> => {
+  if (!fs.existsSync(inputDirectory)) {
+    // logger.silly(`Path specified doesn't exist: ${inputDirectory}`);
+    // logger.verbose(`Path specified doesn't exist: ${inputDirectory}`);
+    // logger.debug(`Path specified doesn't exist: ${inputDirectory}`);
+    // logger.info(`Path specified doesn't exist: ${inputDirectory}`);
+    // logger.warn(`Path specified doesn't exist: ${inputDirectory}`);
+    logger.error(`Path specified doesn't exist: ${inputDirectory}`);
     process.exitCode = 1;
     return;
     // process.exit(1);
   }
 
-  if (!fs.statSync(tracksDirectory).isDirectory()) {
-    logger.error(`Path specified isn't a directory: ${tracksDirectory}`);
+  if (!fs.statSync(inputDirectory).isDirectory()) {
+    logger.error(`Path specified isn't a directory: ${inputDirectory}`);
     process.exitCode = 2;
     return;
     // process.exit(2);
   }
 
-  fs.readdir(directory, async (error, files) => {
-    const directoryWithSeparator: string = directory.replace(/\/+$/, path.sep);
+  fs.readdir(inputDirectory, async (error, files) => {
+    const directoryWithSeparator: string = inputDirectory.replace(/[/\\]+$/, path.sep);
     let noFilesWereProcessed = true;
     if (error) {
-      logger.error(`Couldn't read directory: ${tracksDirectory}`);
+      logger.error(`Couldn't read directory: ${inputDirectory}`);
       process.exitCode = 3;
       return;
       // process.exit(3);
     }
     // if (files.length < 1) {
-    //   console.error(`There are no files in a directory: ${tracksDirectory}`);
+    //   console.error(`There are no files in a directory: ${inputDirectory}`);
     //   process.exit(4);  // breaks process when no files in subdirectory!!!
     // }
     const flacFiles: Array<string> = [];
@@ -75,7 +78,8 @@ const processAllFilesInDirectory = async (directory: string): Promise<void> => {
           flacFiles.splice(flacIndex, 1);
         } else {
           noFilesWereProcessed = false;
-          await tagger.processTrack(filePath);
+          const trackInfo = await tagger.processTrack(filePath);
+          renamer.rename(filePath, trackInfo, outputDirectory);
         }
       } else if (path.extname(file) === '.flac') {
         noFilesWereProcessed = false;
@@ -85,7 +89,8 @@ const processAllFilesInDirectory = async (directory: string): Promise<void> => {
         if (result.status === 0 && result.outputPath) {
           logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
           flacFiles.push(result.outputPath);
-          await tagger.processTrack(result.outputPath);
+          const trackInfo = await tagger.processTrack(result.outputPath);
+          renamer.rename(filePath, trackInfo, outputDirectory);
         } else {
           let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
           warnMessage = `${result.error?.message}:\nLame stderr: ${result.lameStderr}`;
@@ -95,10 +100,10 @@ const processAllFilesInDirectory = async (directory: string): Promise<void> => {
     }
 
     if (noFilesWereProcessed) {
-      logger.error(`There are no suitable files in directory: ${directory}`);
+      logger.error(`There are no suitable files in directory: ${inputDirectory}`);
       process.exitCode = 1;
     }
   });
 };
 
-processAllFilesInDirectory(tracksDirectory);
+processAllFilesInDirectory(inputDirectory, outputDirectory);

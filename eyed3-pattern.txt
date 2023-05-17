@@ -18,5 +18,8 @@
     "artist": "%album-artist%"\,
     "trackNumber": "%track%"\,
     "trackTotal": "%track-total%"
+  }\,
+  "details": {
+    "duration": "$length()"
   }
 }
