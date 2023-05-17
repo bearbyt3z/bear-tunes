@@ -22,6 +22,7 @@ import { BearTunesTagger } from './tagger';
 import { BearTunesRenamer } from './renamer';
 
 const logger = require('./logger');
+const tools = require('./tools');
 
 // const { createLogger, format, transports } = require('winston');
 // const { combine, timestamp, label, printf } = format;
@@ -79,7 +80,9 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
         } else {
           noFilesWereProcessed = false;
           const trackInfo = await tagger.processTrack(filePath);
-          renamer.rename(filePath, trackInfo, outputDirectory);
+          if (!tools.isEmptyObject(trackInfo)) {
+            renamer.rename(filePath, trackInfo, outputDirectory);
+          }
         }
       } else if (path.extname(file) === '.flac') {
         noFilesWereProcessed = false;
@@ -90,7 +93,9 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
           logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
           flacFiles.push(result.outputPath);
           const trackInfo = await tagger.processTrack(result.outputPath);
-          renamer.rename(filePath, trackInfo, outputDirectory);
+          if (!tools.isEmptyObject(trackInfo)) {
+            renamer.rename(filePath, trackInfo, outputDirectory);
+          }
         } else {
           let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
           warnMessage = `${result.error?.message}:\nLame stderr: ${result.lameStderr}`;
