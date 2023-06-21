@@ -98,7 +98,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
           }
         } else {
           let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
-          warnMessage = `${result.error?.message}:\nLame stderr: ${result.lameStderr}`;
+          warnMessage += `${result.error?.message}:\nLame stderr: ${result.lameStderr}`;
           logger.warn(warnMessage);
         }
       }
