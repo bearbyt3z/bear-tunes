@@ -54,7 +54,7 @@ export class BearTunesTagger {
       }
       logger.info(`Using URL from file: ${trackUrl}`);
     } else {
-      const trackInfo = {}; // this.extractId3Tag(trackPath); // see: extractId3Tag()
+      const trackInfo = this.extractId3Tag(trackPath);
       const bestMatchingTrack = await this.findBestMatchingTrack(trackInfo, trackFilenameKeywords);
       trackUrl = bestMatchingTrack.url ?? null;
       if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
@@ -76,9 +76,17 @@ export class BearTunesTagger {
   // This is mentioned also in history file: https://github.com/nicfit/eyeD3/blob/6ae155405770afbc1446432e71782d761218baa4/HISTORY.rst
   // "Changes: Removed display-plugin due to Grako EOL (#585)"
   extractId3Tag(trackPath: string): TrackInfo {
-    const displayPluginOutput = childProcess.spawnSync('eyeD3', [
-      '--plugin', 'display',
-      '--pattern-file', this.options.eyeD3DisplayPluginPatternFile,
+    // const displayPluginOutput = childProcess.spawnSync('eyeD3', [
+    //   '--plugin', 'display',
+    //   '--pattern-file', this.options.eyeD3DisplayPluginPatternFile,
+    //   trackPath,
+    // ], {
+    //   encoding: 'utf-8',
+    // });
+    
+    // Replacing eyeD3 display-plugin with a simple python script:
+    const displayPluginOutput = childProcess.spawnSync('./eyed3-display-plugin.py', [
+      this.options.eyeD3DisplayPluginPatternFile,
       trackPath,
     ], {
       encoding: 'utf-8',

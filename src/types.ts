@@ -34,5 +34,5 @@ export interface PublisherInfo {
 }
 
 export interface TrackDetails {
-  duration: string, // seconds
+  duration: number, // seconds
 }
