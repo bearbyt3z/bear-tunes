@@ -5,11 +5,15 @@ import * as path from 'path';
 import { TrackInfo, AlbumInfo, PublisherInfo } from './types';
 import {
   BearTunesTaggerOptions, MatchingTrack, TrackArtworkFiles, ID3Version,
+  BeatportSearchResultArtistType, BeatportSearchResultArtistInfo, BeatportSearchResultTrackInfo, BeatportSearchResultGenreInfo,
+  BeatportArtistInfo, BeatportTrackInfo, BeatportAlbumInfo, BeatportPublisherInfo,
 } from './tagger.types';
 
 // exporting types, so they will be included in the tagger import
 export {
   BearTunesTaggerOptions, MatchingTrack, TrackArtworkFiles, ID3Version,
+  BeatportSearchResultArtistType, BeatportSearchResultArtistInfo, BeatportSearchResultTrackInfo, BeatportSearchResultGenreInfo,
+  BeatportArtistInfo, BeatportTrackInfo, BeatportAlbumInfo, BeatportPublisherInfo,
 };
 
 const logger = require('./logger');
@@ -23,7 +27,7 @@ const tools = require('./tools');
 
 const defaultTaggerOptions: BearTunesTaggerOptions = {
   domainURL: 'https://www.beatport.com',
-  get searchURL() { return `${this.domainURL}/search/tracks?per-page=150&q=`; }, // we want tracks only
+  get searchURL() { return `${this.domainURL}/search/tracks?per_page=150&q=`; }, // we want tracks only
   // get searchURL() { return `${this.domainURL}/search/tracks?q=`; }, // we want tracks only
   // get searchURL() { return `${this.domainURL}/search?q=`; }, // we want tracks only
   eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
@@ -67,9 +71,9 @@ export class BearTunesTagger {
       logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullName}`);
     }
     if (!trackUrl) return {};
-    const trackData = await this.extractTrackData(trackUrl);
-    await this.saveId3TagToFile(trackPath, trackData);
-    return trackData;
+    const trackInfo = await this.extractTrackData(trackUrl);
+    await this.saveId3TagToFile(trackPath, trackInfo);
+    return trackInfo;
   }
 
   // Unfortunately display plugin is not available anymore in eyeD3 v0.9.7: https://github.com/nicfit/eyeD3/pull/585
@@ -109,8 +113,30 @@ export class BearTunesTagger {
     return id3TagJson;
   }
 
+  static async extractNextJSData(url: URL): Promise<BeatportTrackInfo | BeatportAlbumInfo | BeatportPublisherInfo | BeatportSearchResultTrackInfo[]> {
+    const doc = await tools.fetchWebPage(url);
+
+    const nextJSElement = doc.querySelector('#__NEXT_DATA__'); // Next.js object containing element
+    const nextJSText = nextJSElement?.textContent; // Next.js object text
+
+    if (!nextJSText) throw new TypeError('Cannot obtain Next.js object.');
+
+    let data;
+    try {
+      data = JSON.parse(nextJSText);
+    } catch(error) {
+      throw new TypeError(`Cannot parse Next.js object: ${error}`);
+    }
+
+    const stateData = data?.props?.pageProps?.dehydratedState?.queries[0]?.state?.data;
+
+    if (!stateData) throw new TypeError('Cannot unpack state data from Next.js object.');
+
+    return ('data' in stateData && stateData.data instanceof Array) ? stateData.data : stateData;
+  }
+
   async findBestMatchingTrack(trackInfo: TrackInfo, inputKeywords: string[]): Promise<MatchingTrack> {
-    const searchDoc = await tools.fetchWebPage(this.options.searchURL + encodeURIComponent(inputKeywords.join('+')));
+    const trackArray = await BearTunesTagger.extractNextJSData(new URL(this.options.searchURL + encodeURIComponent(inputKeywords.join('+')))) as BeatportSearchResultTrackInfo[];
 
     const winner: MatchingTrack = {
       score: -1,
@@ -123,15 +149,20 @@ export class BearTunesTagger {
       get fullName() { return `${this.artists?.join(', ')} - ${this.title}`; },
     };
 
-    const trackNodes = searchDoc.querySelectorAll('.bucket-item.ec-item.track');
-    for (const trackNode of trackNodes) {
-      const trackTitle = tools.createTitle(
-        trackNode.querySelector('.buk-track-primary-title'),
-        trackNode.querySelector('.buk-track-remixed'),
+    for (const trackEntry of trackArray) {
+      const trackTitle = tools.createTitle(trackEntry.track_name, trackEntry.mix_name);
+
+      const trackArtists = tools.createArtistArray(trackEntry.artists
+        .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Artist)
+        .map((x: BeatportSearchResultArtistInfo) => x.artist_name)
       );
-      const trackArtists = tools.createArtistsArray(trackNode.querySelector('.buk-track-artists'), trackTitle);
-      const trackRemixers = tools.createArtistsArray(trackNode.querySelector('.buk-track-remixers'));
-      const trackReleased = new Date(trackNode.querySelector('.buk-track-released')?.textContent);
+
+      const trackRemixers = tools.createArtistArray(trackEntry.artists
+        .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Remixer)
+        .map((x: BeatportSearchResultArtistInfo) => x.artist_name)
+      );
+
+      const trackReleased = new Date(trackEntry.release_date);
 
       const trackKeywords = tools.splitTrackNameToKeywords([trackArtists.join(' '), trackTitle]);
       // const trackKeywords = Array.from(new Set([
@@ -145,52 +176,50 @@ export class BearTunesTagger {
         tools.arrayToLowerCase(inputKeywords),
         tools.replacePathForbiddenChars(tools.arrayToLowerCase(trackKeywords)),
       );
-      // console.log(`Track: ${trackArtists} - ${trackTitle} + (${trackRemixed})`);
-      // console.log('Intersection:', keywordsIntersection);
+
       const score = keywordsIntersection.length;
       if ((score > winner.score) || ((score === winner.score) && (!winner.released || trackReleased < winner.released))) {
-        // winner.node = trackNode;
         winner.score = score;
         winner.scoreKeywords = keywordsIntersection;
         winner.released = trackReleased;
         winner.title = trackTitle;
         winner.artists = trackArtists;
         winner.remixers = trackRemixers;
-        winner.url = new URL(this.options.domainURL + trackNode.querySelector('.buk-track-title a[href*="/track/"]').href);
-        // if (score === inputKeywords.length) break;  // winner has been found (but maybe not the earier release!)
+        winner.url = new URL(`${this.options.domainURL}/track/${tools.slugify(trackEntry.track_name)}/${trackEntry.track_id}`);
+
+        // if (score === inputKeywords.length) break;  // winner has been found (but maybe not the earliest release!)
       }
     }
+
     return winner;
   }
 
   async extractTrackData(trackUrl: URL): Promise<TrackInfo> {
-    const trackDoc = await tools.fetchWebPage(trackUrl);
-    const title = tools.createTitle(
-      trackDoc.querySelector('.interior-title h1:not(.remixed)'),
-      trackDoc.querySelector('.interior-title h1.remixed'),
-    );
-    const remixers = tools.createArtistsArray(trackDoc.querySelector('.interior-track-artists:nth-of-type(2) .value'));
-    const artists = tools.createArtistsArray(trackDoc.querySelector('.interior-track-artists .value'), title);
-    const released = new Date(trackDoc.querySelector('.interior-track-content-item.interior-track-released .value').textContent.trim());
+    const trackData = await BearTunesTagger.extractNextJSData(trackUrl) as BeatportTrackInfo;
+
+    const title = tools.createTitle(trackData.name, trackData.mix_name);
+
+    const artists = tools.createArtistArray(trackData.artists.map((x: BeatportArtistInfo) => x.name));
+    const remixers = tools.createArtistArray(trackData.remixers.map((x: BeatportArtistInfo) => x.name));
+
+    const released = new Date(trackData.new_release_date); // or publish_date???
     const year = tools.getPositiveIntegerOrUndefined(released.getFullYear());
-    const bpm = tools.getPositiveIntegerOrUndefined(trackDoc.querySelector('.interior-track-content-item.interior-track-bpm .value').textContent.trim());
-    const key = tools.createKey(trackDoc.querySelector('.interior-track-content-item.interior-track-key .value'));
-    const genre = tools.createGenresList(trackDoc.querySelector('.interior-track-content-item.interior-track-genre'));
 
-    const duration = trackDoc.querySelector('.interior-track-content-item.interior-track-length .value').textContent.trim();
+    const bpm = tools.getPositiveIntegerOrUndefined(trackData.bpm);
+    const key = tools.createKeyTag(trackData.key.name);
+    const genre = tools.createGenreTag(trackData.genre.name, trackData.sub_genre);
 
-    const waveform = new URL(trackDoc.querySelector('#react-track-waveform.interior-track-waveform[data-src]').dataset.src);
+    const duration = tools.roundToDecimalPlaces(trackData.length_ms / 1000.0, 2);
 
-    const trackUrlPathnameArray = trackUrl.pathname.split('/');
-    const trackId = trackUrlPathnameArray[trackUrlPathnameArray.length - 1];
-    const trackUfid = `track-${trackId}`;
+    const waveform = new URL(trackData.image.uri);
 
-    // const publisher = trackDoc.querySelector('.interior-track-content-item.interior-track-labels .value').textContent.trim();
-    const publisherUrl = new URL(this.options.domainURL + trackDoc.querySelector('.interior-track-content-item.interior-track-labels .value a').href);
+    const trackUfid = `track-${trackData.id}`;
+
+    const publisherUrl = new URL(`${this.options.domainURL}/label/${trackData.release.label.slug}/${trackData.release.label.id}`);
     const publisher = await BearTunesTagger.extractPublisherData(publisherUrl);
 
-    const albumUrl = new URL(this.options.domainURL + trackDoc.querySelector('.interior-track-release-artwork-link[href*="/release/"]').href);
-    const album = await BearTunesTagger.extractAlbumData(albumUrl, trackId);
+    const albumUrl = new URL(`${this.options.domainURL}/release/${trackData.release.slug}/${trackData.release.id}`);
+    const album = await BearTunesTagger.extractAlbumData(albumUrl, trackData.number);
 
     return {
       url: trackUrl,
@@ -212,14 +241,15 @@ export class BearTunesTagger {
     };
   }
 
-  static async extractAlbumData(albumUrl: URL, trackId: string): Promise<AlbumInfo> {
-    const albumDoc = await tools.fetchWebPage(albumUrl);
-    const artists = tools.createArtistsArray(albumDoc.querySelector('.interior-release-chart-content .interior-release-chart-content-list .interior-release-chart-content-item .value'));
-    const title = albumDoc.querySelector('.interior-release-chart-content h1').textContent;
-    const catalogNumber = albumDoc.querySelector('.interior-release-chart-content-item--desktop .interior-release-chart-content-item:nth-of-type(3) .value').textContent;
-    const trackNumber = tools.getPositiveIntegerOrUndefined(albumDoc.querySelector(`.interior-release-chart-content .bucket-item.ec-item.track[data-ec-id="${trackId}"] .buk-track-num`).textContent);
-    const trackTotal = tools.getPositiveIntegerOrUndefined(albumDoc.querySelectorAll('.interior-release-chart-content .bucket-item.ec-item.track').length);
-    const artwork = new URL(albumDoc.querySelector('.interior-release-chart-artwork-parent .interior-release-chart-artwork').src);
+  static async extractAlbumData(albumUrl: URL, trackNumber: number): Promise<AlbumInfo> {
+    const albumData = await BearTunesTagger.extractNextJSData(albumUrl) as BeatportAlbumInfo;
+
+    const artists = tools.createArtistArray(albumData.artists.map((x: BeatportArtistInfo) => x.name));
+    const title = albumData.name;
+    const catalogNumber = albumData.catalog_number;
+    const trackTotal = tools.getPositiveIntegerOrUndefined(albumData.track_count);
+    const artwork = new URL(albumData.image.uri);
+
     return {
       artists,
       title,
@@ -232,9 +262,11 @@ export class BearTunesTagger {
   }
 
   static async extractPublisherData(publisherUrl: URL): Promise<PublisherInfo> {
-    const publisherDoc = await tools.fetchWebPage(publisherUrl);
-    const name = publisherDoc.querySelector('.interior-top-container .interior-title h1').textContent.trim();
-    const logotype = new URL(publisherDoc.querySelector('.interior-top-container .interior-top-artwork-parent img.interior-top-artwork').src);
+    const publisherData = await BearTunesTagger.extractNextJSData(publisherUrl) as BeatportPublisherInfo;
+
+    const name = publisherData.name;
+    const logotype = new URL(publisherData.image.uri);
+
     return {
       name,
       url: publisherUrl,

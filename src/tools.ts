@@ -6,8 +6,8 @@ import * as crypto from 'crypto';
 
 const logger = require('./logger');
 
-export async function fetchWebPage(url: string): Promise<HTMLDocument> {
-  const response = await fetch(url)
+export async function fetchWebPage(url: URL): Promise<HTMLDocument> {
+  const response = await fetch(url.toString())
     .then((res) => res.text())
     .catch((error) => logger.error(error));
   return (new jsdom.JSDOM(response)).window.document;
@@ -70,21 +70,37 @@ export function splitTrackNameToKeywords(name: string | string[]): string[] {
   // return name.match(/\b([\w\d]+)\b/mgi);
 }
 
-export function createTitle(titleNode: HTMLElement | null, remixedNode: HTMLElement | null): string {
-  let title = titleNode?.textContent?.trim();
+export function createTitle(trackName?: string, trackMixName?: string): string {
+  let title = trackName?.trim();
   if (!title || title.length < 1) return '';
 
   if (title.match(/\bfeat\b/i)) {
     title = title.replace(/\bfeat\.? /i, 'feat. '); // add missing dot after "feat" shortcut, and replace "Feat" with "feat"
+
     if (title.indexOf('(feat') < 0) { // if "feat" isn't in parentheses add them
-      title = `${title.replace(/\bfeat. /, '(feat. ')})`;
+      title = `${title.replace(/\bfeat\. /, '(feat. ')})`;
     }
   }
 
-  if (remixedNode && remixedNode.textContent && remixedNode.textContent.length > 0) {
-    title += ` (${remixedNode.textContent.trim()})`;
+  const mixName = trackMixName?.trim();
+  if (mixName && mixName.length > 0) {
+    title += ` (${mixName})`;
   }
 
+  title = title
+    .replace(/\)\(/g, ') (') // add space between parentheses
+    .replace(/\s+\)/g, ')')  // remove spaces before closing parentheses
+    .replace(/\(\s+/g, '(')  // remove spaces after opening parentheses
+    .replace(/\s{2,}/g, ' ')   // replace multiple whitespace chars with a single space
+    .replace(/\[(.*)\]/g, '($1)') // replace square brackets by parentheses
+    .replace(/\({2}(.*)\){2}/g, '($1)') // replace doubled parentheses with a single one
+    .replace(/\((Original|Extended|Instrumental|Dub)\)/i, '($1 Mix)') // add missing 'Mix' word
+    .replace(/\((.*)RMX(.*)\)/i, '($1Remix$2)') // RMX to Remix
+    .replace(/(\(.*\b(\sMix|Mix\s|\sRemix|Remix\s)\b.*\))\s*(\(.*\b(Mix|Remix)\b.*\))/i, '$1') // remove doubled (* Mix/Remix *) mix name (one from name, another from mix_name)
+    .replace(/(-|–)\s+(.*Remix)\s+\(Original Mix\)/i, '($2)') // e.g.: Bassturbation - Oyaebu Remix (Original Mix) => Bassturbation (Oyaebu Remix)
+    .replace(/(\(.*\sRemix(\s+\(.*\))\))/, (unused, g1, g2) => g1.replace(g2, '') + g2) // e.g.: It's Our Future (Deadmau5 Remix (Cubrik Re-Edit)) => It's Our Future (Deadmau5 Remix) (Cubrik Re-Edit)
+    .replace(/\b(original|extended|instrumental|dub|radio|mix|remix|edit|demo|tape)\b/g, (match, g1) => g1.charAt(0).toUpperCase() + g1.slice(1)); // first capital letter
+  
   return title;
 }
 
@@ -93,51 +109,63 @@ export function regExpEscape(str: string): string {
 }
 
 // if title provided => remove featuring artists from artist list
-export function createArtistsArray(artistsNode: HTMLElement | null, title?: string): string[] {
+export function createArtistArray(artistArray: string[] | null, title?: string): string[] {
   const result: string[] = []; // => delete frame if there is no artist information
 
-  if (!artistsNode) return result;
+  if (!artistArray) return result;
 
-  const artistsLinks = artistsNode.querySelectorAll('a');
-  if (artistsLinks.length > 0) {
-    Array.from(artistsLinks).forEach((link) => {
-      const artist = link.textContent?.trim();
-      if (artist && artist.length > 0
-        && (title === undefined || title.search(new RegExp(`(feat|ft).+${regExpEscape(artist)}`, 'i')) < 0)) { // we have to search for feat/ft before artist name
-        result.push(artist);
-      }
-    });
-  } else {
-    const artistsNodeContent = artistsNode.textContent?.trim();
-    if (artistsNodeContent && artistsNodeContent.length > 0) {
-      result.push(artistsNodeContent);
+  for (const artist of artistArray) {
+    if (artist && artist.length > 0
+      && (title === undefined || title.search(new RegExp(`(feat|ft).+${regExpEscape(artist)}`, 'i')) < 0)) { // search for feat/ft before the artist name
+      result.push(artist);
     }
   }
 
   return result;
-  // return (artistsLinks.length > 0) ? Array.from(artistsLinks).map(link => link.textContent.trim())).join(', ') : artistsNode.textContent.trim();
 }
 
-export function createGenresList(genresNode: HTMLElement | null): string {
-  if (!genresNode) return ''; // '' => delete frame if there is no genre information
-  const genresLinks = genresNode.querySelectorAll('a');
-  if (genresLinks.length > 0) {
-    return Array.from(genresLinks).reduce((result: string, link) => {
-      const genre = link.textContent?.trim();
-      const separator = result && (link.href.indexOf('sub-genre') >= 0 ? ': ' : ', '); // only if result != ''
-      return result + separator + genre;
-    }, '');
-  }
-  return genresNode.textContent?.trim() ?? '';
-  // return (artistsLinks.length > 0) ? Array.from(artistsLinks).map(link => link.textContent.trim())).join(', ') : artistsNode.textContent.trim();
+export function createGenreTag(genre?: string, subgenre?: string): string {
+  if (!genre) return ''; // '' => delete frame if there is no genre information
+
+  let result = genre;
+
+  // check if sub-genre provided and it's not empty (an empty string is a falsy value)
+  if (subgenre) genre += ` | ${subgenre}`; // separator same as: https://labelsupport.beatport.com/hc/en-us/articles/9709209306772-Beatport-Genres-and-Sub-Genres
+
+  return result;
 }
 
-export function createKey(keyNode: HTMLElement): string | undefined {
-  return keyNode.textContent?.trim()
+// keyString e.g.: 'C Major'
+// https://mutagen-specs.readthedocs.io/en/latest/id3/id3v2.2.html
+// https://docs.mp3tag.de/mapping/
+export function createKeyTag(keyString: string): string {
+  const keyTag = keyString.trim()
     .replace('♭ ', 'b')
     .replace('♯ ', '#')
-    .replace('maj', 'M')
-    .replace('min', 'm');
+    .replace(/maj(or)?/i, '')
+    .replace(/min(or)?/i, 'm')
+    .replace(/\s+/g, ''); // there are no whitespaces in key signature e.g.: Cbm, G#m, B#, B etc.
+
+  if (keyTag.length > 3) throw new Error(`Maximum length (= 3) of key tag (TKEY / INITIALKEY) exceeded (${keyTag.length}).`);
+    
+  return keyTag;
+}
+
+export function slugify(text: string): string {
+  const slug = text
+    .replace(/[^a-z0-9\s]+/igm, '') // keep only alphanumerics & spaces
+    .trim() // trim() must be after removing unwanted chars (spaces can appear at the beginning and the end)
+    .replace(/\s+/g, '-') // create kebab case slug
+    .toLowerCase();
+
+  return slug;
+}
+
+// using the fastest solution from: https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary/48764436#48764436
+export function roundToDecimalPlaces(num: number, decimalPlaces?: number) {
+  const p = Math.pow(10, decimalPlaces || 0);
+  const n = (num * p) * (1 + Number.EPSILON);
+  return Math.round(n) / p;
 }
 
 export function isString(value: unknown): boolean {

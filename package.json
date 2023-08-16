@@ -1,6 +1,6 @@
 {
   "name": "bear-tunes",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./src/index.js",
   "scripts": {
