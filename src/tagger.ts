@@ -303,6 +303,7 @@ export class BearTunesTagger {
     const eyeD3Options: string[] = [
       '--verbose',
       '--remove-frame', 'PRIV', '--remove-all-comments', // remove personal info: https://aaronk.me/removing-personal-information-from-mp3s-bought-off-amazon/
+      '--remove-frame', 'TCOP', '--user-text-frame', 'DESCRIPTION:', // remove frmaes set by Athame (COPYRIGHT & DESCRIPTION)
       '--text-frame', 'TAUT:', // remove frame incompatible with v2.4
       '--preserve-file-times', // do not update file modification times
     ];
