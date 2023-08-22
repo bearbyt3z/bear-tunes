@@ -8,6 +8,7 @@ import { BearTunesRenamerOptions } from './renamer.types';
 export { BearTunesRenamerOptions };
 
 const logger = require('./logger');
+const tools = require('./tools');
 
 const defaultRenamerOptions: BearTunesRenamerOptions = {
   filenamePattern: '%artists% - %title%', // title already contains remixers etc.
@@ -40,7 +41,7 @@ export class BearTunesRenamer {
       if (!outputDirectory) {
         outputPath = path.dirname(trackPath);
       } else if (outputDirectory && fs.lstatSync(outputDirectory).isDirectory()) {
-        outputPath = outputDirectory.replace(/[/\\]+$/, path.sep) + BearTunesRenamer.bindValues(this.options.directoryPattern, trackInfo);
+        outputPath = outputDirectory.replace(/[/\\]+$/, path.sep) + tools.replacePathForbiddenChars(BearTunesRenamer.bindValues(this.options.directoryPattern, trackInfo));
         fs.mkdirSync(outputPath, { recursive: true });
       } else {
         throw new TypeError(`${this.constructor.name}: Specified output directory path ${outputDirectory} is not a valid directory`);
@@ -49,7 +50,7 @@ export class BearTunesRenamer {
       throw new ReferenceError(`${this.constructor.name}: Cannot access directory ${outputDirectory} (incorrect path?)`);
     }
 
-    outputPath += path.sep + filename;
+    outputPath += path.sep + tools.replacePathForbiddenChars(filename);
 
     fs.renameSync(trackPath, outputPath);
 
