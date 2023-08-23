@@ -10,6 +10,7 @@ export interface TrackInfo {
   genre?: string,
   bpm?: number,
   key?: string,
+  isrc?: string,
   ufid?: string,
   waveform?: URL,
   publisher?: PublisherInfo,

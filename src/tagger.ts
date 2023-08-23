@@ -213,6 +213,7 @@ export class BearTunesTagger {
 
     const waveform = new URL(trackData.image.uri);
 
+    const isrc = trackData.isrc;
     const trackUfid = `track-${trackData.id}`;
 
     const publisherUrl = new URL(`${this.options.domainURL}/label/${trackData.release.label.slug}/${trackData.release.label.id}`);
@@ -231,6 +232,7 @@ export class BearTunesTagger {
       genre,
       bpm,
       key,
+      isrc,
       ufid: trackUfid,
       waveform,
       publisher,
@@ -385,6 +387,9 @@ export class BearTunesTagger {
     if (trackData.publisher?.name) {
       eyeD3Options.push('--publisher', trackData.publisher.name);
       eyeD3Options.push('--text-frame', `TIT1:${trackData.publisher.name}`); // TIT1 => CONTENTGROUP
+    }
+    if (trackData.isrc) {
+      eyeD3Options.push('--text-frame', `TSRC:${trackData.isrc}`);
     }
     if (trackData.ufid) {
       // '--unique-file-id', `http${colonEscapeChar}://www.id3.org/dummy/ufid.html:${trackData.ufid}`,
