@@ -4,19 +4,22 @@ import sys
 import eyed3
 
 if len(sys.argv) < 3:
-  print(f'Error: Pattern file and/or audio file parameters are missing\nUsage: {argv[0]} pattern_file audio_file')
+  print(f'Error: Pattern file and/or audio file parameters are missing\nUsage: {argv[0]} pattern_file audio_file', file=sys.stderr)
   sys.exit(1)
 
 pattern_file_path = sys.argv[1]
 with open(pattern_file_path) as f: pattern = f.read()
 
 if len(pattern) < 6:
-  print('Error: Pattern file have to be specified as the first parameter')
+  print('Error: Pattern file have to be specified as the first parameter', file=sys.stderr)
   sys.exit(2)
 
-eyed3.log.setLevel("ERROR") # prevent from printing warnings e.g.: Non standard genre name: ...
+eyed3.log.setLevel('ERROR') # prevent from printing warnings e.g.: Non standard genre name: ...
 
 audio = eyed3.load(sys.argv[2])
+if audio.tag is None:
+  print(f'Error: ID3 tag not found in "{sys.argv[2]}"', file=sys.stderr)
+  sys.exit(3)
 
 pattern = pattern.replace('%artist%', str(audio.tag.artist or ''))
 pattern = pattern.replace('%title%', str(audio.tag.title or ''))
