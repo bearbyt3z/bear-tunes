@@ -3,6 +3,7 @@ import * as jsdom from 'jsdom';
 import * as fs from 'fs';
 import * as request from 'request';
 import * as crypto from 'crypto';
+import * as childProcess from 'child_process';
 
 const logger = require('./logger');
 
@@ -216,4 +217,26 @@ function zeroPad(number: number): string {
 
 export function convertDateToString(date: Date): string {
   return `${date.getFullYear()}-${zeroPad(date.getMonth() + 1)}-${date.getDate()}`;
+}
+
+export function executeChildProcess(
+  commandName: string,
+  options: string[],
+  successMessage: string,
+  verbose: boolean = false
+): number {
+  const child = childProcess.spawnSync(commandName, options, { encoding: 'utf8' });
+
+  if (child.error) {
+    logger.error(`ERROR: Failed to start child process: ${child.error}`);
+    return -1;
+  }
+  
+  if (child.status && child.status !== 0) {
+    logger.error(`ERROR: Child process exited with code ${child.status}:\n${leaveOnlyFirstLine(child.stderr)}`);
+    return child.status;
+  }
+
+  logger.info(verbose ? child.stdout : successMessage);
+  return 0;
 }

@@ -399,11 +399,21 @@ export class BearTunesTagger {
     eyeD3Options.push(trackPath);
 
     if (id3v2) {
-      BearTunesTagger.executeEyeD3Tool(ID3Version.ID3v2_4, eyeD3Options, trackFilename, this.options.verbose);
+      BearTunesTagger.executeEyeD3Tool(
+        ID3Version.ID3v2_4,
+        eyeD3Options,
+        `MP3 ID3v${ID3Version.ID3v2_4} tag was saved to "${trackFilename}"`,
+        this.options.verbose
+      );
     }
 
     if (id3v1) {
-      BearTunesTagger.executeEyeD3Tool(ID3Version.ID3v1_1, eyeD3Options, trackFilename, this.options.verbose);
+      BearTunesTagger.executeEyeD3Tool(
+        ID3Version.ID3v1_1,
+        eyeD3Options,
+        `MP3 ID3v${ID3Version.ID3v1_1} tag was saved to "${trackFilename}"`,
+        this.options.verbose
+      );
     }
 
     // Moved to separate module BearTunesRenamer:
@@ -422,29 +432,16 @@ export class BearTunesTagger {
     Object.values(imagePaths).forEach((imagePath) => path && fs.unlinkSync(imagePath));
   }
 
-  static executeEyeD3Tool(version: ID3Version, options: string[], filename: string, verbose: boolean = false): number {
-    // if (!['1.0', '1.1', '2.3', '2.4'].includes(version)) {
-    //   logger.error(`Wrong version of ID3 tag was specified: ${version}`);
-    //   return -1;
-    // }
-    const child = childProcess.spawnSync('eyeD3', [
-      '--v2',
-      `--to-v${version.toString()}`, // overwrite other versions of id3
-      ...options,
-    ], {
-      encoding: 'utf8',
-    });
-
-    if (child.error) {
-      logger.error(`ERROR: Failed to start child process: ${child.error}`);
-    } else if (child.status !== 0) {
-      logger.error(`ERROR: Child process (v${version}) exited with code ${child.status}:\n${tools.leaveOnlyFirstLine(child.stderr)}`);
-    // } else if (child.stderr) {
-    //   console.error(`Error occured when saving ID3v${version} tag:`);
-    } else {
-      logger.info(verbose ? child.stdout : `ID3v${version} tag was saved to ${filename}`);
-    }
-
-    return 0;
+  static executeEyeD3Tool(version: ID3Version, options: string[], successMessage: string, verbose: boolean = false): number {
+    return tools.executeChildProcess(
+      'eyeD3',
+      [
+        '--v2',
+        `--to-v${version.toString()}`, // overwrite other versions of id3
+        ...options,
+      ],
+      successMessage,
+      verbose,
+    );
   }
 }
