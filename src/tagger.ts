@@ -444,4 +444,156 @@ export class BearTunesTagger {
       verbose,
     );
   }
+
+  async saveId3TagToFlacFile(trackPath: string, trackData: TrackInfo, { verbose = false } = {}): Promise<void> {
+    const imagePaths: TrackArtworkFiles = {};
+    await tools.downloadFile(trackData.publisher?.logotype, null, (filename: string) => {
+      if (verbose) {
+        logger.debug(`Publisher logotype written to: ${filename}`);
+      }
+      imagePaths.publisherLogotype = filename;
+    });
+    await tools.downloadFile(trackData.album?.artwork, null, (filename: string) => {
+      if (verbose) {
+        logger.debug(`Album artwork written to: ${filename}`);
+      }
+      imagePaths.frontCover = filename;
+    });
+    await tools.downloadFile(trackData.waveform, null, (filename: string) => {
+      if (verbose) {
+        logger.debug(`Waveform written to: ${filename}`);
+      }
+      imagePaths.waveform = filename;
+    });
+
+    const metaflacOptions: string[] = [
+      '--remove-tag=PRIV', '--remove-tag=COMMENT',
+      '--remove-tag=DESCRIPTION', '--remove-tag=COPYRIGHT',
+      '--remove-tag=DISCNUMBER', '--remove-tag=DISCTOTAL', '--remove-tag=COMPOSER', // tags set by tidal-dl
+      // '--remove-all-tags',
+    ];
+
+    if (trackData.artists && trackData.artists.length > 0) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ARTIST', trackData.artists.join(', '));
+    }
+
+    if (trackData.title) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'TITLE', trackData.title);
+    }
+
+    if (trackData.remixers && trackData.remixers.length > 0) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'REMIXED BY', trackData.remixers.join(', '));
+    }
+
+    if (trackData.album?.title) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ALBUM', trackData.album.title);
+    }
+
+    if (trackData.album && trackData.album.artists && trackData.album.artists.length > 0) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ALBUMARTIST', trackData.album.artists.join(', '));
+    }
+
+    if (trackData.album?.trackNumber) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'TRACKNUMBER', trackData.album.trackNumber.toString());
+    }
+    if (trackData.album?.trackTotal) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'TRACKTOTAL', trackData.album.trackTotal.toString());
+    }
+
+    if (trackData.year) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'YEAR', trackData.year.toString());
+    }
+
+    if (trackData.released) {
+      const releasedString = tools.convertDateToString(trackData.released);
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'DATE', releasedString);
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'RELEASE DATE', releasedString);
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ORIGINAL RELEASE DATE', releasedString);
+    }
+
+    if (trackData.url) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'FILE WEBPAGE URL', trackData.url.toString());
+    }
+
+    if (trackData.publisher?.url) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'PUBLISHER URL', trackData.publisher.url.toString());
+    }
+
+    if (trackData.bpm) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'BPM', trackData.bpm.toString());
+    }
+
+    if (trackData.key) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'KEY', trackData.key);
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'INITIALKEY', trackData.key);
+    }
+
+    if (trackData.album?.catalogNumber) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'CATALOGNUMBER', trackData.album.catalogNumber);
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'CATALOG #', trackData.album.catalogNumber);
+    }
+
+    if (trackData.genre) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'GENRE', trackData.genre);
+    }
+
+    if (trackData.publisher?.name) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'PUBLISHER', trackData.publisher.name);
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'GROUPING', trackData.publisher.name);
+    }
+
+    if (trackData.ufid) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'UFID', trackData.ufid);
+    }
+
+    if (trackData.isrc) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ISRC', trackData.isrc);
+    }
+
+    // removing all embedded images
+    if (imagePaths.frontCover || imagePaths.waveform || imagePaths.publisherLogotype) {
+      BearTunesTagger.executeMetaflacTool(
+        [
+          '--remove', '--block-type=PICTURE,PADDING',
+          trackPath,
+        ],
+        `All picture blocks removed in "${path.basename(trackPath)}"`,
+        this.options.verbose,
+      );
+    }
+
+    if (imagePaths.frontCover) {
+      metaflacOptions.push(`--import-picture-from=3||Front Cover||${imagePaths.frontCover}`); // front cover
+    }
+    if (imagePaths.waveform) {
+      metaflacOptions.push(`--import-picture-from=17||Waveform||${imagePaths.waveform}`); // waveform
+    }
+    if (imagePaths.publisherLogotype) {
+      metaflacOptions.push(`--import-picture-from=20||Publisher Logotype||${imagePaths.publisherLogotype}`); // publisher logo
+    }
+
+    metaflacOptions.push(trackPath);
+
+    BearTunesTagger.executeMetaflacTool(metaflacOptions, `Flac ID3 tag was saved to "${path.basename(trackPath)}"`, this.options.verbose);
+
+    Object.values(imagePaths).forEach((imagePath) => path && fs.unlinkSync(imagePath));
+  }
+
+  static addMetaflacTaggingOption(optionArray: string[], tagName: string, tagValue: string) {
+    optionArray.push(`--remove-tag=${tagName}`);
+    optionArray.push(`--set-tag=${tagName}=${tagValue}`);
+  }
+
+  static executeMetaflacTool(options: string[], successMessage: string, verbose: boolean = false): number {
+    return tools.executeChildProcess(
+      'metaflac',
+      [
+        '--preserve-modtime',
+        '--dont-use-padding',
+        ...options,
+      ],
+      successMessage,
+      verbose,
+    );
+  }
 }

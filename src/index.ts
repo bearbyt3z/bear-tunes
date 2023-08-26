@@ -93,6 +93,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
           logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
           flacFiles.push(result.outputPath);
           const trackInfo = await tagger.processTrack(result.outputPath);
+          await tagger.saveId3TagToFlacFile(filePath, trackInfo);
           if (!tools.isEmptyObject(trackInfo)) {
             renamer.rename(filePath, trackInfo, outputDirectory);
           }
