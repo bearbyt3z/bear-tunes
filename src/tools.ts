@@ -216,7 +216,7 @@ function zeroPad(number: number): string {
 }
 
 export function convertDateToString(date: Date): string {
-  return `${date.getFullYear()}-${zeroPad(date.getMonth() + 1)}-${date.getDate()}`;
+  return `${date.getFullYear()}-${zeroPad(date.getMonth() + 1)}-${zeroPad(date.getDate())}`;
 }
 
 export function executeChildProcess(
