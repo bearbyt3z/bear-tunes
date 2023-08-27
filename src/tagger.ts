@@ -31,6 +31,7 @@ const defaultTaggerOptions: BearTunesTaggerOptions = {
   // get searchURL() { return `${this.domainURL}/search/tracks?q=`; }, // we want tracks only
   // get searchURL() { return `${this.domainURL}/search?q=`; }, // we want tracks only
   eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
+  lengthDifferenceAccepted: 3,
   verbose: false,
 } as const;
 
@@ -150,6 +151,11 @@ export class BearTunesTagger {
     };
 
     for (const trackEntry of trackArray) {
+      // Skipping tracks with different length
+      const trackLength = tools.roundToDecimalPlaces(trackEntry.length / 1000.0, 2);
+      if (trackLength && trackInfo.details && Math.abs(trackLength - trackInfo.details.duration) > this.options.lengthDifferenceAccepted)
+        continue;
+
       const trackTitle = tools.createTitle(trackEntry.track_name, trackEntry.mix_name);
 
       const trackArtists = tools.createArtistArray(trackEntry.artists

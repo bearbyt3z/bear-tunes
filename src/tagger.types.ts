@@ -4,6 +4,7 @@ export interface BearTunesTaggerOptions {
   domainURL: string,
   searchURL: string, // TODO: URL
   eyeD3DisplayPluginPatternFile: string,
+  lengthDifferenceAccepted: number, // seconds
   verbose: boolean,
 }
 
