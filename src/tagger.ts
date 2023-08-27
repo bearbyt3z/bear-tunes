@@ -72,7 +72,7 @@ export class BearTunesTagger {
     }
     if (!trackUrl) return {};
     const trackInfo = await this.extractTrackData(trackUrl);
-    await this.saveId3TagToFile(trackPath, trackInfo);
+    await this.saveId3TagToMp3File(trackPath, trackInfo);
     return trackInfo;
   }
 
@@ -276,7 +276,7 @@ export class BearTunesTagger {
     };
   }
 
-  async saveId3TagToFile(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}): Promise<void> {
+  async saveId3TagToMp3File(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}): Promise<void> {
     const imagePaths: TrackArtworkFiles = {};
     await tools.downloadFile(trackData.publisher?.logotype, null, (filename: string) => {
       if (verbose) {
