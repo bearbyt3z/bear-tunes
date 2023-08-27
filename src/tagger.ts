@@ -2,6 +2,8 @@ import * as childProcess from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
+const prompt = require('prompt-sync')({ sigint: true });
+
 import { TrackInfo, AlbumInfo, PublisherInfo } from './types';
 import {
   BearTunesTaggerOptions, MatchingTrack, TrackArtworkFiles, ID3Version,
@@ -67,7 +69,11 @@ export class BearTunesTagger {
         warnMessage += `Score keywords: ${bestMatchingTrack.scoreKeywords}\nName  keywords: ${trackFilenameKeywords}`;
         if (trackUrl) warnMessage += `\nURL: ${trackUrl}`;
         logger.warn(warnMessage);
-        return {};
+
+        const proceedWithFound = prompt('Proceed with the found track? (y/n) ');
+        if (proceedWithFound !== 'y' && proceedWithFound !== 'yes') {
+          return {};
+        }
       }
       logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullName}`);
     }
