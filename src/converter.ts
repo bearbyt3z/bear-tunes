@@ -27,6 +27,7 @@ const defaultConverterOptions: BearTunesConverterOptions = {
   quality: Quality.Q1,
   channelMode: ChannelMode.JointStereo,
   replayGain: ReplayGain.Accurate,
+  transferTagEntries: false,
   verbose: false,
 } as const;
 
@@ -109,47 +110,53 @@ export class BearTunesConverter {
       logger.info(`Using following lame options: ${lameOptionsJoined}`);
     }
 
-    const flacTrackInfo = this.extractTagsFromFlac(flacFilePath);
-    const tagOptions = ['--add-id3v2'];
-    if (flacTrackInfo.title) {
-      tagOptions.push(`--tt "${flacTrackInfo.title}"`);
-    }
-    if (flacTrackInfo.artists && flacTrackInfo.artists.length > 0) {
-      tagOptions.push(`--ta "${flacTrackInfo.artists.join(', ')}"`);
-    }
-    if (flacTrackInfo.genre) {
-      tagOptions.push(`--tg "${flacTrackInfo.genre}"`);
-    }
-    if (flacTrackInfo.year) {
-      tagOptions.push(`--ty "${flacTrackInfo.year}"`);
-    }
-    if (flacTrackInfo.released) {
-      tagOptions.push(`--tv TORY=${tools.convertDateToString(flacTrackInfo.released)}`);
-    }
+    let tagOptionsJoined = '';
+    let flacImages : FlacImageBlockExport[] = [];
 
-    if (flacTrackInfo.album) {
-      if (flacTrackInfo.album.title) {
-        tagOptions.push(`--tl "${flacTrackInfo.album.title}"`);
+    if (this.options.transferTagEntries) {
+      const flacTrackInfo = this.extractTagsFromFlac(flacFilePath);
+
+      const tagOptions = ['--add-id3v2'];
+      if (flacTrackInfo.title) {
+        tagOptions.push(`--tt "${flacTrackInfo.title}"`);
       }
-      if (flacTrackInfo.album.trackNumber) {
-        let albumNumbers = flacTrackInfo.album.trackNumber.toString();
-        if (flacTrackInfo.album.trackTotal) {
-          albumNumbers += `/${flacTrackInfo.album.trackTotal.toString()}`;
+      if (flacTrackInfo.artists && flacTrackInfo.artists.length > 0) {
+        tagOptions.push(`--ta "${flacTrackInfo.artists.join(', ')}"`);
+      }
+      if (flacTrackInfo.genre) {
+        tagOptions.push(`--tg "${flacTrackInfo.genre}"`);
+      }
+      if (flacTrackInfo.year) {
+        tagOptions.push(`--ty "${flacTrackInfo.year}"`);
+      }
+      if (flacTrackInfo.released) {
+        tagOptions.push(`--tv TORY=${tools.convertDateToString(flacTrackInfo.released)}`);
+      }
+
+      if (flacTrackInfo.album) {
+        if (flacTrackInfo.album.title) {
+          tagOptions.push(`--tl "${flacTrackInfo.album.title}"`);
         }
-        tagOptions.push(`--tn "${albumNumbers}"`);
+        if (flacTrackInfo.album.trackNumber) {
+          let albumNumbers = flacTrackInfo.album.trackNumber.toString();
+          if (flacTrackInfo.album.trackTotal) {
+            albumNumbers += `/${flacTrackInfo.album.trackTotal.toString()}`;
+          }
+          tagOptions.push(`--tn "${albumNumbers}"`);
+        }
       }
-    }
 
-    // lame codec supports only front cover option:
-    const flacImages = BearTunesConverter.extractArtworkFromFlac(flacFilePath, [FlacImageBlockType.CoverFront]);
-    if (flacImages.length > 0) {
-      tagOptions.push(`--ti "${flacImages[0].imagePath}"`);
-    }
+      // lame codec supports only front cover option:
+      flacImages = BearTunesConverter.extractArtworkFromFlac(flacFilePath, [FlacImageBlockType.CoverFront]);
+      if (flacImages.length > 0) {
+        tagOptions.push(`--ti "${flacImages[0].imagePath}"`);
+      }
 
-    const tagOptionsJoined = (tagOptions.length > 1) ? tagOptions.join(' ') : ''; // length > 1 means there is at least one tag entry to set (the fist one is --add-id3v2)
+      tagOptionsJoined = (tagOptions.length > 1) ? tagOptions.join(' ') : ''; // length > 1 means there is at least one tag entry to set (the fist one is --add-id3v2)
 
-    if (this.options.verbose) {
-      logger.info(`Using following tag options: ${tagOptionsJoined}`);
+      if (this.options.verbose) {
+        logger.info(`Using following tag options: ${tagOptionsJoined}`);
+      }
     }
 
     const childResult = childProcess.spawnSync(

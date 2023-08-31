@@ -14,6 +14,7 @@ export interface BearTunesConverterOptions {
   quality: Quality,
   channelMode: ChannelMode,
   replayGain: ReplayGain,
+  transferTagEntries: boolean,
   verbose: boolean,
 }
 
