@@ -77,7 +77,10 @@ export class BearTunesTagger {
       }
       logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullName}`);
     }
-    if (!trackUrl) return {};
+    if (!trackUrl) {
+      logger.error('URL of the matching track not found.');
+      return {};
+    }
     const trackInfo = await this.extractTrackData(trackUrl);
     await this.saveId3TagToMp3File(trackPath, trackInfo);
     return trackInfo;
