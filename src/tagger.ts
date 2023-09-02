@@ -221,21 +221,21 @@ export class BearTunesTagger {
     const year = tools.getPositiveIntegerOrUndefined(released.getFullYear());
 
     const bpm = tools.getPositiveIntegerOrUndefined(trackData.bpm);
-    const key = tools.createKeyTag(trackData.key.name);
-    const genre = tools.createGenreTag(trackData.genre.name, trackData.sub_genre);
+    const key = trackData.key && tools.createKeyTag(trackData.key.name) || undefined;
+    const genre = trackData.genre && tools.createGenreTag(trackData.genre.name, trackData.sub_genre) || undefined;
 
     const duration = tools.roundToDecimalPlaces(trackData.length_ms / 1000.0, 2);
 
-    const waveform = new URL(trackData.image.uri);
+    const waveform = trackData.image && new URL(trackData.image.uri) || undefined;
 
     const isrc = trackData.isrc;
     const trackUfid = `track-${trackData.id}`;
 
-    const publisherUrl = new URL(`${this.options.domainURL}/label/${trackData.release.label.slug}/${trackData.release.label.id}`);
-    const publisher = await BearTunesTagger.extractPublisherData(publisherUrl);
+    const publisherUrl = trackData.release?.label && new URL(`${this.options.domainURL}/label/${trackData.release.label.slug}/${trackData.release.label.id}`) || undefined;
+    const publisher = publisherUrl && await BearTunesTagger.extractPublisherData(publisherUrl) || undefined;
 
-    const albumUrl = new URL(`${this.options.domainURL}/release/${trackData.release.slug}/${trackData.release.id}`);
-    const album = await BearTunesTagger.extractAlbumData(albumUrl, trackData.number);
+    const albumUrl = trackData.release && new URL(`${this.options.domainURL}/release/${trackData.release.slug}/${trackData.release.id}`) || undefined;
+    const album = albumUrl && await BearTunesTagger.extractAlbumData(albumUrl, trackData.number) || undefined;
 
     return {
       url: trackUrl,
@@ -265,7 +265,7 @@ export class BearTunesTagger {
     const title = albumData.name;
     const catalogNumber = albumData.catalog_number;
     const trackTotal = tools.getPositiveIntegerOrUndefined(albumData.track_count);
-    const artwork = new URL(albumData.image.uri);
+    const artwork = albumData.image && new URL(albumData.image.uri) || undefined;
 
     return {
       artists,
@@ -282,7 +282,7 @@ export class BearTunesTagger {
     const publisherData = await BearTunesTagger.extractNextJSData(publisherUrl) as BeatportPublisherInfo;
 
     const name = publisherData.name;
-    const logotype = new URL(publisherData.image.uri);
+    const logotype = publisherData.image && new URL(publisherData.image.uri) || undefined;
 
     return {
       name,
@@ -298,19 +298,24 @@ export class BearTunesTagger {
         logger.debug(`Publisher logotype written to: ${filename}`);
       }
       imagePaths.publisherLogotype = filename;
-    });
+    })
+    .catch((error: string) => logger.warn(`Publisher logotype: ${error}`));
+
     await tools.downloadFile(trackData.album?.artwork, null, (filename: string) => {
       if (verbose) {
         logger.debug(`Album artwork written to: ${filename}`);
       }
       imagePaths.frontCover = filename;
-    });
+    })
+    .catch((error: string) => logger.warn(`Album artwork: ${error}`));
+
     await tools.downloadFile(trackData.waveform, null, (filename: string) => {
       if (verbose) {
         logger.debug(`Waveform written to: ${filename}`);
       }
       imagePaths.waveform = filename;
-    });
+    })
+    .catch((error: string) => logger.warn(`Waveform: ${error}`));
 
     const trackFilename = path.basename(trackPath);
 
@@ -467,19 +472,24 @@ export class BearTunesTagger {
         logger.debug(`Publisher logotype written to: ${filename}`);
       }
       imagePaths.publisherLogotype = filename;
-    });
+    })
+    .catch((error: string) => logger.warn(`Publisher logotype: ${error}`));
+
     await tools.downloadFile(trackData.album?.artwork, null, (filename: string) => {
       if (verbose) {
         logger.debug(`Album artwork written to: ${filename}`);
       }
       imagePaths.frontCover = filename;
-    });
+    })
+    .catch((error: string) => logger.warn(`Album artwork: ${error}`));
+
     await tools.downloadFile(trackData.waveform, null, (filename: string) => {
       if (verbose) {
         logger.debug(`Waveform written to: ${filename}`);
       }
       imagePaths.waveform = filename;
-    });
+    })
+    .catch((error: string) => logger.warn(`Waveform: ${error}`));
 
     const metaflacOptions: string[] = [
       '--remove-tag=PRIV', '--remove-tag=COMMENT',

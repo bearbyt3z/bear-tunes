@@ -28,6 +28,8 @@ export function arrayToLowerCase(array: string[]): string[] {
 
 export function downloadFile(url: URL, filename?: string, callback?: (filename: string) => void): Promise<string> {
   return new Promise((resolve, reject) => {
+    if (!url) return reject('Proper URL is needed to download a file.');
+
     // request.head(url, async (error, response, body) => {
     // console.log('content-type:', response.headers['content-type']);
     // console.log('content-length:', response.headers['content-length']);
