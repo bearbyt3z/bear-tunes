@@ -97,9 +97,9 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
           const trackInfo = await tagger.processTrack(result.outputPath);
           if (!tools.isEmptyObject(trackInfo)) {
             renamer.rename(result.outputPath, trackInfo, outputDirectory);
-          }
-          await tagger.saveId3TagToFlacFile(filePath, trackInfo);
-          if (!tools.isEmptyObject(trackInfo)) {
+
+            await tagger.saveId3TagToFlacFile(filePath, trackInfo);
+
             const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
 
             await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
