@@ -81,7 +81,9 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
           noFilesWereProcessed = false;
           const trackInfo = await tagger.processTrack(filePath);
           if (!tools.isEmptyObject(trackInfo)) {
-            renamer.rename(filePath, trackInfo, outputDirectory);
+            const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
+
+            await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
           }
         }
       } else if (path.extname(file) === '.flac') {
@@ -98,7 +100,9 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
           }
           await tagger.saveId3TagToFlacFile(filePath, trackInfo);
           if (!tools.isEmptyObject(trackInfo)) {
-            renamer.rename(filePath, trackInfo, outputDirectory);
+            const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
+
+            await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
           }
         } else {
           let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;

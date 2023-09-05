@@ -24,7 +24,7 @@ export class BearTunesRenamer {
     Object.assign(this.options, options);
   }
 
-  rename(trackPath: string, trackInfo: TrackInfo, outputDirectory?: string): void {
+  rename(trackPath: string, trackInfo: TrackInfo, outputDirectory?: string): string {
     // let newFilename = this.options.filenamePattern.replace(/%\w+%/ig, (match) => {
     //   const keyName = match.replace(/%/g, '');
     //   const key: keyof TrackInfo = keyName as keyof TrackInfo;
@@ -57,6 +57,8 @@ export class BearTunesRenamer {
     if (this.options.verbose) {
       logger.info(`File was renamed to: ${outputPath}`);
     }
+
+    return outputPath;
   }
 
   static bindValues(pattern: string, trackInfo: TrackInfo): string {
