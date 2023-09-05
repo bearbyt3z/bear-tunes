@@ -55,7 +55,7 @@ export class BearTunesRenamer {
     fs.renameSync(trackPath, outputPath);
 
     if (this.options.verbose) {
-      logger.info(`File was renamed to: ${outputPath}`);
+      logger.info(`File was renamed to: "${outputPath}"`);
     }
 
     return outputPath;
