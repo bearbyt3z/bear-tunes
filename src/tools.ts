@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as request from 'request';
 import * as crypto from 'crypto';
 import * as childProcess from 'child_process';
+import * as path from 'path';
 import { TrackInfo } from './types';
 
 const logger = require('./logger');
@@ -64,15 +65,17 @@ export function downloadFile(url: URL, filename?: string, callback?: (filename: 
 
 export async function downloadAndSaveArtwork(trackPath: string, trackInfo: TrackInfo) {
   if (trackInfo.album?.artwork?.pathname.includes('.')) {
-    const artworkExtension = trackInfo.album.artwork.pathname.split('.')?.pop() || 'unrecognized';
-    const artworkPath = trackPath.replace(/(?<=\.)[^.]+$/, artworkExtension);
+    const artworkExtension = trackInfo.album.artwork.pathname.split('.')?.pop() || '.unrecognized';
+    const artworkPath = replaceFilenameExtension(trackPath, `.${artworkExtension}`);
     
     await downloadFile(trackInfo.album.artwork, artworkPath);
     logger.info(`Artwork written to: "${artworkPath}"`);
   }
 }
 
-// replaceFilenameExtension: filename => filename.replace(/\.[^\\/.]+$/, ''),  // it's easier to use path module
+export function replaceFilenameExtension(filename: string, replacement: string) : string {
+  return filename.replace(new RegExp(`${path.extname(filename)}$`), replacement);
+}
 
 export function splitTrackNameToKeywords(name: string | string[]): string[] {
   let nameComputed = (name instanceof Array) ? name.join(' ') : name;

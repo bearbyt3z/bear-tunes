@@ -47,7 +47,7 @@ export class BearTunesTagger {
 
   async processTrack(trackPath: string): Promise<TrackInfo> {
     const trackFilename = path.basename(trackPath);
-    const trackFilenameWithoutExtension = trackFilename.replace(new RegExp(`${path.extname(trackFilename)}$`), '');
+    const trackFilenameWithoutExtension = tools.replaceFilenameExtension(trackFilename, '');
     const trackFilenameKeywords = tools.splitTrackNameToKeywords(trackFilenameWithoutExtension);
     logger.silly('########################################');
     logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
