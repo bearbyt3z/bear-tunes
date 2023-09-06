@@ -79,12 +79,15 @@ export function replaceFilenameExtension(filename: string, replacement: string) 
 
 export function splitTrackNameToKeywords(name: string | string[]): string[] {
   let nameComputed = (name instanceof Array) ? name.join(' ') : name;
-  nameComputed = nameComputed.trim(); // remove spaces at the beggining & end
-  nameComputed = nameComputed.replace(/\s+[-–&]\s+|\s+/mgi, ' ');
-  // nameComputed = nameComputed.replace(/[\(\)\[\],]|\.[\w\d]+?$/mgi, ''); // +? => non-greedy for file extension match // => don't work with: Lust 2.1.mp3
-  nameComputed = nameComputed.replace(/[()[\],]|\.mp3$/mgi, ''); // +? => non-greedy for file extension match
+
+  nameComputed = nameComputed
+    .replace(/(^|(\s+-\s+))\d+\s*[-.]\s+/, ' ') // remove track number (at the beggining or in the middle)
+    .replace(/[()[\],]/, ' ') // replace brackets & comma with a single space
+    .replace(/\s+[-–&]\s+/g, ' ') // replace dash & ampersand (etc.) surrounded by spaces with a single space
+    .replace(/\s{2,}/g, ' ') // replace multiple whitespace chars with a single space
+    .trim(); // remove spaces at the beggining & end
+
   return Array.from(new Set(nameComputed.split(' '))); // set to avoid repetitions
-  // return name.match(/\b([\w\d]+)\b/mgi);
 }
 
 export function createTitle(trackName?: string, trackMixName?: string): string {
