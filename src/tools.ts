@@ -207,7 +207,7 @@ export function leaveOnlyFirstLine(text: string): string {
 export function getUrlFromFile(filePath: string): URL | null {
   const fileContent = fs.readFileSync(filePath, 'utf8');
   const urlIndex = fileContent.indexOf('URL=');
-  if (!urlIndex) return null;
+  if (urlIndex < 0) return null;
   return new URL(fileContent.substring(urlIndex + 4).split('\n')[0]);
 }
 
