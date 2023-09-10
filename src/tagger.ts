@@ -494,7 +494,7 @@ export class BearTunesTagger {
     const metaflacOptions: string[] = [
       '--remove-tag=PRIV', '--remove-tag=COMMENT',
       '--remove-tag=DESCRIPTION', '--remove-tag=COPYRIGHT',
-      '--remove-tag=DISCNUMBER', '--remove-tag=DISCTOTAL', '--remove-tag=COMPOSER', // tags set by tidal-dl
+      '--remove-tag=DISCNUMBER', '--remove-tag=DISCTOTAL', '--remove-tag=COMPOSER', '--remove-tag=LYRICS', // tags set by tidal-dl
       // '--remove-all-tags',
     ];
 
