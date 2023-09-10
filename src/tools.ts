@@ -77,7 +77,7 @@ export function replaceFilenameExtension(filename: string, replacement: string) 
   return filename.replace(new RegExp(`${path.extname(filename)}$`), replacement);
 }
 
-export function splitTrackNameToKeywords(name: string | string[]): string[] {
+export function splitTrackNameIntoKeywords(name: string | string[]): string[] {
   let nameComputed = (name instanceof Array) ? name.join(' ') : name;
 
   nameComputed = nameComputed
