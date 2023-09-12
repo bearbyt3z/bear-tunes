@@ -48,7 +48,7 @@ export class BearTunesTagger {
   async processTrack(trackPath: string): Promise<TrackInfo> {
     const trackFilename = path.basename(trackPath);
     const trackFilenameWithoutExtension = tools.replaceFilenameExtension(trackFilename, '');
-    const trackFilenameKeywords = tools.splitTrackNameToKeywords(trackFilenameWithoutExtension);
+    const trackFilenameKeywords = tools.splitTrackNameIntoKeywords(trackFilenameWithoutExtension);
     logger.silly('########################################');
     logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
     const trackUrlFilename = path.join(path.dirname(trackPath), `${trackFilenameWithoutExtension}.url`);
@@ -179,7 +179,7 @@ export class BearTunesTagger {
 
       const trackReleased = new Date(trackEntry.release_date);
 
-      const trackKeywords = tools.splitTrackNameToKeywords([trackArtists.join(' '), trackTitle]);
+      const trackKeywords = tools.splitTrackNameIntoKeywords([trackArtists.join(' '), trackTitle]);
       // const trackKeywords = Array.from(new Set([
       //   ...trackTitle.split(/\s+/),
       //   ...trackRemixed.split(/\s+/),
