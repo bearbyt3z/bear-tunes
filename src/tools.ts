@@ -259,3 +259,8 @@ export function executeChildProcess(
   logger.info(verbose ? child.stdout : successMessage);
   return 0;
 }
+
+export function getMimeTypeFromPath(filePath: string): string {
+  const mimeType = childProcess.execSync(`file --mime-type -b "${filePath}"`).toString();
+  return mimeType.trim();
+}

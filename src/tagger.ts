@@ -392,13 +392,13 @@ export class BearTunesTagger {
       eyeD3Options.push('--user-text-frame', `CATALOGNUMBER:${trackData.album.catalogNumber}`);
       eyeD3Options.push('--user-text-frame', `CATALOG #:${trackData.album.catalogNumber}`);
     }
-    if (imagePaths.frontCover) {
+    if (imagePaths.frontCover && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
       eyeD3Options.push('--add-image', `${imagePaths.frontCover}:FRONT_COVER:Front Cover`); // front cover
     }
-    if (imagePaths.waveform) {
+    if (imagePaths.waveform && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
       eyeD3Options.push('--add-image', `${imagePaths.waveform}:BRIGHT_COLORED_FISH:Waveform`); // waveform
     }
-    if (imagePaths.publisherLogotype) {
+    if (imagePaths.publisherLogotype && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
       eyeD3Options.push('--add-image', `${imagePaths.publisherLogotype}:PUBLISHER_LOGO:Publisher Logotype`); // publisher logo
     }
     if (trackData.genre) {
@@ -587,13 +587,13 @@ export class BearTunesTagger {
       );
     }
 
-    if (imagePaths.frontCover) {
+    if (imagePaths.frontCover && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
       metaflacOptions.push(`--import-picture-from=3||Front Cover||${imagePaths.frontCover}`); // front cover
     }
-    if (imagePaths.waveform) {
+    if (imagePaths.waveform && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
       metaflacOptions.push(`--import-picture-from=17||Waveform||${imagePaths.waveform}`); // waveform
     }
-    if (imagePaths.publisherLogotype) {
+    if (imagePaths.publisherLogotype && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
       metaflacOptions.push(`--import-picture-from=20||Publisher Logotype||${imagePaths.publisherLogotype}`); // publisher logo
     }
 
