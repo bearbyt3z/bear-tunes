@@ -549,7 +549,7 @@ export class BearTunesTagger {
     }
 
     if (trackData.key) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'KEY', trackData.key);
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'INITIAL KEY', trackData.key);
       BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'INITIALKEY', trackData.key);
     }
 
