@@ -526,12 +526,11 @@ export class BearTunesTagger {
     }
 
     if (trackData.year) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'YEAR', trackData.year.toString());
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'DATE', trackData.year.toString()); // DATE = Year <= same as in mp3 tag
     }
 
     if (trackData.released) {
       const releasedString = tools.convertDateToString(trackData.released);
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'DATE', releasedString);
       BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'RELEASE DATE', releasedString);
       BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ORIGINAL RELEASE DATE', releasedString);
     }
