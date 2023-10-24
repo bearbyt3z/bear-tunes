@@ -395,10 +395,10 @@ export class BearTunesTagger {
     if (imagePaths.frontCover && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
       eyeD3Options.push('--add-image', `${imagePaths.frontCover}:FRONT_COVER:Front Cover`); // front cover
     }
-    if (imagePaths.waveform && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
+    if (imagePaths.waveform && tools.getMimeTypeFromPath(imagePaths.waveform).startsWith('image')) {
       eyeD3Options.push('--add-image', `${imagePaths.waveform}:BRIGHT_COLORED_FISH:Waveform`); // waveform
     }
-    if (imagePaths.publisherLogotype && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
+    if (imagePaths.publisherLogotype && tools.getMimeTypeFromPath(imagePaths.publisherLogotype).startsWith('image')) {
       eyeD3Options.push('--add-image', `${imagePaths.publisherLogotype}:PUBLISHER_LOGO:Publisher Logotype`); // publisher logo
     }
     if (trackData.genre) {
@@ -589,10 +589,10 @@ export class BearTunesTagger {
     if (imagePaths.frontCover && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
       metaflacOptions.push(`--import-picture-from=3||Front Cover||${imagePaths.frontCover}`); // front cover
     }
-    if (imagePaths.waveform && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
+    if (imagePaths.waveform && tools.getMimeTypeFromPath(imagePaths.waveform).startsWith('image')) {
       metaflacOptions.push(`--import-picture-from=17||Waveform||${imagePaths.waveform}`); // waveform
     }
-    if (imagePaths.publisherLogotype && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
+    if (imagePaths.publisherLogotype && tools.getMimeTypeFromPath(imagePaths.publisherLogotype).startsWith('image')) {
       metaflacOptions.push(`--import-picture-from=20||Publisher Logotype||${imagePaths.publisherLogotype}`); // publisher logo
     }
 
