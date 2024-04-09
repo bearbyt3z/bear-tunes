@@ -188,6 +188,26 @@ export function roundToDecimalPlaces(num: number, decimalPlaces?: number) {
   return Math.round(n) / p;
 }
 
+export function secondsToTimeFormat(inputSeconds : number): string {
+  inputSeconds = Math.round(inputSeconds);
+  const hours = Math.floor(inputSeconds / 3600);
+  const minutes = Math.floor((inputSeconds % 3600) / 60);
+  const seconds = Math.floor(inputSeconds % 60);
+
+  let result = '';
+  if (hours > 0) {
+    result += `${hours}:`;
+
+    if (minutes < 10) {
+      result += '0'; // minutes variable with zeroPad() below would end up in "04:13"-like format...
+    }
+  }
+
+  result += `${minutes}:${zeroPad(seconds)}`;
+
+  return result;
+}
+
 export function isString(value: unknown): boolean {
   return typeof value === 'string' || value instanceof String;
 }

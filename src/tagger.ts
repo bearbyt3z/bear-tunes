@@ -46,6 +46,8 @@ export class BearTunesTagger {
   }
 
   async processTrack(trackPath: string): Promise<TrackInfo> {
+    let forceRadioEdit = false;
+
     const trackFilename = path.basename(trackPath);
     const trackFilenameWithoutExtension = tools.replaceFilenameExtension(trackFilename, '');
     const trackFilenameKeywords = tools.splitTrackNameIntoKeywords(trackFilenameWithoutExtension);
@@ -76,12 +78,23 @@ export class BearTunesTagger {
         }
       }
       logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullName}`);
+
+      if (trackInfo.details && bestMatchingTrack.details && Math.abs(bestMatchingTrack.details.duration - trackInfo.details.duration) > this.options.lengthDifferenceAccepted) {
+        logger.warn(`Matched track has different duration: ${tools.secondsToTimeFormat(bestMatchingTrack.details.duration)} vs. ${tools.secondsToTimeFormat(trackInfo.details.duration)} (original)\nURL: ${trackUrl}`);
+
+        const changeToRadioEdit = prompt('Change it to "Radio Edit"? (y)es/(n)o/(s)kip: ');
+        if (changeToRadioEdit === 's' || changeToRadioEdit === 'skip') {
+          return {};
+        }
+
+        forceRadioEdit = (changeToRadioEdit === 'y') || (changeToRadioEdit === 'yes');
+      }
     }
     if (!trackUrl) {
       logger.error('URL of the matching track not found.');
       return {};
     }
-    const trackInfo = await this.extractTrackData(trackUrl);
+    const trackInfo = await this.extractTrackData(trackUrl, forceRadioEdit);
     await this.saveId3TagToMp3File(trackPath, trackInfo);
     return trackInfo;
   }
@@ -149,6 +162,9 @@ export class BearTunesTagger {
     const trackArray = await BearTunesTagger.extractNextJSData(new URL(this.options.searchURL + encodeURIComponent(inputKeywords.join('+')))) as BeatportSearchResultTrackInfo[];
 
     const winner: MatchingTrack = {
+      details: {
+        duration: 0,
+      },
       score: -1,
       scoreKeywords: [],
       // released: new Date('2999-12-12'), // some far away date...
@@ -160,11 +176,6 @@ export class BearTunesTagger {
     };
 
     for (const trackEntry of trackArray) {
-      // Skipping tracks with different length
-      const trackLength = tools.roundToDecimalPlaces(trackEntry.length / 1000.0, 2);
-      if (trackLength && trackInfo.details && Math.abs(trackLength - trackInfo.details.duration) > this.options.lengthDifferenceAccepted)
-        continue;
-
       const trackTitle = tools.createTitle(trackEntry.track_name, trackEntry.mix_name);
 
       const trackArtists = tools.createArtistArray(trackEntry.artists
@@ -193,7 +204,12 @@ export class BearTunesTagger {
       );
 
       const score = keywordsIntersection.length;
-      if ((score > winner.score) || ((score === winner.score) && (!winner.released || trackReleased < winner.released))) {
+      const trackLength = tools.roundToDecimalPlaces(trackEntry.length / 1000.0, 2);
+
+      if ((score > winner.score)
+        || ((score === winner.score) && (!winner.released || trackReleased < winner.released))
+        || ((score === winner.score) && trackLength > 0 && trackInfo.details && Math.abs(trackLength - trackInfo.details.duration) < Math.abs(winner.details!.duration - trackInfo.details.duration))) {
+        winner.details!.duration = trackLength; // the initialization of the winner variable (at the beginning) ensures that details prop is defined
         winner.score = score;
         winner.scoreKeywords = keywordsIntersection;
         winner.released = trackReleased;
@@ -209,10 +225,19 @@ export class BearTunesTagger {
     return winner;
   }
 
-  async extractTrackData(trackUrl: URL): Promise<TrackInfo> {
+  async extractTrackData(trackUrl: URL, forceRadioEdit: boolean): Promise<TrackInfo> {
     const trackData = await BearTunesTagger.extractNextJSData(trackUrl) as BeatportTrackInfo;
 
-    const title = tools.createTitle(trackData.name, trackData.mix_name);
+    let title = tools.createTitle(trackData.name, trackData.mix_name);
+
+    if (forceRadioEdit) {
+      const match = title.match(/Original Mix|Extended Mix/i);
+      if (match != null && match.length >= 1) {
+        title = title.replace(match[0], 'Radio Edit');
+      } else {
+        title += ' (Radio Edit)';
+      }
+    }
 
     const artists = tools.createArtistArray(trackData.artists.map((x: BeatportArtistInfo) => x.name));
     const remixers = tools.createArtistArray(trackData.remixers.map((x: BeatportArtistInfo) => x.name));
