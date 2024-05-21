@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/opt/pipx/venvs/eyed3/bin/python
 
 import sys
 import eyed3
@@ -38,10 +38,10 @@ pattern = pattern.replace('$length()', str(audio.info and audio.info.time_secs o
 
 user_text_frames = ''
 for frame in audio.tag and audio.tag.user_text_frames or []:
-  user_text_frames += f'"{frame.description}": "{frame.text}"\, '
+  user_text_frames += f'"{frame.description}": "{frame.text}"\\, '
 
-pattern = pattern.replace('%texts,output="#d": "#t"\,%', user_text_frames)
+pattern = pattern.replace('%texts,output="#d": "#t"\\,%', user_text_frames)
 
-pattern = pattern.replace('\,', ',') # replace comma escapers in the pattern file
+pattern = pattern.replace('\\,', ',') # replace comma escapers in the pattern file
 
 print(pattern)
