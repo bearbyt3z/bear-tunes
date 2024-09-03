@@ -360,13 +360,15 @@ export class BearTunesTagger {
       // '--artist', trackData.artists.replace('ø', 'o'),
     }
     if (trackData.title) {
-      eyeD3Options.push('--title', trackData.title);
+      // eyeD3Options.push('--title', trackData.title.replace(/^-/, '- '));
+      eyeD3Options.push('--text-frame', `TIT2:${trackData.title}`); // --title option with a parameter starting with a hyphen (-) will cause eyeD3 to report the usage error
     }
     if (trackData.remixers && trackData.remixers.length > 0) {
       eyeD3Options.push('--text-frame', `TPE4:${trackData.remixers.join(', ')}`); // TPE4 => REMIXEDBY
     }
     if (trackData.album?.title) {
-      eyeD3Options.push('--album', trackData.album.title);
+      // eyeD3Options.push('--album', trackData.album.title.replace(/^-/, '- '));
+      eyeD3Options.push('--text-frame', `TALB:${trackData.album.title}`); // the same as with --title
     }
     if (trackData.album && trackData.album.artists && trackData.album.artists.length > 0) {
       eyeD3Options.push('--album-artist', trackData.album.artists.join(', '));
