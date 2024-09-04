@@ -73,6 +73,13 @@ export async function downloadAndSaveArtwork(trackPath: string, trackInfo: Track
   }
 }
 
+// const colonEscapeChar = (process.platform === "win32") ? '\\' : '\\\\';
+const colonEscapeChar = '\\'; // the same on windows & linux platform...
+
+export function escapeColonChar(str: string): string {
+  return str.replace(/:/g, `${colonEscapeChar}:`);
+}
+
 export function replaceFilenameExtension(filename: string, replacement: string) : string {
   return filename.replace(new RegExp(`${path.extname(filename)}$`), replacement);
 }
