@@ -287,7 +287,7 @@ export class BearTunesTagger {
     const albumData = await BearTunesTagger.extractNextJSData(albumUrl) as BeatportAlbumInfo;
 
     const artists = tools.createArtistArray(albumData.artists.map((x: BeatportArtistInfo) => x.name));
-    const title = albumData.name;
+    const title = tools.replaceTagForbiddenChars(albumData.name);
     const catalogNumber = albumData.catalog_number;
     const trackTotal = tools.getPositiveIntegerOrUndefined(albumData.track_count);
     const artwork = albumData.image && new URL(albumData.image.uri) || undefined;

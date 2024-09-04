@@ -77,6 +77,11 @@ export function replaceFilenameExtension(filename: string, replacement: string) 
   return filename.replace(new RegExp(`${path.extname(filename)}$`), replacement);
 }
 
+export function replaceTagForbiddenChars(str: string): string {
+  return str
+    .replace(/[`’]/g, '\''); // replace weird apostrophes with '
+}
+
 export function splitTrackNameIntoKeywords(name: string | string[]): string[] {
   let nameComputed = (name instanceof Array) ? name.join(' ') : name;
 
@@ -86,6 +91,8 @@ export function splitTrackNameIntoKeywords(name: string | string[]): string[] {
     .replace(/\s+[-–&]\s+/g, ' ') // replace dash & ampersand (etc.) surrounded by spaces with a single space
     .replace(/\s{2,}/g, ' ') // replace multiple whitespace chars with a single space
     .trim(); // remove spaces at the beggining & end
+  
+  nameComputed = replaceTagForbiddenChars(nameComputed);
 
   return Array.from(new Set(nameComputed.split(' '))); // set to avoid repetitions
 }
@@ -120,7 +127,9 @@ export function createTitle(trackName?: string, trackMixName?: string): string {
     .replace(/(-|–)\s+(.*Remix)\s+\(Original Mix\)/i, '($2)') // e.g.: Bassturbation - Oyaebu Remix (Original Mix) => Bassturbation (Oyaebu Remix)
     .replace(/(\(.*\sRemix(\s+\(.*\))\))/, (unused, g1, g2) => g1.replace(g2, '') + g2) // e.g.: It's Our Future (Deadmau5 Remix (Cubrik Re-Edit)) => It's Our Future (Deadmau5 Remix) (Cubrik Re-Edit)
     .replace(/\b(original|extended|instrumental|dub|radio|mix|remix|edit|demo|tape)\b/g, (match, g1) => g1.charAt(0).toUpperCase() + g1.slice(1)); // first capital letter
-  
+
+  title = replaceTagForbiddenChars(title);
+
   return title;
 }
 
@@ -137,7 +146,7 @@ export function createArtistArray(artistArray: string[] | null, title?: string):
   for (const artist of artistArray) {
     if (artist && artist.length > 0
       && (title === undefined || title.search(new RegExp(`(feat|ft).+${regExpEscape(artist)}`, 'i')) < 0)) { // search for feat/ft before the artist name
-      result.push(artist);
+      result.push(replaceTagForbiddenChars(artist));
     }
   }
 
