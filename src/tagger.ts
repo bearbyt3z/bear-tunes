@@ -519,6 +519,7 @@ export class BearTunesTagger {
       '--remove-tag=PRIV', '--remove-tag=COMMENT',
       '--remove-tag=DESCRIPTION', '--remove-tag=COPYRIGHT',
       '--remove-tag=DISCNUMBER', '--remove-tag=DISCTOTAL', '--remove-tag=COMPOSER', '--remove-tag=LYRICS', // tags set by tidal-dl
+      '--remove-tag=COMPATIBLE_BRANDS', '--remove-tag=MAJOR_BRAND', '--remove-tag=MINOR_VERSION', '--remove-tag=ENCODER', // tags set by tidal-dl-ng
       '--remove-replay-gain',
       // '--remove-all-tags',
     ];
