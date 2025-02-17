@@ -78,6 +78,7 @@ export class BearTunesTagger {
         }
       }
       logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullName}`);
+      logger.info(`Matched  URL: ${bestMatchingTrack.url ?? 'Undefined'}`);
 
       if (trackInfo.details && bestMatchingTrack.details && Math.abs(bestMatchingTrack.details.duration - trackInfo.details.duration) > this.options.lengthDifferenceAccepted) {
         logger.warn(`Matched track has different duration: ${tools.secondsToTimeFormat(bestMatchingTrack.details.duration)} vs. ${tools.secondsToTimeFormat(trackInfo.details.duration)} (original)\nURL: ${trackUrl}`);
