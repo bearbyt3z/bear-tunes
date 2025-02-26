@@ -1,7 +1,6 @@
 import fetch from 'node-fetch';
 import * as jsdom from 'jsdom';
 import * as fs from 'fs';
-import * as request from 'request';
 import * as crypto from 'crypto';
 import * as childProcess from 'child_process';
 import * as path from 'path';
@@ -32,9 +31,6 @@ export function downloadFile(url: URL, filename?: string, callback?: (filename: 
   return new Promise((resolve, reject) => {
     if (!url) return reject('Proper URL is needed to download a file.');
 
-    // request.head(url, async (error, response, body) => {
-    // console.log('content-type:', response.headers['content-type']);
-    // console.log('content-length:', response.headers['content-length']);
     const urlSplit = url.pathname.split('/');
     const urlFilename = urlSplit[urlSplit.length - 1];
     let filenameComputed: string;
@@ -49,17 +45,23 @@ export function downloadFile(url: URL, filename?: string, callback?: (filename: 
       filenameComputed = filename;
     }
 
-    // request(url).pipe(fs.createWriteStream(filenameComputed)).on('close', callback(filenameComputed));
-    request(url.toString()).pipe(fs.createWriteStream(filenameComputed))
-      .on('close', () => {
-        resolve(`File created successfully: ${filenameComputed}`);
-        if (callback !== undefined) callback(filenameComputed);
-      })
-      .on('error', (error) => {
-        logger.error(error);
-        reject(error);
-      });
-    // request(url).pipe(fs.WriteSync(filename)).on('close', callback(filename));
+    fetch(url.toString())
+      .then((response) => response.body)
+      .then((body) => {
+        if (!body) {
+          reject(`Failed to download a file: ${filenameComputed} (response body is null)`);
+        } else {
+          body?.pipe(fs.createWriteStream(filenameComputed))
+            .on('close', () => {
+              resolve(`File created successfully: ${filenameComputed}`);
+              if (callback !== undefined) callback(filenameComputed);
+            })
+            .on('error', (error) => {
+              logger.error(error);
+              reject(error);
+            });
+        }
+    });
   });
 }
 
