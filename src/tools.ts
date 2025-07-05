@@ -95,11 +95,11 @@ export function splitTrackNameIntoKeywords(name: string | string[]): string[] {
   let nameComputed = (name instanceof Array) ? name.join(' ') : name;
 
   nameComputed = nameComputed
-    .replace(/(^|(\s+-\s+))\d+\s*[-.]\s+/, ' ') // remove track number (at the beggining or in the middle)
+    .replace(/(^|(\s+-\s+))\d+\s*[-.]\s+/, ' ') // remove track number (at the beginning or in the middle)
     .replace(/[()[\],]/g, ' ') // replace brackets & comma with a single space
     .replace(/\s+[-–&]\s+/g, ' ') // replace dash & ampersand (etc.) surrounded by spaces with a single space
     .replace(/\s{2,}/g, ' ') // replace multiple whitespace chars with a single space
-    .trim(); // remove spaces at the beggining & end
+    .trim(); // remove spaces at the beginning & end
   
   nameComputed = replaceTagForbiddenChars(nameComputed);
 
