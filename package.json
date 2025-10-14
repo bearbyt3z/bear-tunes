@@ -1,6 +1,6 @@
 {
   "name": "bear-tunes",
-  "version": "0.16.2",
+  "version": "0.16.3",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./src/index.js",
   "scripts": {
@@ -14,25 +14,25 @@
   "author": "bearbyt3z",
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "canvas": "^3.1.2",
+    "canvas": "^3.2.0",
     "jsdom": "^26.1.0",
     "node-fetch": "^3.3.2",
     "prompt-sync": "^4.2.0",
-    "winston": "^3.17.0"
+    "winston": "^3.18.3"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.7",
-    "@types/node": "^24.2.0",
+    "@types/node": "^24.7.2",
     "@types/node-fetch": "^2.6.13",
-    "@typescript-eslint/eslint-plugin": "^8.39.0",
-    "@typescript-eslint/parser": "^8.39.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.1",
+    "@typescript-eslint/parser": "^8.46.1",
     "ajv": "^8.17.1",
-    "eslint": "^9.32.0",
+    "eslint": "^9.37.0",
     "eslint-config-airbnb-typescript": "^18.0.0",
     "node-loader": "^2.1.0",
-    "ts-loader": "^9.5.2",
-    "typescript": "^5.9.2",
-    "webpack": "^5.101.0",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "webpack": "^5.102.1",
     "webpack-cli": "^6.0.1",
     "webpack-merge": "^6.0.1"
   }
