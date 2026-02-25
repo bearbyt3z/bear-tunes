@@ -119,4 +119,31 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
   });
 };
 
-processAllFilesInDirectory(inputDirectory, outputDirectory);
+// Last-resort handlers for errors that escape normal try/catch.
+// - `unhandledRejection`: a rejected Promise with no handler.
+// - `uncaughtException`: a synchronous throw not caught anywhere.
+// We log the error and set a non-zero exit code, letting Node exit naturally
+// (instead of forcing an immediate shutdown).
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection:', reason);
+  process.exitCode = 1;
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception:', error);
+  process.exitCode = 1;
+});
+
+// Start the main async workflow (process all files) and attach a single, top-level
+// error handler for anything that bubbles up as a rejected Promise.
+//
+// If an error reaches this point, it means we couldn't (or chose not to) recover
+// locally, so we log it and signal failure to the calling environment (CI, shell).
+// We set `process.exitCode` instead of calling `process.exit(1)` to let Node finish
+// any pending I/O (e.g., flushing stderr) and exit naturally.
+processAllFilesInDirectory(inputDirectory, outputDirectory)
+  .catch((error) => {
+    logger.error(error);
+    process.exitCode = 1;
+  });
