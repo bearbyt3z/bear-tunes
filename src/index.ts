@@ -71,7 +71,16 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
 
     for (const file of files) {
       const filePath = directoryWithSeparator + file;
-      if (fs.statSync(filePath).isDirectory()) {
+
+      let fileStat;
+      try {
+        fileStat = fs.statSync(filePath);
+      } catch (error: unknown) {
+        logger.error(`Path does not exist or is not accessible: ${filePath}`);
+        continue;
+      }
+
+      if (fileStat.isDirectory()) {
         processAllFilesInDirectory(filePath);
       } else if (path.extname(file) === '.mp3') {
         const flacIndex = flacFiles.indexOf(filePath);
