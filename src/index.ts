@@ -55,7 +55,6 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
   }
 
   fs.readdir(inputDirectory, async (error, files) => {
-    const directoryWithSeparator: string = inputDirectory.replace(/[/\\]+$/, path.sep);
     let noFilesWereProcessed = true;
     if (error) {
       logger.error(`Couldn't read directory: ${inputDirectory}`);
@@ -70,7 +69,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
     const flacFiles: Array<string> = [];
 
     for (const file of files) {
-      const filePath = directoryWithSeparator + file;
+      const filePath = path.join(inputDirectory, file);
 
       let fileStat;
       try {
