@@ -19,7 +19,11 @@ const options = {
       level: 'silly',
       format: winston.format.combine(
         // winston.format.printf(info => `${info.level.toUpperCase()}: ${info.message}`),
-        winston.format.printf((info) => info.message as string),
+        winston.format.printf((info) => {
+          const err = info.error as Error | undefined;
+          const message = info.message as string;
+          return err instanceof Error ? `${message}: ${err.message}` : message;
+        }),
         winston.format.colorize({ all: true }),
       ),
     }),
