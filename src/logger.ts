@@ -32,7 +32,10 @@ const options = {
         // winston.format.prettyPrint(),
         // // winston.format.json(),
         // winston.format.align(),
-        winston.format.timestamp({ format: 'YY.MM.DD HH:MM:SS' }),
+
+        // Human-readable local timestamp with timezone offset for error logs
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss (Z)' }),
+
         winston.format.printf((info) => `${info.timestamp} ${info.level.toUpperCase()}: ${info.message}`),
         // winston.format.colorize({ all: true }),
       ),
