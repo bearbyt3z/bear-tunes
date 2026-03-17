@@ -8,11 +8,15 @@ import { TrackInfo } from './types';
 
 const logger = require('./logger');
 
-export async function fetchWebPage(url: URL): Promise<HTMLDocument> {
-  const response = await fetch(url.toString())
-    .then((res) => res.text())
-    .catch((error) => logger.error(error));
-  return (new jsdom.JSDOM(response)).window.document;
+export async function fetchWebPage(url: URL): Promise<Document> {
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for "${url.toString()}"`);
+  }
+
+  const html = await response.text();
+  return (new jsdom.JSDOM(html)).window.document;
 }
 
 export function arrayDifference(array1: unknown[], array2: unknown[]): unknown[] {

@@ -51,21 +51,35 @@ export class BearTunesTagger {
     const trackFilename = path.basename(trackPath);
     const trackFilenameWithoutExtension = tools.replaceFilenameExtension(trackFilename, '');
     const trackFilenameKeywords = tools.splitTrackNameIntoKeywords(trackFilenameWithoutExtension);
+
     logger.silly('########################################');
     logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
+
     const trackUrlFilename = path.join(path.dirname(trackPath), `${trackFilenameWithoutExtension}.url`);
-    let trackUrl: URL | null;
+    let trackUrl: URL | null = null;
+
     if (fs.existsSync(trackUrlFilename)) {
       trackUrl = tools.getUrlFromFile(trackUrlFilename);
+
       if (trackUrl === null) {
         logger.warn(`URL file is present but no URL found inside (skipping): ${trackUrlFilename}`);
         return {};
       }
+
       logger.info(`Using URL from file: ${trackUrl}`);
     } else {
       const trackInfo = this.extractId3Tag(trackPath);
-      const bestMatchingTrack = await this.findBestMatchingTrack(trackInfo, trackFilenameKeywords);
+
+      let bestMatchingTrack;
+      try {
+        bestMatchingTrack = await this.findBestMatchingTrack(trackInfo, trackFilenameKeywords);
+      } catch (error) {
+        logger.error(`Track matching failed for "${trackFilename}"`, { error });
+        return {};
+      }
+
       trackUrl = bestMatchingTrack.url ?? null;
+
       if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
         let warnMessage = `Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n${bestMatchingTrack.fullName}\n`;
         warnMessage += `Score keywords: ${bestMatchingTrack.scoreKeywords}\nName  keywords: ${trackFilenameKeywords}`;
@@ -77,6 +91,7 @@ export class BearTunesTagger {
           return {};
         }
       }
+
       logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullName}`);
       logger.info(`Matched  URL: ${bestMatchingTrack.url ?? 'Undefined'}`);
 
@@ -91,12 +106,16 @@ export class BearTunesTagger {
         forceRadioEdit = (changeToRadioEdit === 'y') || (changeToRadioEdit === 'yes');
       }
     }
+
     if (!trackUrl) {
       logger.error('URL of the matching track not found.');
       return {};
     }
+
     const trackInfo = await this.extractTrackData(trackUrl, forceRadioEdit);
+
     await this.saveId3TagToMp3File(trackPath, trackInfo);
+
     return trackInfo;
   }
 
