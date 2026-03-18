@@ -4,19 +4,168 @@ import * as fs from 'fs';
 import * as crypto from 'crypto';
 import * as childProcess from 'child_process';
 import * as path from 'path';
+import UserAgent from 'user-agents';
+
+import type { UACache, UAProfile } from './tools.types';
+
 import { TrackInfo } from './types';
 
 const logger = require('./logger');
 
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const UA_PROFILES: UAProfile[] = [
+  {
+    name: 'chrome-windows',
+    match: /Chrome/,
+    filter: { deviceCategory: 'desktop', platform: 'Win32' },
+  },
+  {
+    name: 'firefox-windows',
+    match: /Firefox/,
+    filter: { deviceCategory: 'desktop', platform: 'Win32' },
+  },
+  {
+    name: 'safari-macos',
+    match: /Safari/,
+    filter: { deviceCategory: 'desktop', platform: 'MacIntel' },
+  },
+  {
+    name: 'chrome-mobile',
+    match: /(Chrome|CriOS)/,
+    filter: { deviceCategory: 'mobile' },
+  },
+  {
+    name: 'safari-mobile',
+    match: /Version\/.*Mobile\/.*Safari\//,
+    filter: { deviceCategory: 'mobile' },
+  },
+];
+
+const CACHE_DIR = path.join(process.cwd(), '.cache');
+const UA_CACHE_FILE = path.join(CACHE_DIR, 'user-agent.json');
+
+function randomInt(min: number, max: number): number {
+  if (!Number.isInteger(min) || !Number.isInteger(max) || min > max) {
+    throw new Error(`Invalid randomInt range: min=${min}, max=${max}`);
+  }
+
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomTtlMs(minDays = 3, maxDays = 10): number {
+  const minMs = minDays * MILLISECONDS_PER_DAY;
+  const maxMs = maxDays * MILLISECONDS_PER_DAY;
+  return randomInt(minMs, maxMs);
+}
+
+function pickRandomProfile(): UAProfile {
+  return UA_PROFILES[randomInt(0, UA_PROFILES.length - 1)];
+}
+
+function generateUserAgent(profile: UAProfile): string {
+  return new UserAgent([profile.match, profile.filter]).toString();
+}
+
+async function ensureDir(dirPath: string): Promise<void> {
+  await fs.promises.mkdir(dirPath, { recursive: true });
+}
+
+async function readJsonFile<T>(filePath: string): Promise<T | null> {
+  try {
+    const raw = await fs.promises.readFile(filePath, 'utf8');
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+
+    if (err.code === 'ENOENT') {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+async function writeFileAtomic(filePath: string, content: string): Promise<void> {
+  const dirPath = path.dirname(filePath);
+  const tempFilePath = path.join(
+    dirPath,
+    `.tmp-${path.basename(filePath)}-${process.pid}-${crypto.randomUUID()}`
+  );
+
+  await ensureDir(dirPath);
+  await fs.promises.writeFile(tempFilePath, content, 'utf8');
+  await fs.promises.rename(tempFilePath, filePath);
+}
+
+function isValidUACache(value: unknown): value is UACache {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const cache = value as Record<string, unknown>;
+
+  return (
+    typeof cache.userAgent === 'string' &&
+    cache.userAgent.length > 0 &&
+    typeof cache.profileName === 'string' &&
+    typeof cache.createdAt === 'number' &&
+    Number.isFinite(cache.createdAt) &&
+    typeof cache.expiresAt === 'number' &&
+    Number.isFinite(cache.expiresAt)
+  );
+}
+
+export async function getUserAgent(): Promise<string> {
+  const now = Date.now();
+  const cached = await readJsonFile<unknown>(UA_CACHE_FILE);
+
+  if (isValidUACache(cached) && cached.expiresAt > now) {
+    return cached.userAgent;
+  }
+
+  const profile = pickRandomProfile();
+  const userAgent = generateUserAgent(profile);
+
+  const cache: UACache = {
+    userAgent,
+    profileName: profile.name,
+    createdAt: now,
+    expiresAt: now + randomTtlMs(7, 14),
+  };
+
+  await writeFileAtomic(UA_CACHE_FILE, JSON.stringify(cache, null, 2));
+
+  return cache.userAgent;
+}
+
+export async function buildSafeHeaders(): Promise<Record<string, string>> {
+  const userAgent = await getUserAgent();
+
+  return {
+    'User-Agent': userAgent,
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+  };
+}
+
 export async function fetchWebPage(url: URL): Promise<Document> {
-  const response = await fetch(url.toString());
+  const headers = await buildSafeHeaders();
+
+  const response = await fetch(url.toString(), {
+    headers: headers,
+    redirect: 'follow',
+  });
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} for "${url.toString()}"`);
   }
 
   const html = await response.text();
-  return (new jsdom.JSDOM(html)).window.document;
+  return new jsdom.JSDOM(html).window.document;
 }
 
 export function arrayDifference(array1: unknown[], array2: unknown[]): unknown[] {
