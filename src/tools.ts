@@ -193,7 +193,7 @@ export function downloadFile(url: URL, filename?: string, callback?: (filename: 
     } else if (filename.split('.').length < 2) { // no extension
       const urlFilenameSplit = urlFilename.split('.');
       const urlFilenameExtension = urlFilenameSplit[urlFilenameSplit.length - 1];
-      filenameComputed = filename + urlFilenameExtension;
+      filenameComputed = `${filename}.${urlFilenameExtension}`;
     } else {
       filenameComputed = filename;
     }
