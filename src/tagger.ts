@@ -34,7 +34,7 @@ const defaultTaggerOptions: BearTunesTaggerOptions = {
   // get searchURL() { return `${this.domainURL}/search?q=`; }, // we want tracks only
   eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
   lengthDifferenceAccepted: 3,
-  verbose: false,
+  verbose: true,
 } as const;
 
 export class BearTunesTagger {
@@ -338,29 +338,36 @@ export class BearTunesTagger {
 
   async saveId3TagToMp3File(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}): Promise<void> {
     const imagePaths: TrackArtworkFiles = {};
-    await tools.downloadFile(trackData.publisher?.logotype, null, (filename: string) => {
+
+    try {
+      const filename = await tools.downloadFile(trackData.publisher?.logotype, null);
       if (verbose) {
         logger.debug(`Publisher logotype written to: ${filename}`);
       }
       imagePaths.publisherLogotype = filename;
-    })
-    .catch((error: string) => logger.warn(`Publisher logotype: ${error}`));
+    } catch (error: unknown) {
+      logger.warn('Publisher logotype', { error });
+    }
 
-    await tools.downloadFile(trackData.album?.artwork, null, (filename: string) => {
+    try {
+      const filename = await tools.downloadFile(trackData.album?.artwork, null);
       if (verbose) {
         logger.debug(`Album artwork written to: ${filename}`);
       }
       imagePaths.frontCover = filename;
-    })
-    .catch((error: string) => logger.warn(`Album artwork: ${error}`));
+    } catch (error: unknown) {
+      logger.warn('Album artwork', { error });
+    }
 
-    await tools.downloadFile(trackData.waveform, null, (filename: string) => {
+    try {
+      const filename = await tools.downloadFile(trackData.waveform, null);
       if (verbose) {
         logger.debug(`Waveform written to: ${filename}`);
       }
       imagePaths.waveform = filename;
-    })
-    .catch((error: string) => logger.warn(`Waveform: ${error}`));
+    } catch (error: unknown) {
+      logger.warn('Waveform', { error });
+    }
 
     const trackFilename = path.basename(trackPath);
 
@@ -511,29 +518,36 @@ export class BearTunesTagger {
 
   async saveId3TagToFlacFile(trackPath: string, trackData: TrackInfo, { verbose = false } = {}): Promise<void> {
     const imagePaths: TrackArtworkFiles = {};
-    await tools.downloadFile(trackData.publisher?.logotype, null, (filename: string) => {
+
+    try {
+      const filename = await tools.downloadFile(trackData.publisher?.logotype, null);
       if (verbose) {
         logger.debug(`Publisher logotype written to: ${filename}`);
       }
       imagePaths.publisherLogotype = filename;
-    })
-    .catch((error: string) => logger.warn(`Publisher logotype: ${error}`));
+    } catch (error: unknown) {
+      logger.warn('Publisher logotype', { error });
+    }
 
-    await tools.downloadFile(trackData.album?.artwork, null, (filename: string) => {
+    try {
+      const filename = await tools.downloadFile(trackData.album?.artwork, null);
       if (verbose) {
         logger.debug(`Album artwork written to: ${filename}`);
       }
       imagePaths.frontCover = filename;
-    })
-    .catch((error: string) => logger.warn(`Album artwork: ${error}`));
+    } catch (error: unknown) {
+      logger.warn('Album artwork', { error });
+    }
 
-    await tools.downloadFile(trackData.waveform, null, (filename: string) => {
+    try {
+      const filename = await tools.downloadFile(trackData.waveform, null);
       if (verbose) {
         logger.debug(`Waveform written to: ${filename}`);
       }
       imagePaths.waveform = filename;
-    })
-    .catch((error: string) => logger.warn(`Waveform: ${error}`));
+    } catch (error: unknown) {
+      logger.warn('Waveform', { error });
+    }
 
     const metaflacOptions: string[] = [
       '--remove-tag=PRIV', '--remove-tag=COMMENT',

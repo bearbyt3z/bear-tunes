@@ -1,10 +1,13 @@
-import fetch from 'node-fetch';
 import * as jsdom from 'jsdom';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import * as childProcess from 'child_process';
 import * as path from 'path';
 import UserAgent from 'user-agents';
+
+import { pipeline } from 'stream/promises';
+import { Readable } from 'node:stream';
+import { ReadableStream } from 'node:stream/web';
 
 import type { UACache, UAProfile } from './tools.types';
 
@@ -180,43 +183,47 @@ export function arrayToLowerCase(array: string[]): string[] {
   return array.map((value) => value.toLowerCase());
 }
 
-export function downloadFile(url: URL, filename?: string, callback?: (filename: string) => void): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (!url) return reject('Proper URL is needed to download a file.');
+export async function downloadFile(
+  url: URL,
+  filename?: string | null
+): Promise<string> {
+  if (!url) {
+    throw new Error('Proper URL is needed to download a file.');
+  }
 
-    const urlSplit = url.pathname.split('/');
-    const urlFilename = urlSplit[urlSplit.length - 1];
-    let filenameComputed: string;
+  const urlSplit = url.pathname.split('/');
+  const urlFilename = urlSplit[urlSplit.length - 1];
+  let filenameComputed: string;
 
-    if (!filename || filename.length < 1) {
-      filenameComputed = urlFilename;
-    } else if (filename.split('.').length < 2) { // no extension
-      const urlFilenameSplit = urlFilename.split('.');
-      const urlFilenameExtension = urlFilenameSplit[urlFilenameSplit.length - 1];
-      filenameComputed = `${filename}.${urlFilenameExtension}`;
-    } else {
-      filenameComputed = filename;
-    }
+  if (!filename || filename.length < 1) {
+    filenameComputed = urlFilename;
+  } else if (filename.split('.').length < 2) {
+    const urlFilenameSplit = urlFilename.split('.');
+    const urlFilenameExtension = urlFilenameSplit[urlFilenameSplit.length - 1];
+    filenameComputed = `${filename}.${urlFilenameExtension}`;
+  } else {
+    filenameComputed = filename;
+  }
 
-    fetch(url.toString())
-      .then((response) => response.body)
-      .then((body) => {
-        if (!body) {
-          reject(`Failed to download a file: ${filenameComputed} (response body is null)`);
-        } else {
-          body?.pipe(fs.createWriteStream(filenameComputed))
-            .on('close', () => {
-              resolve(`File created successfully: ${filenameComputed}`);
-              if (callback !== undefined) callback(filenameComputed);
-            })
-            .on('error', (error) => {
-              logger.error(error);
-              reject(error);
-            });
-        }
-    });
-  });
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`Failed to download file: HTTP ${response.status} for "${url.toString()}"`);
+  }
+
+  if (!response.body) {
+    throw new Error(`Failed to download a file: ${filenameComputed} (response body is null)`);
+  }
+
+  const body = response.body as unknown as ReadableStream<Uint8Array<ArrayBufferLike>>;
+  const readable = Readable.fromWeb(body);
+  const writable = fs.createWriteStream(filenameComputed);
+
+  await pipeline(readable, writable);
+
+  return filenameComputed;
 }
+
 
 export async function downloadAndSaveArtwork(trackPath: string, trackInfo: TrackInfo) {
   if (trackInfo.album?.artwork?.pathname.includes('.')) {
