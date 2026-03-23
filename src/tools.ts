@@ -7,7 +7,7 @@ import UserAgent from 'user-agents';
 
 import { pipeline } from 'stream/promises';
 import { Readable } from 'node:stream';
-import { ReadableStream } from 'node:stream/web';
+import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
 
 import type { UACache, UAProfile } from './tools.types';
 
@@ -183,6 +183,18 @@ export function arrayToLowerCase(array: string[]): string[] {
   return array.map((value) => value.toLowerCase());
 }
 
+/**
+ * Converts a Fetch API response body into a Node.js readable stream.
+ *
+ * This helper isolates the DOM-vs-Node stream typing workaround used by
+ * Readable.fromWeb(), so the cast does not leak into higher-level code.
+ */
+function bodyToReadable(body: ReadableStream<Uint8Array>): Readable {
+  // TypeScript mismatch between DOM ReadableStream returned by fetch()
+  // and node:stream/web ReadableStream expected by Readable.fromWeb().
+  return Readable.fromWeb(body as unknown as NodeWebReadableStream<Uint8Array>);
+}
+
 export async function downloadFile(
   url: URL,
   filename?: string | null
@@ -215,8 +227,7 @@ export async function downloadFile(
     throw new Error(`Failed to download a file: ${filenameComputed} (response body is null)`);
   }
 
-  const body = response.body as unknown as ReadableStream<Uint8Array<ArrayBufferLike>>;
-  const readable = Readable.fromWeb(body);
+  const readable = bodyToReadable(response.body);
   const writable = fs.createWriteStream(filenameComputed);
 
   await pipeline(readable, writable);
