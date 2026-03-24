@@ -195,6 +195,37 @@ function bodyToReadable(body: ReadableStream<Uint8Array>): Readable {
   return Readable.fromWeb(body as unknown as NodeWebReadableStream<Uint8Array>);
 }
 
+/**
+ * Resolves the output filename for a downloaded resource.
+ *
+ * If no filename is provided, the filename is derived from the URL path.
+ * If a filename without extension is provided, the extension is copied
+ * from the URL filename when available.
+ */
+function resolveDownloadFilename(url: URL, filename?: string | null): string {
+  const urlSegments = url.pathname.split('/');
+  const urlFilename = urlSegments[urlSegments.length - 1];
+
+  if (!filename || filename.length < 1) {
+    return urlFilename;
+  }
+
+  if (filename.split('.').length < 2) {
+    const urlFilenameSegments = urlFilename.split('.');
+    const urlFilenameExtension = urlFilenameSegments[urlFilenameSegments.length - 1];
+    return `${filename}.${urlFilenameExtension}`;
+  }
+
+  return filename;
+}
+
+/**
+ * Downloads a remote file and saves it to the local filesystem.
+ *
+ * @param filename Optional target filename. If it has no extension,
+ * the extension is derived from the source URL.
+ * @returns The resolved output filename after the file has been written.
+ */
 export async function downloadFile(
   url: URL,
   filename?: string | null
@@ -203,19 +234,7 @@ export async function downloadFile(
     throw new Error('Proper URL is needed to download a file.');
   }
 
-  const urlSplit = url.pathname.split('/');
-  const urlFilename = urlSplit[urlSplit.length - 1];
-  let filenameComputed: string;
-
-  if (!filename || filename.length < 1) {
-    filenameComputed = urlFilename;
-  } else if (filename.split('.').length < 2) {
-    const urlFilenameSplit = urlFilename.split('.');
-    const urlFilenameExtension = urlFilenameSplit[urlFilenameSplit.length - 1];
-    filenameComputed = `${filename}.${urlFilenameExtension}`;
-  } else {
-    filenameComputed = filename;
-  }
+  const resolvedFilename = resolveDownloadFilename(url, filename);
 
   const response = await fetch(url.toString());
 
@@ -224,17 +243,16 @@ export async function downloadFile(
   }
 
   if (!response.body) {
-    throw new Error(`Failed to download a file: ${filenameComputed} (response body is null)`);
+    throw new Error(`Failed to download a file: ${resolvedFilename} (response body is null)`);
   }
 
   const readable = bodyToReadable(response.body);
-  const writable = fs.createWriteStream(filenameComputed);
+  const writable = fs.createWriteStream(resolvedFilename);
 
   await pipeline(readable, writable);
 
-  return filenameComputed;
+  return resolvedFilename;
 }
-
 
 export async function downloadAndSaveArtwork(trackPath: string, trackInfo: TrackInfo) {
   if (trackInfo.album?.artwork?.pathname.includes('.')) {
