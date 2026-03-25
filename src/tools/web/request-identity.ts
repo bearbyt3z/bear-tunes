@@ -1,0 +1,171 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as crypto from 'node:crypto';
+import UserAgent from 'user-agents';
+import type { UACache, UAProfile } from './request-identity.types';
+
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Supported User-Agent profile templates used for cached identity rotation. */
+const UA_PROFILES: UAProfile[] = [
+  {
+    name: 'chrome-windows',
+    match: /Chrome/,
+    filter: { deviceCategory: 'desktop', platform: 'Win32' },
+  },
+  {
+    name: 'firefox-windows',
+    match: /Firefox/,
+    filter: { deviceCategory: 'desktop', platform: 'Win32' },
+  },
+  {
+    name: 'safari-macos',
+    match: /Safari/,
+    filter: { deviceCategory: 'desktop', platform: 'MacIntel' },
+  },
+  {
+    name: 'chrome-mobile',
+    match: /(Chrome|CriOS)/,
+    filter: { deviceCategory: 'mobile' },
+  },
+  {
+    name: 'safari-mobile',
+    match: /Version\/.*Mobile\/.*Safari\//,
+    filter: { deviceCategory: 'mobile' },
+  },
+];
+
+const CACHE_DIR = path.join(process.cwd(), '.cache');
+const UA_CACHE_FILE = path.join(CACHE_DIR, 'user-agent.json');
+
+/** Returns a random integer from the inclusive range between min and max, or throws for an invalid range. */
+function randomInt(min: number, max: number): number {
+  if (!Number.isInteger(min) || !Number.isInteger(max) || min > max) {
+    throw new Error(`Invalid randomInt range: min=${min}, max=${max}`);
+  }
+
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/** Returns a random duration in milliseconds for the given day range. */
+function randomTtlMs(minDays = 3, maxDays = 10): number {
+  const minMs = minDays * MILLISECONDS_PER_DAY;
+  const maxMs = maxDays * MILLISECONDS_PER_DAY;
+  return randomInt(minMs, maxMs);
+}
+
+/** Selects one of the configured User-Agent profile templates. */
+function pickRandomProfile(): UAProfile {
+  return UA_PROFILES[randomInt(0, UA_PROFILES.length - 1)];
+}
+
+/** Generates a concrete User-Agent string for the selected profile template. */
+function generateUserAgent(profile: UAProfile): string {
+  return new UserAgent([profile.match, profile.filter]).toString();
+}
+
+/** Ensures that the target directory exists, creating it recursively if needed. */
+async function ensureDir(dirPath: string): Promise<void> {
+  await fs.promises.mkdir(dirPath, { recursive: true });
+}
+
+/** Reads and parses a JSON file, returning null when the file does not exist. */
+async function readJsonFile<T>(filePath: string): Promise<T | null> {
+  try {
+    const raw = await fs.promises.readFile(filePath, 'utf8');
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+
+    if (err.code === 'ENOENT') {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+/** Writes a file through a temporary sibling file to avoid partial cache writes. */
+async function writeFileAtomic(filePath: string, content: string): Promise<void> {
+  const dirPath = path.dirname(filePath);
+  const tempFilePath = path.join(
+    dirPath,
+    `.tmp-${path.basename(filePath)}-${process.pid}-${crypto.randomUUID()}`
+  );
+
+  await ensureDir(dirPath);
+  await fs.promises.writeFile(tempFilePath, content, 'utf8');
+  await fs.promises.rename(tempFilePath, filePath);
+}
+
+/** Checks whether parsed JSON has the expected cached User-Agent shape. */
+function isValidUACache(value: unknown): value is UACache {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const cache = value as Record<string, unknown>;
+
+  return (
+    typeof cache.userAgent === 'string' &&
+    cache.userAgent.length > 0 &&
+    typeof cache.profileName === 'string' &&
+    typeof cache.createdAt === 'number' &&
+    Number.isFinite(cache.createdAt) &&
+    typeof cache.expiresAt === 'number' &&
+    Number.isFinite(cache.expiresAt)
+  );
+}
+
+/**
+ * Returns the current cached User-Agent string or generates a new one.
+ *
+ * The generated value is persisted on disk and reused until its cache entry
+ * expires. This keeps repeated requests within a short time window consistent
+ * instead of rotating the User-Agent on every fetch.
+ *
+ * @returns A cached or newly generated User-Agent string.
+ */
+export async function getUserAgent(): Promise<string> {
+  const now = Date.now();
+  const cached = await readJsonFile<unknown>(UA_CACHE_FILE);
+
+  if (isValidUACache(cached) && cached.expiresAt > now) {
+    return cached.userAgent;
+  }
+
+  const profile = pickRandomProfile();
+  const userAgent = generateUserAgent(profile);
+
+  const cache: UACache = {
+    userAgent,
+    profileName: profile.name,
+    createdAt: now,
+    expiresAt: now + randomTtlMs(7, 14),
+  };
+
+  await writeFileAtomic(UA_CACHE_FILE, JSON.stringify(cache, null, 2));
+
+  return cache.userAgent;
+}
+
+/**
+ * Builds a browser-like header set for plain HTTP requests.
+ *
+ * The returned headers include the current cached User-Agent together with a
+ * conservative set of common navigation headers.
+ *
+ * @returns A headers object ready to be passed to fetch().
+ */
+export async function buildSafeHeaders(): Promise<Record<string, string>> {
+  const userAgent = await getUserAgent();
+
+  return {
+    'User-Agent': userAgent,
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+  };
+}

@@ -2,6 +2,7 @@ const path = require('path');
 
 module.exports = {
   target: 'node',
+  externalsPresets: { node: true },
   entry: './src/index.ts',
   output: {
     filename: 'main.js',
@@ -28,7 +29,9 @@ module.exports = {
     ],
   },
   externals: {
-    bufferutil: "bufferutil",
-    "utf-8-validate": "utf-8-validate",
+    bufferutil: 'bufferutil',
+    'utf-8-validate': 'utf-8-validate',
+    playwright: 'commonjs playwright',
+    'playwright-core': 'commonjs playwright-core',
   }
 };
