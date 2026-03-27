@@ -4,3 +4,4 @@
 *.flac
 /test/
 /.cache/
+/dist/
