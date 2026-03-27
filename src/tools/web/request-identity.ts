@@ -2,7 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import UserAgent from 'user-agents';
-import type { UACache, UAProfile } from './request-identity.types';
+import type { UACache, UAProfile, ClientProfile } from './request-identity.types';
+import type { BrowserContextOptions } from 'playwright';
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -150,22 +151,67 @@ export async function getUserAgent(): Promise<string> {
 }
 
 /**
- * Builds a browser-like header set for plain HTTP requests.
+ * Builds the canonical client profile containing identity, device, and request values.
  *
- * The returned headers include the current cached User-Agent together with a
- * conservative set of common navigation headers.
+ * The returned profile contains a complete set of client settings.
  *
- * @returns A headers object ready to be passed to fetch().
+ * @returns A complete client profile.
  */
-export async function buildSafeHeaders(): Promise<Record<string, string>> {
+export async function getClientProfile(): Promise<ClientProfile> {
   const userAgent = await getUserAgent();
 
   return {
-    'User-Agent': userAgent,
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Connection': 'keep-alive',
-    'Upgrade-Insecure-Requests': '1',
+    identity: {
+      userAgent,
+      locale: 'en-US',
+      timezoneId: 'Europe/Warsaw',
+    },
+    device: {
+      viewport: { width: 1920, height: 915 },
+      screen: { width: 1920, height: 1080 },
+      deviceScaleFactor: 1,
+      isMobile: false,
+      hasTouch: false,
+    },
+    request: {
+      accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      acceptLanguage: 'en-US,en;q=0.9',
+      acceptEncoding: 'gzip, deflate, br',
+      connection: 'keep-alive',
+      upgradeInsecureRequests: '1',
+    },
+  };
+}
+
+/**
+ * Builds HTTP request headers from a client profile.
+ *
+ * @returns A headers object ready to be passed to fetch().
+ */
+export function buildFetchHeaders(profile: ClientProfile): Record<string, string> {
+  return {
+    'User-Agent': profile.identity.userAgent,
+    'Accept': profile.request.accept,
+    'Accept-Language': profile.request.acceptLanguage,
+    'Accept-Encoding': profile.request.acceptEncoding,
+    'Connection': profile.request.connection,
+    'Upgrade-Insecure-Requests': profile.request.upgradeInsecureRequests,
+  };
+}
+
+/**
+ * Builds Playwright browser context options from a client profile.
+ *
+ * @returns A Playwright browser context options object.
+ */
+export function buildPlaywrightContextOptions(profile: ClientProfile): BrowserContextOptions {
+  return {
+    viewport: profile.device.viewport,
+    screen: profile.device.screen,
+    deviceScaleFactor: profile.device.deviceScaleFactor,
+    isMobile: profile.device.isMobile,
+    hasTouch: profile.device.hasTouch,
+    locale: profile.identity.locale,
+    timezoneId: profile.identity.timezoneId,
   };
 }

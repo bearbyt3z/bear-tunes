@@ -1,19 +1,9 @@
-import { chromium, type Page } from 'playwright';
+import { chromium, type Page, type BrowserContextOptions } from 'playwright';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { looksLikeChallengeHtml } from './challenge-detection';
 import type { BrowserFetchOptions, PageChallengeState } from './browser-session.types';
-
-/** Shared Chromium context settings for persistent browser sessions. */
-const PERSISTENT_CONTEXT_OPTIONS = {
-  viewport: { width: 1920, height: 915 },
-  screen: { width: 1920, height: 1080 },
-  deviceScaleFactor: 1,
-  isMobile: false,
-  hasTouch: false,
-  locale: 'en-US',
-  timezoneId: 'Europe/Warsaw',
-} as const;
+import { buildPlaywrightContextOptions, getClientProfile } from './request-identity';
 
 /** Returns the persistent Playwright profile directory, creating it if needed. */
 function getUserDataDir(cacheDir?: string): string {
@@ -76,15 +66,17 @@ async function waitUntilChallengeIsGone(
   }
 }
 
-/** Loads a page through a persistent browser context and returns its current state. */
+/** Loads a page through a persistent browser context configured with the given
+ * options and returns its current state. */
 async function readPageViaPersistentContext(
   url: URL,
+  contextOptions: BrowserContextOptions,
   options: BrowserFetchOptions = {},
 ): Promise<PageChallengeState> {
   const userDataDir = getUserDataDir(options.cacheDir);
 
   const context = await chromium.launchPersistentContext(userDataDir, {
-    ...PERSISTENT_CONTEXT_OPTIONS,
+    ...contextOptions,
     headless: options.headless ?? true,
   });
 
@@ -105,12 +97,12 @@ async function readPageViaPersistentContext(
 }
 
 /**
- * Resolves a page through a persistent Chromium profile and returns its final HTML.
+ * Resolves a page through a persistent browser context and returns its final HTML.
  *
  * The function first tries to load the page in headless mode using the existing
- * persistent profile state. If the page still looks like a challenge response,
+ * persistent browser state. If the page still looks like a challenge response,
  * it retries in headful mode so the verification can be completed manually, then
- * loads the page once more in headless mode using the same profile directory.
+ * loads the page once more in headless mode using the same persistent state.
  *
  * @param url - The target page URL.
  * @param options - Persistent browser loading options.
@@ -121,7 +113,10 @@ export async function fetchPageWithPersistentProfile(
   url: URL,
   options: BrowserFetchOptions = {},
 ): Promise<string> {
-  const firstTry = await readPageViaPersistentContext(url, {
+  const profile = await getClientProfile();
+  const contextOptions = buildPlaywrightContextOptions(profile);
+
+  const firstTry = await readPageViaPersistentContext(url, contextOptions, {
     ...options,
     headless: true,
   });
@@ -134,7 +129,7 @@ export async function fetchPageWithPersistentProfile(
   const manualTimeoutMs = options.manualTimeoutMs ?? 180_000;
 
   const context = await chromium.launchPersistentContext(userDataDir, {
-    ...PERSISTENT_CONTEXT_OPTIONS,
+    ...contextOptions,
     headless: false,
   });
 
@@ -151,7 +146,7 @@ export async function fetchPageWithPersistentProfile(
     await context.close();
   }
 
-  const secondTry = await readPageViaPersistentContext(url, {
+  const secondTry = await readPageViaPersistentContext(url, contextOptions, {
     ...options,
     headless: true,
   });
