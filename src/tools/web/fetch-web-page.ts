@@ -1,5 +1,5 @@
 import * as jsdom from 'jsdom';
-import { looksLikeChallengeHtml } from './challenge-detection';
+import { looksLikeChallengeResponse } from './challenge-detection';
 import { fetchPageWithPersistentProfile } from './browser-session';
 import { getClientProfile, buildFetchHeaders } from './request-identity';
 
@@ -17,7 +17,8 @@ import { getClientProfile, buildFetchHeaders } from './request-identity';
  *
  * @param url - The absolute page URL to download and parse.
  * @returns A parsed DOM document created from the final HTML response.
- * @throws {Error} When the initial HTTP request returns a non-success status code.
+ * @throws {Error} When the HTTP request returns a non-success status code
+ * and the response does not look like a challenge page.
  */
 export async function fetchWebPage(url: URL): Promise<Document> {
   const profile = await getClientProfile();
@@ -28,19 +29,19 @@ export async function fetchWebPage(url: URL): Promise<Document> {
     redirect: 'follow',
   });
 
+  const html = await response.text();
+
+  if (looksLikeChallengeResponse(response, html)) {
+    const resolvedHtml = await fetchPageWithPersistentProfile(url, {
+      cacheDir: '.cache/playwright-profile',
+    });
+
+    return new jsdom.JSDOM(resolvedHtml, { url: url.toString() }).window.document;
+  }
+
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} for "${url.toString()}"`);
   }
 
-  const html = await response.text();
-
-  if (!looksLikeChallengeHtml(html)) {
-    return new jsdom.JSDOM(html, { url: url.toString() }).window.document;
-  }
-
-  const resolvedHtml = await fetchPageWithPersistentProfile(url, {
-    cacheDir: '.cache/playwright-profile',
-  });
-
-  return new jsdom.JSDOM(resolvedHtml, { url: url.toString() }).window.document;
+  return new jsdom.JSDOM(html, { url: url.toString() }).window.document;
 }

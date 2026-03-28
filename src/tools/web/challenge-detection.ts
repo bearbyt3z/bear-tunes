@@ -11,10 +11,31 @@ export function looksLikeChallengeHtml(html: string): boolean {
 
   return [
     'checking your browser',
+    'verify you are human',
+    'enable javascript and cookies to continue',
+    'challenge-error-text',
+    'cf-challenge',
+    '__cf_chl_',
+    'cf-browser-verification',
+    'just a moment',
+    'captcha',
     'recaptcha',
     'g-recaptcha',
-    'verify you are human',
-    'captcha',
-    'cf-challenge',
   ].some((needle) => normalized.includes(needle));
+}
+
+/**
+ * Detects whether an HTTP response looks like a challenge or verification page.
+ *
+ * The check first uses response headers, then falls back to case-insensitive
+ * HTML markers commonly found in anti-bot, CAPTCHA, or browser verification responses.
+ *
+ * @returns True when the response appears to contain challenge-related content.
+ */
+export function looksLikeChallengeResponse(
+  response: Pick<Response, 'headers'>,
+  html: string,
+): boolean {
+  return response.headers.get('cf-mitigated') === 'challenge'
+    || looksLikeChallengeHtml(html);
 }
