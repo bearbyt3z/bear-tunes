@@ -64,13 +64,14 @@ function resolveDownloadFilename(url: URL, filename?: string | null): string {
 /**
  * Downloads a remote file and saves it to the local filesystem.
  *
- * @param filename Optional target filename. If it has no extension,
- * the extension is derived from the source URL.
+ * @param filename Optional target filename. When omitted, the filename is derived
+ * from the source URL. If provided without an extension, the extension is also
+ * derived from the source URL.
  * @returns The resolved output filename after the file has been written.
  */
 export async function downloadFile(
   url: URL,
-  filename?: string | null
+  filename?: string
 ): Promise<string> {
   if (!url) {
     throw new Error('Proper URL is needed to download a file.');

@@ -340,7 +340,7 @@ export class BearTunesTagger {
     const imagePaths: TrackArtworkFiles = {};
 
     try {
-      const filename = await tools.downloadFile(trackData.publisher?.logotype, null);
+      const filename = await tools.downloadFile(trackData.publisher?.logotype);
       if (verbose) {
         logger.debug(`Publisher logotype written to: ${filename}`);
       }
@@ -350,7 +350,7 @@ export class BearTunesTagger {
     }
 
     try {
-      const filename = await tools.downloadFile(trackData.album?.artwork, null);
+      const filename = await tools.downloadFile(trackData.album?.artwork);
       if (verbose) {
         logger.debug(`Album artwork written to: ${filename}`);
       }
@@ -360,7 +360,7 @@ export class BearTunesTagger {
     }
 
     try {
-      const filename = await tools.downloadFile(trackData.waveform, null);
+      const filename = await tools.downloadFile(trackData.waveform);
       if (verbose) {
         logger.debug(`Waveform written to: ${filename}`);
       }
@@ -520,7 +520,7 @@ export class BearTunesTagger {
     const imagePaths: TrackArtworkFiles = {};
 
     try {
-      const filename = await tools.downloadFile(trackData.publisher?.logotype, null);
+      const filename = await tools.downloadFile(trackData.publisher?.logotype);
       if (verbose) {
         logger.debug(`Publisher logotype written to: ${filename}`);
       }
@@ -530,7 +530,7 @@ export class BearTunesTagger {
     }
 
     try {
-      const filename = await tools.downloadFile(trackData.album?.artwork, null);
+      const filename = await tools.downloadFile(trackData.album?.artwork);
       if (verbose) {
         logger.debug(`Album artwork written to: ${filename}`);
       }
@@ -540,7 +540,7 @@ export class BearTunesTagger {
     }
 
     try {
-      const filename = await tools.downloadFile(trackData.waveform, null);
+      const filename = await tools.downloadFile(trackData.waveform);
       if (verbose) {
         logger.debug(`Waveform written to: ${filename}`);
       }
