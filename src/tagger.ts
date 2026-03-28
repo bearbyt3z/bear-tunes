@@ -49,7 +49,7 @@ export class BearTunesTagger {
     let forceRadioEdit = false;
 
     const trackFilename = path.basename(trackPath);
-    const trackFilenameWithoutExtension = tools.replaceFilenameExtension(trackFilename, '');
+    const trackFilenameWithoutExtension = tools.removeFilenameExtension(trackFilename);
     const trackFilenameKeywords = tools.splitTrackNameIntoKeywords(trackFilenameWithoutExtension);
 
     logger.silly('########################################');
