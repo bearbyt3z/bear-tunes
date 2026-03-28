@@ -92,9 +92,15 @@ export async function downloadFile(
   const readable = bodyToReadable(response.body);
   const writable = fs.createWriteStream(resolvedFilename);
 
-  await pipeline(readable, writable);
-
-  return resolvedFilename;
+  try {
+    await pipeline(readable, writable);
+    return resolvedFilename;
+  } catch (error) {
+    // Remove any partially downloaded file left after a failed write.
+    // Ignore cleanup errors so the original download/write error is preserved.
+    await fs.promises.rm(resolvedFilename, { force: true }).catch(() => undefined);
+    throw error;
+  }
 }
 
 export async function downloadAndSaveArtwork(trackPath: string, trackInfo: TrackInfo) {
