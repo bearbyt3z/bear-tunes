@@ -44,18 +44,20 @@ function bodyToReadable(body: ReadableStream<Uint8Array>): Readable {
  * If a filename without extension is provided, the extension is copied
  * from the URL filename when available.
  */
-function resolveDownloadFilename(url: URL, filename?: string | null): string {
-  const urlSegments = url.pathname.split('/');
-  const urlFilename = urlSegments[urlSegments.length - 1];
+function resolveDownloadFilename(url: URL, filename?: string): string {
+  // URL.pathname always uses forward-slash-separated URL paths,
+  // so use path.posix helpers instead of platform-dependent path parsing.
+  const urlFilename = path.posix.basename(url.pathname) || `unnamed-download-${getRandomString(6)}`;
 
   if (!filename || filename.length < 1) {
     return urlFilename;
   }
 
-  if (filename.split('.').length < 2) {
-    const urlFilenameSegments = urlFilename.split('.');
-    const urlFilenameExtension = urlFilenameSegments[urlFilenameSegments.length - 1];
-    return `${filename}.${urlFilenameExtension}`;
+  // Use POSIX path helpers here as well, because the derived source name
+  // still comes from a URL path rather than a native filesystem path.
+  if (!path.posix.extname(filename)) {
+    const extension = path.posix.extname(urlFilename);
+    return extension ? `${filename}${extension}` : filename;
   }
 
   return filename;
