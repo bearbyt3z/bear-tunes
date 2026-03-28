@@ -105,14 +105,30 @@ export async function downloadFile(
   }
 }
 
-export async function downloadAndSaveArtwork(trackPath: string, trackInfo: TrackInfo) {
-  if (trackInfo.album?.artwork?.pathname.includes('.')) {
-    const artworkExtension = trackInfo.album.artwork.pathname.split('.')?.pop() || '.unrecognized';
-    const artworkPath = replaceFilenameExtension(trackPath, `.${artworkExtension}`);
-    
-    await downloadFile(trackInfo.album.artwork, artworkPath);
-    logger.info(`Artwork written to: "${artworkPath}"`);
+/**
+ * Downloads album artwork for the given track and saves it next to the track file.
+ *
+ * The saved artwork file reuses the track path and replaces its extension with
+ * the extension derived from the artwork URL. If the artwork URL does not expose
+ * a recognizable extension, a fallback `.unrecognized` extension is used.
+ */
+export async function downloadAndSaveArtwork(
+  trackPath: string,
+  trackInfo: TrackInfo
+): Promise<void> {
+  const artworkUrl = trackInfo.album?.artwork;
+
+  if (!artworkUrl) {
+    return;
   }
+
+  // URL.pathname always uses POSIX-style separators, so use path.posix helpers
+  // instead of platform-dependent path parsing.
+  const artworkExtension = path.posix.extname(artworkUrl.pathname) || '.unrecognized';
+  const artworkPath = replaceFilenameExtension(trackPath, artworkExtension);
+
+  await downloadFile(artworkUrl, artworkPath);
+  logger.info(`Artwork written to: "${artworkPath}"`);
 }
 
 // const colonEscapeChar = (process.platform === "win32") ? '\\' : '\\\\';
