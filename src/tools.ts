@@ -3,8 +3,6 @@ import * as crypto from 'crypto';
 import * as childProcess from 'child_process';
 import * as path from 'path';
 
-import { TrackInfo } from './types';
-
 const logger = require('./logger');
 
 export { fetchWebPage } from './tools/web/fetch-web-page';
