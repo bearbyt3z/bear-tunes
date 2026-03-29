@@ -41,6 +41,16 @@ export function arrayIntersection<T>(array1: readonly T[], array2: readonly T[])
   return array1.filter((value) => included.has(value));
 }
 
+/**
+ * Maps an array of strings to their lowercase equivalents.
+ *
+ * Each element in the returned array is the result of calling
+ * `String.prototype.toLowerCase()` on the corresponding element
+ * from the input array.
+ *
+ * @param array The array of strings to convert.
+ * @returns A new array where every string is converted to lowercase.
+ */
 export function arrayToLowerCase(array: string[]): string[] {
   return array.map((value) => value.toLowerCase());
 }
