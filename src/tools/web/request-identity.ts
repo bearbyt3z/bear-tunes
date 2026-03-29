@@ -215,3 +215,29 @@ export function buildPlaywrightContextOptions(profile: ClientProfile): BrowserCo
     timezoneId: profile.identity.timezoneId,
   };
 }
+
+/**
+ * Builds browser-like HTTP headers for image download requests.
+ *
+ * @param profile - Client profile containing user agent and request preferences.
+ * @param referer - Optional referrer URL to include in the Referer header.
+ * @returns HTTP headers object ready for fetch() requests.
+ */
+export function buildImageDownloadHeaders(
+  profile: ClientProfile,
+  referer?: URL,
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    'User-Agent': profile.identity.userAgent,
+    'Accept': 'image/jpeg,image/png,image/gif,image/svg+xml,image/*;q=0.8,*/*;q=0.5',
+    'Accept-Language': profile.request.acceptLanguage,
+    'Accept-Encoding': profile.request.acceptEncoding,
+    'Connection': profile.request.connection,
+  };
+
+  if (referer) {
+    headers.Referer = referer.toString();
+  }
+
+  return headers;
+}

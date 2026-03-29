@@ -3,15 +3,13 @@ import * as crypto from 'crypto';
 import * as childProcess from 'child_process';
 import * as path from 'path';
 
-import { pipeline } from 'stream/promises';
-import { Readable } from 'node:stream';
-import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
-
 import { TrackInfo } from './types';
 
 const logger = require('./logger');
 
 export { fetchWebPage } from './tools/web/fetch-web-page';
+export { downloadFile } from './tools/web/download-file';
+export { downloadImage, downloadAndSaveArtwork } from './tools/web/download-image';
 
 export function arrayDifference(array1: unknown[], array2: unknown[]): unknown[] {
   return array1.filter((value) => !array2.includes(value));
@@ -23,112 +21,6 @@ export function arrayIntersection(array1: unknown[], array2: unknown[]): unknown
 
 export function arrayToLowerCase(array: string[]): string[] {
   return array.map((value) => value.toLowerCase());
-}
-
-/**
- * Converts a Fetch API response body into a Node.js readable stream.
- *
- * This helper isolates the DOM-vs-Node stream typing workaround used by
- * Readable.fromWeb(), so the cast does not leak into higher-level code.
- */
-function bodyToReadable(body: ReadableStream<Uint8Array>): Readable {
-  // TypeScript mismatch between DOM ReadableStream returned by fetch()
-  // and node:stream/web ReadableStream expected by Readable.fromWeb().
-  return Readable.fromWeb(body as unknown as NodeWebReadableStream<Uint8Array>);
-}
-
-/**
- * Resolves the output filename for a downloaded resource.
- *
- * If no filename is provided, the filename is derived from the URL path.
- * If a filename without extension is provided, the extension is copied
- * from the URL filename when available.
- */
-function resolveDownloadFilename(url: URL, filename?: string): string {
-  // URL.pathname always uses forward-slash-separated URL paths,
-  // so use path.posix helpers instead of platform-dependent path parsing.
-  const urlFilename = path.posix.basename(url.pathname) || `unnamed-download-${getRandomString(6)}`;
-
-  if (!filename || filename.length < 1) {
-    return urlFilename;
-  }
-
-  // Use POSIX path helpers here as well, because the derived source name
-  // still comes from a URL path rather than a native filesystem path.
-  if (!path.posix.extname(filename)) {
-    const extension = path.posix.extname(urlFilename);
-    return extension ? `${filename}${extension}` : filename;
-  }
-
-  return filename;
-}
-
-/**
- * Downloads a remote file and saves it to the local filesystem.
- *
- * @param filename Optional target filename. When omitted, the filename is derived
- * from the source URL. If provided without an extension, the extension is also
- * derived from the source URL.
- * @returns The resolved output filename after the file has been written.
- */
-export async function downloadFile(
-  url: URL,
-  filename?: string
-): Promise<string> {
-  if (!url) {
-    throw new Error('Proper URL is needed to download a file.');
-  }
-
-  const resolvedFilename = resolveDownloadFilename(url, filename);
-
-  const response = await fetch(url.toString());
-
-  if (!response.ok) {
-    throw new Error(`Failed to download file: HTTP ${response.status} for "${url.toString()}"`);
-  }
-
-  if (!response.body) {
-    throw new Error(`Failed to download a file: ${resolvedFilename} (response body is null)`);
-  }
-
-  const readable = bodyToReadable(response.body);
-  const writable = fs.createWriteStream(resolvedFilename);
-
-  try {
-    await pipeline(readable, writable);
-    return resolvedFilename;
-  } catch (error) {
-    // Remove any partially downloaded file left after a failed write.
-    // Ignore cleanup errors so the original download/write error is preserved.
-    await fs.promises.rm(resolvedFilename, { force: true }).catch(() => undefined);
-    throw error;
-  }
-}
-
-/**
- * Downloads album artwork for the given track and saves it next to the track file.
- *
- * The saved artwork file reuses the track path and replaces its extension with
- * the extension derived from the artwork URL. If the artwork URL does not expose
- * a recognizable extension, a fallback `.unrecognized` extension is used.
- */
-export async function downloadAndSaveArtwork(
-  trackPath: string,
-  trackInfo: TrackInfo
-): Promise<void> {
-  const artworkUrl = trackInfo.album?.artwork;
-
-  if (!artworkUrl) {
-    return;
-  }
-
-  // URL.pathname always uses POSIX-style separators, so use path.posix helpers
-  // instead of platform-dependent path parsing.
-  const artworkExtension = path.posix.extname(artworkUrl.pathname) || '.unrecognized';
-  const artworkPath = replaceFilenameExtension(trackPath, artworkExtension);
-
-  await downloadFile(artworkUrl, artworkPath);
-  logger.info(`Artwork written to: "${artworkPath}"`);
 }
 
 // const colonEscapeChar = (process.platform === "win32") ? '\\' : '\\\\';

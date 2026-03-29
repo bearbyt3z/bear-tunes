@@ -340,7 +340,9 @@ export class BearTunesTagger {
     const imagePaths: TrackArtworkFiles = {};
 
     try {
-      const filename = await tools.downloadFile(trackData.publisher?.logotype);
+      const filename = await tools.downloadImage(trackData.publisher?.logotype, {
+        referer: trackData.publisher?.url,
+      });
       if (verbose) {
         logger.debug(`Publisher logotype written to: ${filename}`);
       }
@@ -350,7 +352,9 @@ export class BearTunesTagger {
     }
 
     try {
-      const filename = await tools.downloadFile(trackData.album?.artwork);
+      const filename = await tools.downloadImage(trackData.album?.artwork, {
+        referer: trackData.album?.url,
+      });
       if (verbose) {
         logger.debug(`Album artwork written to: ${filename}`);
       }
@@ -360,7 +364,9 @@ export class BearTunesTagger {
     }
 
     try {
-      const filename = await tools.downloadFile(trackData.waveform);
+      const filename = await tools.downloadImage(trackData.waveform, {
+        referer: trackData.url,
+      });
       if (verbose) {
         logger.debug(`Waveform written to: ${filename}`);
       }
@@ -520,7 +526,9 @@ export class BearTunesTagger {
     const imagePaths: TrackArtworkFiles = {};
 
     try {
-      const filename = await tools.downloadFile(trackData.publisher?.logotype);
+      const filename = await tools.downloadImage(trackData.publisher?.logotype, {
+        referer: trackData.publisher?.url,
+      });
       if (verbose) {
         logger.debug(`Publisher logotype written to: ${filename}`);
       }
@@ -530,7 +538,9 @@ export class BearTunesTagger {
     }
 
     try {
-      const filename = await tools.downloadFile(trackData.album?.artwork);
+      const filename = await tools.downloadImage(trackData.album?.artwork, {
+        referer: trackData.album?.url,
+      });
       if (verbose) {
         logger.debug(`Album artwork written to: ${filename}`);
       }
@@ -540,7 +550,9 @@ export class BearTunesTagger {
     }
 
     try {
-      const filename = await tools.downloadFile(trackData.waveform);
+      const filename = await tools.downloadImage(trackData.waveform, {
+        referer: trackData.url,
+      });
       if (verbose) {
         logger.debug(`Waveform written to: ${filename}`);
       }

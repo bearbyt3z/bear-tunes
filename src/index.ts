@@ -110,7 +110,17 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
 
             const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
 
-            await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
+            try {
+              const artworkPath = await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
+
+              if (artworkPath) {
+                logger.info(`Artwork written to: "${artworkPath}"`);
+              } else {
+                logger.info('No artwork to download.');
+              }
+            } catch (error) {
+              logger.error('Artwork download failed', { error });
+            }
           }
         } else {
           let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
