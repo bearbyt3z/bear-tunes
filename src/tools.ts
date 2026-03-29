@@ -11,11 +11,11 @@ export { fetchWebPage } from './tools/web/fetch-web-page';
 export { downloadFile } from './tools/web/download-file';
 export { downloadImage, downloadAndSaveArtwork } from './tools/web/download-image';
 
-export function arrayDifference(array1: unknown[], array2: unknown[]): unknown[] {
+export function arrayDifference<T>(array1: readonly T[], array2: readonly T[]): T[] {
   return array1.filter((value) => !array2.includes(value));
 }
 
-export function arrayIntersection(array1: unknown[], array2: unknown[]): unknown[] {
+export function arrayIntersection<T>(array1: readonly T[], array2: readonly T[]): T[] {
   return array1.filter((value) => array2.includes(value));
 }
 
