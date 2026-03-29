@@ -12,11 +12,13 @@ export { downloadFile } from './tools/web/download-file';
 export { downloadImage, downloadAndSaveArtwork } from './tools/web/download-image';
 
 export function arrayDifference<T>(array1: readonly T[], array2: readonly T[]): T[] {
-  return array1.filter((value) => !array2.includes(value));
+  const excluded = new Set(array2);
+  return array1.filter((value) => !excluded.has(value));
 }
 
 export function arrayIntersection<T>(array1: readonly T[], array2: readonly T[]): T[] {
-  return array1.filter((value) => array2.includes(value));
+  const included = new Set(array2);
+  return array1.filter((value) => included.has(value));
 }
 
 export function arrayToLowerCase(array: string[]): string[] {
