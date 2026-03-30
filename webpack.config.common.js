@@ -12,7 +12,13 @@ module.exports = {
     rules: [
       {
         test: /\.tsx?$/,
-        use: 'ts-loader',
+        use: {
+          loader: 'ts-loader',
+          options: {
+            configFile: 'tsconfig.json', // Explicitly use project tsconfig
+            transpileOnly: true, // Faster builds with isolatedModules (type checking via tsc)
+          },
+        },
         exclude: /node_modules/,
       },
       { // required for: ./node_modules/canvas/build/Release/canvas.node (error: Module parse failed: Unexpected character '' (1:0))
@@ -23,10 +29,9 @@ module.exports = {
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js'],
-    modules: [
-      path.resolve('src'),
-      'node_modules',
-    ],
+    alias: {
+      '@': path.resolve(__dirname, 'src/'), // Absolute import path for cleaner src/ imports
+    },
   },
   externals: {
     bufferutil: 'bufferutil',
