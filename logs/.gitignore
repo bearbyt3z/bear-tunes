@@ -1,0 +1,4 @@
+# Ignore all generated log files, but keep this directory in the repository
+# because it is part of the project structure and is required at runtime.
+*
+!.gitignore

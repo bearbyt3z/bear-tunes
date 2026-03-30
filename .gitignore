@@ -1,7 +1,8 @@
 /node_modules/
-/logs/
 *.mp3
 *.flac
 /test/
 /.cache/
 /dist/
+
+# Log directory rules are managed in /logs/.gitignore

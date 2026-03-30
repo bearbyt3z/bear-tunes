@@ -1,5 +1,3 @@
-// TODO: CREATE DIRECTORIES FOR LOGS !!!!!!!!!!!!!
-
 import * as winston from 'winston';
 import * as process from 'process';
 
