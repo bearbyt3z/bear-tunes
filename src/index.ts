@@ -13,7 +13,7 @@
 // display plugin of eyeD3 requires grako:
 // $pip install grako
 
-import 'process'; // to assign process.exitCode (if imported with "* as process" => TS2540: Cannot assign to 'exitCode' because it is a read-only property.)
+import process from 'node:process';
 import * as fs from 'fs';
 import * as path from 'path';
 
