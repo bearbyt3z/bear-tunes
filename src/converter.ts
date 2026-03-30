@@ -2,12 +2,12 @@ import * as childProcess from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { TrackInfo } from './types';
+import { TrackInfo } from '@/types';
 import {
   BearTunesConverterResult, BearTunesConverterOptions,
   BitrateMethod, Quality, ChannelMode, ReplayGain,
   FlacImageBlockExport, FlacImageBlockType,
-} from './converter.types';
+} from '@/converter.types';
 
 // exporting types, so they will be included in the converter import
 export type {

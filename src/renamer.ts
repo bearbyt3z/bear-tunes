@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { TrackInfo } from './types';
-import { BearTunesRenamerOptions } from './renamer.types';
+import { TrackInfo } from '@/types';
+import { BearTunesRenamerOptions } from '@/renamer.types';
 
 // exporting types, so they will be included in the renamer module import
 export type { BearTunesRenamerOptions };

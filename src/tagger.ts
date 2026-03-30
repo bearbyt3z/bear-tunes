@@ -4,12 +4,12 @@ import * as path from 'path';
 
 const prompt = require('prompt-sync')({ sigint: true });
 
-import { TrackInfo, AlbumInfo, PublisherInfo } from './types';
+import { TrackInfo, AlbumInfo, PublisherInfo } from '@/types';
 import {
   BearTunesTaggerOptions, MatchingTrack, TrackArtworkFiles, ID3Version,
   BeatportSearchResultArtistType, BeatportSearchResultArtistInfo, BeatportSearchResultTrackInfo, BeatportSearchResultGenreInfo,
   BeatportArtistInfo, BeatportTrackInfo, BeatportAlbumInfo, BeatportPublisherInfo,
-} from './tagger.types';
+} from '@/tagger.types';
 
 // exporting types, so they will be included in the tagger import
 export type {

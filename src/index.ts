@@ -17,9 +17,9 @@ import 'process'; // to assign process.exitCode (if imported with "* as process"
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { BearTunesConverter } from './converter';
-import { BearTunesTagger } from './tagger';
-import { BearTunesRenamer } from './renamer';
+import { BearTunesConverter } from '@/converter';
+import { BearTunesTagger } from '@/tagger';
+import { BearTunesRenamer } from '@/renamer';
 
 const logger = require('./logger');
 const tools = require('./tools');
