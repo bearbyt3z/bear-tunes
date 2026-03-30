@@ -10,7 +10,7 @@ import {
 } from './converter.types';
 
 // exporting types, so they will be included in the converter import
-export {
+export type {
   BearTunesConverterResult, BearTunesConverterOptions,
   BitrateMethod, Quality, ChannelMode, ReplayGain,
   FlacImageBlockExport, FlacImageBlockType,

@@ -1,15 +1,28 @@
 {
   "compilerOptions": {
-    "outDir": "./dist/",
-    "sourceMap": true,
-    // "module": "es6",
-    "target": "es5",
+    "target": "ES2024",
+    "lib": ["ES2024", "DOM"],
+
+    "module": "node16",
+    "moduleResolution": "node16",
+
+    "outDir": "./dist",
+    "rootDir": "./src",
+
+    "strict": true,
     "allowJs": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    "sourceMap": true,
     "removeComments": true,
-    "strict": true
+
+    "resolveJsonModule": true,
+    "isolatedModules": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "**/*.spec.ts"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
 }

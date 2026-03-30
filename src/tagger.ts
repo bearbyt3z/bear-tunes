@@ -12,7 +12,7 @@ import {
 } from './tagger.types';
 
 // exporting types, so they will be included in the tagger import
-export {
+export type {
   BearTunesTaggerOptions, MatchingTrack, TrackArtworkFiles, ID3Version,
   BeatportSearchResultArtistType, BeatportSearchResultArtistInfo, BeatportSearchResultTrackInfo, BeatportSearchResultGenreInfo,
   BeatportArtistInfo, BeatportTrackInfo, BeatportAlbumInfo, BeatportPublisherInfo,

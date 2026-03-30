@@ -5,7 +5,7 @@ import { TrackInfo } from './types';
 import { BearTunesRenamerOptions } from './renamer.types';
 
 // exporting types, so they will be included in the renamer module import
-export { BearTunesRenamerOptions };
+export type { BearTunesRenamerOptions };
 
 const logger = require('./logger');
 const tools = require('./tools');
