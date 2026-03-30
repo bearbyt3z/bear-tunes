@@ -16,7 +16,8 @@ export type {
   FlacImageBlockExport, FlacImageBlockType,
 };
 
-const logger = require('./logger');
+import logger from '@/logger';
+
 const tools = require('./tools');
 
 const defaultConverterOptions: BearTunesConverterOptions = {

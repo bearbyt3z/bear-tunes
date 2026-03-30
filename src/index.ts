@@ -21,7 +21,8 @@ import { BearTunesConverter } from '@/converter';
 import { BearTunesTagger } from '@/tagger';
 import { BearTunesRenamer } from '@/renamer';
 
-const logger = require('./logger');
+import logger from '@/logger';
+
 const tools = require('./tools');
 
 // const { createLogger, format, transports } = require('winston');

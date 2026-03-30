@@ -18,7 +18,8 @@ export type {
   BeatportArtistInfo, BeatportTrackInfo, BeatportAlbumInfo, BeatportPublisherInfo,
 };
 
-const logger = require('./logger');
+import logger from '@/logger';
+
 const tools = require('./tools');
 
 // const DOMAIN_URL = 'https://www.beatport.com';

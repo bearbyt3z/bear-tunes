@@ -7,7 +7,8 @@ import { BearTunesRenamerOptions } from '@/renamer.types';
 // exporting types, so they will be included in the renamer module import
 export type { BearTunesRenamerOptions };
 
-const logger = require('./logger');
+import logger from '@/logger';
+
 const tools = require('./tools');
 
 const defaultRenamerOptions: BearTunesRenamerOptions = {

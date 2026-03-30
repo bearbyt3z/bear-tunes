@@ -77,4 +77,4 @@ const options = {
   ],
 };
 
-module.exports = winston.createLogger(options);
+export default winston.createLogger(options);

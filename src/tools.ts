@@ -3,7 +3,7 @@ import * as crypto from 'crypto';
 import * as childProcess from 'child_process';
 import * as path from 'path';
 
-const logger = require('./logger');
+import logger from '@/logger';
 
 export { fetchWebPage } from './tools/web/fetch-web-page';
 export { downloadFile } from './tools/web/download-file';
