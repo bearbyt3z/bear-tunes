@@ -2,10 +2,10 @@ import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-const prompt = require('prompt-sync')({ sigint: true });
-
 import logger from '@/logger';
 const tools = require('@/tools');
+
+import { prompt } from '@/tools';
 
 import {
   BeatportSearchResultArtistType,
@@ -115,7 +115,7 @@ export class BearTunesTagger {
         if (trackUrl) warnMessage += `\nURL: ${trackUrl}`;
         logger.warn(warnMessage);
 
-        const proceedWithFound = prompt('Proceed with the found track? (y/n) ');
+        const proceedWithFound = await prompt('Proceed with the found track? (y/n) ');
         if (proceedWithFound !== 'y' && proceedWithFound !== 'yes') {
           return {};
         }
@@ -127,7 +127,7 @@ export class BearTunesTagger {
       if (trackInfo.details && bestMatchingTrack.details && Math.abs(bestMatchingTrack.details.duration - trackInfo.details.duration) > this.options.lengthDifferenceAccepted) {
         logger.warn(`Matched track has different duration: ${tools.secondsToTimeFormat(bestMatchingTrack.details.duration)} vs. ${tools.secondsToTimeFormat(trackInfo.details.duration)} (original)\nURL: ${trackUrl}`);
 
-        const changeToRadioEdit = prompt('Change it to "Radio Edit"? (y)es/(n)o/(s)kip: ');
+        const changeToRadioEdit = await prompt('Change it to "Radio Edit"? (y)es/(n)o/(s)kip: ');
         if (changeToRadioEdit === 's' || changeToRadioEdit === 'skip') {
           return {};
         }
