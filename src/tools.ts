@@ -179,7 +179,7 @@ export function createArtistArray(artistArray: string[] | null, title?: string):
   return result;
 }
 
-export function createGenreTag(genre?: string, subgenre?: string): string {
+export function createGenreTag(genre?: string, subgenre?: string | null): string {
   if (!genre) return ''; // '' => delete frame if there is no genre information
 
   let result = genre;
@@ -252,13 +252,13 @@ export function isEmptyObject(value: object): boolean {
 }
 
 const replaceRegEx = /[/\\*?<>|:"]/gm;
-export function replacePathForbiddenChars(stringOrArray: string | string[]): string | string[] {
-  if (isString(stringOrArray)) {
-    return (stringOrArray as string).replace(replaceRegEx, '-');
-  }
 
-  // otherwise it's an array
-  return (stringOrArray as string[]).map((str) => str.replace(replaceRegEx, '-'));
+export function replacePathForbiddenChars(value: string): string {
+  return value.replace(replaceRegEx, '-');
+}
+
+export function replacePathForbiddenCharsInArray(stringArray: readonly string[]): string[] {
+  return stringArray.map((str) => replacePathForbiddenChars(str));
 }
 
 export function leaveOnlyFirstLine(text: string): string {
@@ -280,8 +280,8 @@ export function isInteger(value: unknown): boolean {
   return !Number.isNaN(value) && parseInt(Number(value).toString(), 10) === value && !Number.isNaN(parseInt(value.toString(), 10));
 }
 
-export function getPositiveIntegerOrUndefined(str: string): number | undefined {
-  const result = Number(str);
+export function getPositiveIntegerOrUndefined(value: string | number | undefined): number | undefined {
+  const result = Number(value);
   return (isInteger(result) && result > 0) ? result : undefined;
 }
 

@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import logger from '@/logger';
-const tools = require('@/tools');
+import * as tools from '@/tools';
 
 import {
   BitrateMethod,

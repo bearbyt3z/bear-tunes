@@ -22,7 +22,7 @@ import { BearTunesRenamer } from '@/renamer';
 import { BearTunesTagger } from '@/tagger';
 
 import logger from '@/logger';
-const tools = require('@/tools');
+import * as tools from '@/tools';
 
 // const { createLogger, format, transports } = require('winston');
 // const { combine, timestamp, label, printf } = format;
