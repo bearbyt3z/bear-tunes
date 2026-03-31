@@ -89,6 +89,11 @@ export interface BeatportGenreInfo {
   name: string,
 }
 
+export interface BeatportSubGenreInfo {
+  id: number,
+  name: string,
+}
+
 export interface BeatportImageInfo {
   id: number,
   uri: string,
@@ -135,7 +140,7 @@ export interface BeatportTrackInfo {
   release: BeatportReleaseInfo,
   remixers: BeatportArtistInfo[],
   slug: string,
-  sub_genre: string | null,
+  sub_genre: BeatportSubGenreInfo,
 }
 
 // Beatport album (release) info object

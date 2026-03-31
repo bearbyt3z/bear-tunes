@@ -179,13 +179,15 @@ export function createArtistArray(artistArray: string[] | null, title?: string):
   return result;
 }
 
-export function createGenreTag(genre?: string, subgenre?: string | null): string {
-  if (!genre) return ''; // '' => delete frame if there is no genre information
+export function createGenreTag(genreName?: string, subgenreName?: string): string {
+  if (!genreName) return ''; // '' => delete frame if there is no genre information
 
-  let result = genre;
+  let result = genreName;
 
   // check if sub-genre provided and it's not empty (an empty string is a falsy value)
-  if (subgenre) genre += ` | ${subgenre}`; // separator same as: https://labelsupport.beatport.com/hc/en-us/articles/9709209306772-Beatport-Genres-and-Sub-Genres
+  if (subgenreName) {
+    result += ` | ${subgenreName}`; // separator same as: https://labelsupport.beatport.com/hc/en-us/articles/9709209306772-Beatport-Genres-and-Sub-Genres
+  }
 
   return result;
 }
