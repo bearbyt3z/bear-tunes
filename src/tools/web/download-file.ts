@@ -1,12 +1,13 @@
-import * as path from 'node:path';
 import * as fs from 'node:fs';
-
-import { pipeline } from 'stream/promises';
+import * as path from 'node:path';
 import { Readable } from 'node:stream';
-import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
-import type { DownloadFileOptions } from './download.types';
+import { pipeline } from 'node:stream/promises';
 
-import { getRandomString } from '../../tools';
+import { getRandomString } from '@/tools';
+
+import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
+
+import type { DownloadFileOptions } from './download.types';
 
 /**
  * Converts a Fetch API response body into a Node.js readable stream.

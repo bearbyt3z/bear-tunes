@@ -1,26 +1,54 @@
-import * as childProcess from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
+import * as childProcess from 'node:child_process';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 const prompt = require('prompt-sync')({ sigint: true });
 
-import { TrackInfo, AlbumInfo, PublisherInfo } from '@/types';
-import {
-  BearTunesTaggerOptions, MatchingTrack, TrackArtworkFiles, ID3Version,
-  BeatportSearchResultArtistType, BeatportSearchResultArtistInfo, BeatportSearchResultTrackInfo, BeatportSearchResultGenreInfo,
-  BeatportArtistInfo, BeatportTrackInfo, BeatportAlbumInfo, BeatportPublisherInfo,
-} from '@/tagger.types';
+import logger from '@/logger';
+const tools = require('@/tools');
 
-// exporting types, so they will be included in the tagger import
-export type {
-  BearTunesTaggerOptions, MatchingTrack, TrackArtworkFiles, ID3Version,
-  BeatportSearchResultArtistType, BeatportSearchResultArtistInfo, BeatportSearchResultTrackInfo, BeatportSearchResultGenreInfo,
-  BeatportArtistInfo, BeatportTrackInfo, BeatportAlbumInfo, BeatportPublisherInfo,
+import {
+  BeatportSearchResultArtistType,
+  ID3Version,
+} from './tagger.types';
+
+import type {
+  BearTunesTaggerOptions,
+  BeatportAlbumInfo,
+  BeatportArtistInfo,
+  BeatportPublisherInfo,
+  BeatportSearchResultArtistInfo,
+  BeatportSearchResultGenreInfo,
+  BeatportSearchResultTrackInfo,
+  BeatportTrackInfo,
+  MatchingTrack,
+  TrackArtworkFiles,
+} from './tagger.types';
+
+import type {
+  TrackInfo,
+  AlbumInfo,
+  PublisherInfo,
+} from '@/types';
+
+// exporting enums & types, so they will be included in the tagger import
+export {
+  BeatportSearchResultArtistType,
+  ID3Version,
 };
 
-import logger from '@/logger';
-
-const tools = require('./tools');
+export type {
+  BearTunesTaggerOptions,
+  MatchingTrack,
+  TrackArtworkFiles,
+  BeatportSearchResultArtistInfo,
+  BeatportSearchResultTrackInfo,
+  BeatportSearchResultGenreInfo,
+  BeatportArtistInfo,
+  BeatportTrackInfo,
+  BeatportAlbumInfo,
+  BeatportPublisherInfo,
+};
 
 // const DOMAIN_URL = 'https://www.beatport.com';
 // const SEARCH_URL = `${DOMAIN_URL}/search/tracks?per-page=150&q=`; // we want tracks only

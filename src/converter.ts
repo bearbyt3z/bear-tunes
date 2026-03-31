@@ -1,24 +1,40 @@
-import * as childProcess from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
-
-import { TrackInfo } from '@/types';
-import {
-  BearTunesConverterResult, BearTunesConverterOptions,
-  BitrateMethod, Quality, ChannelMode, ReplayGain,
-  FlacImageBlockExport, FlacImageBlockType,
-} from '@/converter.types';
-
-// exporting types, so they will be included in the converter import
-export type {
-  BearTunesConverterResult, BearTunesConverterOptions,
-  BitrateMethod, Quality, ChannelMode, ReplayGain,
-  FlacImageBlockExport, FlacImageBlockType,
-};
+import * as childProcess from 'node:child_process';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 import logger from '@/logger';
+const tools = require('@/tools');
 
-const tools = require('./tools');
+import {
+  BitrateMethod,
+  Quality,
+  ChannelMode,
+  ReplayGain,
+  FlacImageBlockType,
+} from './converter.types';
+
+import type {
+  BearTunesConverterOptions,
+  BearTunesConverterResult,
+  FlacImageBlockExport,
+} from './converter.types';
+
+import type { TrackInfo } from '@/types';
+
+// reexporting enums & types, so they will be included in the converter import
+export {
+  BitrateMethod,
+  Quality,
+  ChannelMode,
+  ReplayGain,
+  FlacImageBlockType,
+};
+
+export type {
+  BearTunesConverterOptions,
+  BearTunesConverterResult,
+  FlacImageBlockExport,
+};
 
 const defaultConverterOptions: BearTunesConverterOptions = {
   bitrateMethod: BitrateMethod.CBR,

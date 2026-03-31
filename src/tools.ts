@@ -1,13 +1,13 @@
-import * as fs from 'fs';
-import * as crypto from 'crypto';
-import * as childProcess from 'child_process';
-import * as path from 'path';
+import * as childProcess from 'node:child_process';
+import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 import logger from '@/logger';
 
-export { fetchWebPage } from './tools/web/fetch-web-page';
 export { downloadFile } from './tools/web/download-file';
 export { downloadImage, downloadAndSaveArtwork } from './tools/web/download-image';
+export { fetchWebPage } from './tools/web/fetch-web-page';
 
 /**
  * Returns the elements of the first array that are not present in the second array.

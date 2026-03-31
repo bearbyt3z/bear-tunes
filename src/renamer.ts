@@ -1,15 +1,14 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
-import { TrackInfo } from '@/types';
-import { BearTunesRenamerOptions } from '@/renamer.types';
-
-// exporting types, so they will be included in the renamer module import
-export type { BearTunesRenamerOptions };
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 import logger from '@/logger';
+const tools = require('@/tools');
 
-const tools = require('./tools');
+import type { BearTunesRenamerOptions } from './renamer.types';
+import type { TrackInfo } from '@/types';
+
+// reexporting type, so it will be included in the renamer module import
+export type { BearTunesRenamerOptions };
 
 const defaultRenamerOptions: BearTunesRenamerOptions = {
   filenamePattern: '%artists% - %title%', // title already contains remixers etc.

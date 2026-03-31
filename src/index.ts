@@ -13,17 +13,16 @@
 // display plugin of eyeD3 requires grako:
 // $pip install grako
 
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import process from 'node:process';
-import * as fs from 'fs';
-import * as path from 'path';
 
 import { BearTunesConverter } from '@/converter';
-import { BearTunesTagger } from '@/tagger';
 import { BearTunesRenamer } from '@/renamer';
+import { BearTunesTagger } from '@/tagger';
 
 import logger from '@/logger';
-
-const tools = require('./tools');
+const tools = require('@/tools');
 
 // const { createLogger, format, transports } = require('winston');
 // const { combine, timestamp, label, printf } = format;

@@ -1,5 +1,6 @@
+import process from 'node:process';
+
 import * as winston from 'winston';
-import * as process from 'process';
 
 const level = process.env.LOG_LEVEL || 'debug';
 

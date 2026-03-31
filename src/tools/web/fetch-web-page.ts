@@ -1,6 +1,7 @@
-import * as jsdom from 'jsdom';
-import { looksLikeChallengeResponse } from './challenge-detection';
+import { JSDOM } from 'jsdom';
+
 import { fetchPageWithPersistentProfile } from './browser-session';
+import { looksLikeChallengeResponse } from './challenge-detection';
 import { getClientProfile, buildFetchHeaders } from './request-identity';
 
 /**
@@ -36,12 +37,12 @@ export async function fetchWebPage(url: URL): Promise<Document> {
       cacheDir: '.cache/playwright-profile',
     });
 
-    return new jsdom.JSDOM(resolvedHtml, { url: url.toString() }).window.document;
+    return new JSDOM(resolvedHtml, { url: url.toString() }).window.document;
   }
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} for "${url.toString()}"`);
   }
 
-  return new jsdom.JSDOM(html, { url: url.toString() }).window.document;
+  return new JSDOM(html, { url: url.toString() }).window.document;
 }

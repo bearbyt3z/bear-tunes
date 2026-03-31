@@ -1,9 +1,14 @@
-import { chromium, type Page, type BrowserContextOptions } from 'playwright';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+
+import { chromium } from 'playwright';
+
 import { looksLikeChallengeHtml } from './challenge-detection';
-import type { BrowserFetchOptions, PageChallengeState } from './browser-session.types';
 import { buildPlaywrightContextOptions, getClientProfile } from './request-identity';
+
+import type { Page, BrowserContextOptions } from 'playwright';
+
+import type { BrowserFetchOptions, PageChallengeState } from './browser-session.types';
 
 /** Returns the persistent Playwright profile directory, creating it if needed. */
 function getUserDataDir(cacheDir?: string): string {
