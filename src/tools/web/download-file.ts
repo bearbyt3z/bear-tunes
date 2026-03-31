@@ -62,10 +62,6 @@ export async function downloadFile(
   url: URL,
   options: DownloadFileOptions = {},
 ): Promise<string> {
-  if (!url) {
-    throw new Error('Proper URL is needed to download a file.');
-  }
-
   const resolvedFilePath = resolveDownloadFilename(url, options.outputFilePath);
 
   const response = await fetch(url.toString(), {
