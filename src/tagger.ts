@@ -300,15 +300,15 @@ export class BearTunesTagger {
 
     const duration = tools.roundToDecimalPlaces(trackData.length_ms / 1000.0, 2);
 
-    const waveform = trackData.image && new URL(trackData.image.uri) || undefined;
+    const waveform = tools.tryParseUrl(trackData.image?.uri);
 
     const isrc = trackData.isrc;
     const trackUfid = `track-${trackData.id}`;
 
-    const publisherUrl = trackData.release?.label && new URL(`${this.options.domainURL}/label/${trackData.release.label.slug}/${trackData.release.label.id}`) || undefined;
+    const publisherUrl = trackData.release?.label ? new URL(`${this.options.domainURL}/label/${trackData.release.label.slug}/${trackData.release.label.id}`) : undefined;
     const publisher = publisherUrl && await BearTunesTagger.extractPublisherData(publisherUrl) || undefined;
 
-    const albumUrl = trackData.release && new URL(`${this.options.domainURL}/release/${trackData.release.slug}/${trackData.release.id}`) || undefined;
+    const albumUrl = trackData.release ? new URL(`${this.options.domainURL}/release/${trackData.release.slug}/${trackData.release.id}`) : undefined;
     const album = albumUrl && await BearTunesTagger.extractAlbumData(albumUrl, trackData.number) || undefined;
 
     return {
@@ -339,7 +339,7 @@ export class BearTunesTagger {
     const title = tools.replaceTagForbiddenChars(albumData.name);
     const catalogNumber = albumData.catalog_number;
     const trackTotal = tools.getPositiveIntegerOrUndefined(albumData.track_count);
-    const artwork = albumData.image && new URL(albumData.image.uri) || undefined;
+    const artwork = tools.tryParseUrl(albumData.image?.uri);
 
     return {
       artists,
@@ -356,7 +356,7 @@ export class BearTunesTagger {
     const publisherData = await BearTunesTagger.extractNextJSData(publisherUrl) as BeatportPublisherInfo;
 
     const name = publisherData.name;
-    const logotype = publisherData.image && new URL(publisherData.image.uri) || undefined;
+    const logotype = tools.tryParseUrl(publisherData.image?.uri);
 
     return {
       name,
