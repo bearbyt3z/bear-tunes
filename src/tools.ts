@@ -184,12 +184,13 @@ export function createArtistArray(artistArray: string[] | null, title?: string):
  *
  * If no main genre name is provided, the function returns `undefined`.
  * The optional sub-genre is appended only when it is present and non-empty.
- * The ` | ` separator matches Beatport's XML notation for track genres:
- * https://greenroomsupport.beatport.com/hc/en-us/articles/9709209306772-Beatport-Genres-and-Sub-Genres
+ * The ` | ` separator matches Beatport's XML notation for track genres.
  *
  * @param genreName - Main genre name.
  * @param subgenreName - Optional sub-genre name.
  * @returns A formatted genre tag, or `undefined` when no main genre is available.
+ *
+ * @see {@link https://greenroomsupport.beatport.com/hc/en-us/articles/9709209306772-Beatport-Genres-and-Sub-Genres | Beatport Genres and Sub-Genres }
  */
 export function createGenreTag(genreName?: string, subgenreName?: string): string | undefined {
   if (!genreName) return undefined;
