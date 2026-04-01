@@ -296,7 +296,7 @@ export class BearTunesTagger {
 
     const bpm = tools.getPositiveIntegerOrUndefined(trackData.bpm);
     const key = trackData.key && tools.createKeyTag(trackData.key.name) || undefined;
-    const genre = trackData.genre && tools.createGenreTag(trackData.genre.name, trackData.sub_genre?.name) || undefined;
+    const genre = tools.createGenreTag(trackData.genre?.name, trackData.sub_genre?.name);
 
     const duration = tools.roundToDecimalPlaces(trackData.length_ms / 1000.0, 2);
 

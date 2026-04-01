@@ -179,17 +179,22 @@ export function createArtistArray(artistArray: string[] | null, title?: string):
   return result;
 }
 
-export function createGenreTag(genreName?: string, subgenreName?: string): string {
-  if (!genreName) return ''; // '' => delete frame if there is no genre information
+/**
+ * Builds a genre tag in the `Genre | Sub-Genre` format.
+ *
+ * If no main genre name is provided, the function returns `undefined`.
+ * The optional sub-genre is appended only when it is present and non-empty.
+ * The ` | ` separator matches Beatport's XML notation for track genres:
+ * https://greenroomsupport.beatport.com/hc/en-us/articles/9709209306772-Beatport-Genres-and-Sub-Genres
+ *
+ * @param genreName - Main genre name.
+ * @param subgenreName - Optional sub-genre name.
+ * @returns A formatted genre tag, or `undefined` when no main genre is available.
+ */
+export function createGenreTag(genreName?: string, subgenreName?: string): string | undefined {
+  if (!genreName) return undefined;
 
-  let result = genreName;
-
-  // check if sub-genre provided and it's not empty (an empty string is a falsy value)
-  if (subgenreName) {
-    result += ` | ${subgenreName}`; // separator same as: https://labelsupport.beatport.com/hc/en-us/articles/9709209306772-Beatport-Genres-and-Sub-Genres
-  }
-
-  return result;
+  return subgenreName ? `${genreName} | ${subgenreName}` : genreName;
 }
 
 // keyString e.g.: 'C Major'
