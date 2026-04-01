@@ -170,3 +170,19 @@ export interface BeatportPublisherInfo {
   // latest_active_publish_date: string,
   slug: string,
 }
+
+/**
+ * Options for downloading an image asset with optional source page context.
+ * @internal Not re-exported from tagger module.
+ *
+ * @property imageUrl - Image URL to download. The property is required, but its value may be `undefined`.
+ * @property sourcePageUrl - Optional URL of the page from which the image asset originates.
+ * @property label - Human-readable asset label used in log messages.
+ * @property verbose - Enables additional diagnostic logging.
+ */
+export interface DownloadImageAssetOptions {
+  imageUrl: URL | undefined;
+  sourcePageUrl?: URL;
+  label: string;
+  verbose?: boolean;
+}
