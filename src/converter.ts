@@ -247,8 +247,8 @@ export class BearTunesConverter {
       album: {
         artists: BearTunesConverter.extractMultiTagFromMetaflacOutput(metaflacOutput, 'albumartist'),
         title: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'album'),
-        trackNumber: tools.getPositiveIntegerOrUndefined(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracknumber')),
-        trackTotal: tools.getPositiveIntegerOrUndefined(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracktotal')),
+        trackNumber: tools.tryParsePositiveInteger(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracknumber')),
+        trackTotal: tools.tryParsePositiveInteger(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracktotal')),
       },
     };
 

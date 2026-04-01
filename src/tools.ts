@@ -326,7 +326,17 @@ export function tryParseUrl(str?: string): URL | undefined {
   }
 }
 
-export function getPositiveIntegerOrUndefined(value: string | number | undefined): number | undefined {
+/**
+ * Attempts to parse a value into a positive integer.
+ *
+ * Returns `undefined` when the input is missing, non-numeric, zero, or negative.
+ * Unlike `Number()` + manual validation, this helper provides safe parsing without NaN checks.
+ *
+ * @param value - Value to parse as positive integer.
+ * @returns Parsed positive integer or `undefined` on failure.
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number | MDN: Number constructor}
+ */
+export function tryParsePositiveInteger(value: string | number | undefined): number | undefined {
   const result = Number(value);
   return (isInteger(result) && result > 0) ? result : undefined;
 }

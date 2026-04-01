@@ -292,9 +292,9 @@ export class BearTunesTagger {
     const remixers = tools.createArtistArray(trackData.remixers.map((x: BeatportArtistInfo) => x.name));
 
     const released = new Date(trackData.new_release_date); // or publish_date???
-    const year = tools.getPositiveIntegerOrUndefined(released.getFullYear());
+    const year = tools.tryParsePositiveInteger(released.getFullYear());
 
-    const bpm = tools.getPositiveIntegerOrUndefined(trackData.bpm);
+    const bpm = tools.tryParsePositiveInteger(trackData.bpm);
     const key = tools.createKeyTag(trackData.key?.name);
     const genre = tools.createGenreTag(trackData.genre?.name, trackData.sub_genre?.name);
 
@@ -338,7 +338,7 @@ export class BearTunesTagger {
     const artists = tools.createArtistArray(albumData.artists.map((x: BeatportArtistInfo) => x.name));
     const title = tools.replaceTagForbiddenChars(albumData.name);
     const catalogNumber = albumData.catalog_number;
-    const trackTotal = tools.getPositiveIntegerOrUndefined(albumData.track_count);
+    const trackTotal = tools.tryParsePositiveInteger(albumData.track_count);
     const artwork = tools.tryParseUrl(albumData.image?.uri);
 
     return {
