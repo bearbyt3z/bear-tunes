@@ -455,14 +455,14 @@ export class BearTunesTagger {
     }
     if (trackData.title) {
       // eyeD3Options.push('--title', trackData.title.replace(/^-/, '- '));
-      eyeD3Options.push('--text-frame', `TIT2:${tools.escapeColonChar(trackData.title)}`); // --title option with a parameter starting with a hyphen (-) will cause eyeD3 to report the usage error
+      eyeD3Options.push('--text-frame', `TIT2:${tools.escapeUnescapedColons(trackData.title)}`); // --title option with a parameter starting with a hyphen (-) will cause eyeD3 to report the usage error
     }
     if (trackData.remixers && trackData.remixers.length > 0) {
-      eyeD3Options.push('--text-frame', `TPE4:${tools.escapeColonChar(trackData.remixers.join(', '))}`); // TPE4 => REMIXEDBY
+      eyeD3Options.push('--text-frame', `TPE4:${tools.escapeUnescapedColons(trackData.remixers.join(', '))}`); // TPE4 => REMIXEDBY
     }
     if (trackData.album?.title) {
       // eyeD3Options.push('--album', trackData.album.title.replace(/^-/, '- '));
-      eyeD3Options.push('--text-frame', `TALB:${tools.escapeColonChar(trackData.album.title)}`); // the same as with --title
+      eyeD3Options.push('--text-frame', `TALB:${tools.escapeUnescapedColons(trackData.album.title)}`); // the same as with --title
     }
     if (trackData.album && trackData.album.artists && trackData.album.artists.length > 0) {
       eyeD3Options.push('--album-artist', trackData.album.artists.join(', '));
@@ -496,10 +496,10 @@ export class BearTunesTagger {
       // '--orig-release-date', trackData.released,
     }
     if (trackData.url) {
-      eyeD3Options.push('--url-frame', `WOAF:${tools.escapeColonChar(trackData.url.toString())}`); // file webpage
+      eyeD3Options.push('--url-frame', `WOAF:${tools.escapeUnescapedColons(trackData.url.toString())}`); // file webpage
     }
     if (trackData.publisher?.url) {
-      eyeD3Options.push('--url-frame', `WPUB:${tools.escapeColonChar(trackData.publisher.url.toString())}`); // publisher webpage
+      eyeD3Options.push('--url-frame', `WPUB:${tools.escapeUnescapedColons(trackData.publisher.url.toString())}`); // publisher webpage
     }
     if (trackData.bpm) {
       eyeD3Options.push('--bpm', trackData.bpm.toString());
@@ -510,8 +510,8 @@ export class BearTunesTagger {
     }
     if (trackData.album?.catalogNumber) {
       // https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
-      eyeD3Options.push('--user-text-frame', `CATALOGNUMBER:${tools.escapeColonChar(trackData.album.catalogNumber)}`);
-      eyeD3Options.push('--user-text-frame', `CATALOG #:${tools.escapeColonChar(trackData.album.catalogNumber)}`);
+      eyeD3Options.push('--user-text-frame', `CATALOGNUMBER:${tools.escapeUnescapedColons(trackData.album.catalogNumber)}`);
+      eyeD3Options.push('--user-text-frame', `CATALOG #:${tools.escapeUnescapedColons(trackData.album.catalogNumber)}`);
     }
     if (imagePaths.frontCover && tools.getMimeTypeFromPath(imagePaths.frontCover).startsWith('image')) {
       eyeD3Options.push('--add-image', `${imagePaths.frontCover}:FRONT_COVER:Front Cover`); // front cover
@@ -527,14 +527,14 @@ export class BearTunesTagger {
     }
     if (trackData.publisher?.name) {
       eyeD3Options.push('--publisher', trackData.publisher.name);
-      eyeD3Options.push('--text-frame', `TIT1:${tools.escapeColonChar(trackData.publisher.name)}`); // TIT1 => CONTENTGROUP
+      eyeD3Options.push('--text-frame', `TIT1:${tools.escapeUnescapedColons(trackData.publisher.name)}`); // TIT1 => CONTENTGROUP
     }
     if (trackData.isrc) {
-      eyeD3Options.push('--text-frame', `TSRC:${tools.escapeColonChar(trackData.isrc)}`);
+      eyeD3Options.push('--text-frame', `TSRC:${tools.escapeUnescapedColons(trackData.isrc)}`);
     }
     if (trackData.ufid) {
       // '--unique-file-id', `http${colonEscapeChar}://www.id3.org/dummy/ufid.html:${trackData.ufid}`,
-      eyeD3Options.push('--unique-file-id', `${tools.escapeColonChar(this.options.domainURL)}:${trackData.ufid}`);
+      eyeD3Options.push('--unique-file-id', `${tools.escapeUnescapedColons(this.options.domainURL)}:${trackData.ufid}`);
     }
 
     eyeD3Options.push(trackPath);
