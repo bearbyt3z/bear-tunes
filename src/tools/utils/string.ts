@@ -22,3 +22,17 @@ const colonEscapeChar = '\\'; // same on windows & linux platform
 export function escapeUnescapedColons(str: string): string {
   return str.replaceAll(/(?<!\\):/g, `${colonEscapeChar}:`);
 }
+
+/**
+ * Returns a string with its first character converted to uppercase.
+ *
+ * Returns the original value unchanged when the input is an empty string.
+ *
+ * @param str - String to capitalize.
+ * @returns A new string with the first character converted to uppercase.
+ */
+export function capitalize(str: string): string {
+  if (!str) return str;
+
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
