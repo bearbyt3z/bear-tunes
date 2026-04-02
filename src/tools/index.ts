@@ -5,10 +5,10 @@ import * as path from 'node:path';
 
 import logger from '@/logger';
 
-export { downloadFile } from './tools/web/download-file';
-export { downloadImage, downloadAndSaveArtwork } from './tools/web/download-image';
-export { fetchWebPage } from './tools/web/fetch-web-page';
-export { prompt } from './tools/cli/prompt';
+export { prompt } from './cli/prompt';
+export { downloadFile } from './web/download-file';
+export { downloadImage, downloadAndSaveArtwork } from './web/download-image';
+export { fetchWebPage } from './web/fetch-web-page';
 
 /**
  * Returns the elements of the first array that are not present in the second array.
