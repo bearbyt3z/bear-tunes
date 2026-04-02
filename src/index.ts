@@ -88,7 +88,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
         } else {
           noFilesWereProcessed = false;
           const trackInfo = await tagger.processTrack(filePath);
-          if (!tools.isEmptyObject(trackInfo)) {
+          if (!tools.isEmptyPlainObject(trackInfo)) {
             const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
 
             await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
@@ -103,7 +103,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
           logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
           flacFiles.push(result.outputPath);
           const trackInfo = await tagger.processTrack(result.outputPath);
-          if (!tools.isEmptyObject(trackInfo)) {
+          if (!tools.isEmptyPlainObject(trackInfo)) {
             renamer.rename(result.outputPath, trackInfo, outputDirectory);
 
             await tagger.saveId3TagToFlacFile(filePath, trackInfo);
