@@ -229,10 +229,6 @@ export function secondsToTimeFormat(inputSeconds : number): string {
   return result;
 }
 
-export function isString(value: unknown): boolean {
-  return typeof value === 'string' || value instanceof String;
-}
-
 export function isEmptyObject(value: object): boolean {
   return Object.keys(value).length === 0;
 }
