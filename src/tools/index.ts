@@ -1,5 +1,4 @@
 import * as childProcess from 'node:child_process';
-import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -15,6 +14,7 @@ export {
   arrayIntersection,
   arrayToLowerCase,
 } from './utils/array';
+export { generateRandomHexString } from './utils/random';
 export {
   capitalize,
   escapeRegExpChars,
@@ -235,10 +235,6 @@ export function getUrlFromFile(filePath: string): URL | null {
   const urlIndex = fileContent.indexOf('URL=');
   if (urlIndex < 0) return null;
   return new URL(fileContent.substring(urlIndex + 4).split('\n')[0]);
-}
-
-export function getRandomString(length = 20): string {
-  return crypto.randomBytes(length).toString('hex');
 }
 
 /**

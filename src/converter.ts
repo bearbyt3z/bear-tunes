@@ -284,7 +284,7 @@ export class BearTunesConverter {
 
     for (const imageBlockInfo of matchingImageBlocks) {
       const imageFileExtension = imageBlockInfo.mimeType.replace('image/', '');
-      const imageFilePath = `${tools.getRandomString()}.${imageFileExtension}`;
+      const imageFilePath = `${tools.generateRandomHexString()}.${imageFileExtension}`;
 
       const metaflacResult = childProcess.spawnSync('metaflac', [
         `--block-number=${imageBlockInfo.blockType.toString()}`,
