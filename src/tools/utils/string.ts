@@ -56,3 +56,34 @@ export function capitalize(str: string): string {
 export function escapeRegExpChars(str: string): string {
   return str.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
 }
+
+const pathForbiddenCharsRegExp = /[/\\*?<>|:"]/g;
+
+/**
+ * Replaces path-forbidden characters with a hyphen.
+ *
+ * This helper replaces characters matched by `pathForbiddenCharsRegExp`,
+ * to make strings safer for cross-platform file and directory names.
+ *
+ * It is intended as a lightweight character replacement helper, not as a full
+ * path or filename sanitizer.
+ *
+ * @param value - String in which forbidden path characters should be replaced.
+ * @returns A new string with every forbidden character replaced with `-`.
+ */
+export function replacePathForbiddenChars(value: string): string {
+  return value.replace(pathForbiddenCharsRegExp, '-');
+}
+
+/**
+ * Replaces path-forbidden characters with a hyphen in every string in an array.
+ *
+ * This helper applies {@link replacePathForbiddenChars} to each element and
+ * returns a new array without mutating the input.
+ *
+ * @param stringArray - Array of strings to sanitize.
+ * @returns A new array with forbidden path characters replaced in every string.
+ */
+export function replacePathForbiddenCharsInArray(stringArray: readonly string[]): string[] {
+  return stringArray.map((str) => replacePathForbiddenChars(str));
+}

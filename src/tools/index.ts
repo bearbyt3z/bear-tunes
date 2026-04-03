@@ -16,6 +16,8 @@ export {
   capitalize,
   escapeRegExpChars,
   escapeUnescapedColons,
+  replacePathForbiddenChars,
+  replacePathForbiddenCharsInArray,
 } from './utils/string';
 export { isEmptyPlainObject } from './utils/type-guards';
 export { downloadFile } from './web/download-file';
@@ -223,16 +225,6 @@ export function secondsToTimeFormat(inputSeconds : number): string {
   result += `${minutes}:${zeroPad(seconds)}`;
 
   return result;
-}
-
-const replaceRegEx = /[/\\*?<>|:"]/gm;
-
-export function replacePathForbiddenChars(value: string): string {
-  return value.replace(replaceRegEx, '-');
-}
-
-export function replacePathForbiddenCharsInArray(stringArray: readonly string[]): string[] {
-  return stringArray.map((str) => replacePathForbiddenChars(str));
 }
 
 export function leaveOnlyFirstLine(text: string): string {
