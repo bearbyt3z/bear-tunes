@@ -36,3 +36,23 @@ export function capitalize(str: string): string {
 
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
+/**
+ * Escapes regular expression special characters in a string.
+ *
+ * This helper is intended for building regular expressions from literal text
+ * while preserving a readable backslash-based escaped form.
+ *
+ * It prefixes each matched special character with `\` by using
+ * `String.prototype.replace()` and the `$&` replacement pattern, where `$&`
+ * inserts the entire matched substring.
+ *
+ * Unlike `RegExp.escape()`, this helper keeps the output in the classic
+ * backslash-escaped form instead of using escape sequences such as `\xNN`.
+ *
+ * @param str - String whose regular expression special characters should be escaped.
+ * @returns A new string with RegExp special characters escaped.
+ */
+export function escapeRegExpChars(str: string): string {
+  return str.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+}

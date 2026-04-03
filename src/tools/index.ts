@@ -4,6 +4,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import logger from '@/logger';
+import { escapeRegExpChars } from './utils/string';
 
 export { prompt } from './cli/prompt';
 export {
@@ -13,6 +14,7 @@ export {
 } from './utils/array';
 export {
   capitalize,
+  escapeRegExpChars,
   escapeUnescapedColons,
 } from './utils/string';
 export { isEmptyPlainObject } from './utils/type-guards';
@@ -118,10 +120,6 @@ export function createTitle(trackName?: string, trackMixName?: string): string {
   return title;
 }
 
-export function regExpEscape(str: string): string {
-  return str.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-}
-
 // if title provided => remove featuring artists from artist list
 export function createArtistArray(artistArray: string[] | null, title?: string): string[] {
   const result: string[] = []; // => delete frame if there is no artist information
@@ -130,7 +128,7 @@ export function createArtistArray(artistArray: string[] | null, title?: string):
 
   for (const artist of artistArray) {
     if (artist && artist.length > 0
-      && (title === undefined || title.search(new RegExp(`(feat|ft).+${regExpEscape(artist)}`, 'i')) < 0)) { // search for feat/ft before the artist name
+      && (title === undefined || title.search(new RegExp(`(feat|ft).+${escapeRegExpChars(artist)}`, 'i')) < 0)) { // search for feat/ft before the artist name
       result.push(replaceTagForbiddenChars(artist));
     }
   }
