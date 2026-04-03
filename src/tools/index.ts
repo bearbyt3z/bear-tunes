@@ -4,7 +4,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import logger from '@/logger';
-import { escapeRegExpChars } from './utils/string';
+import {
+  escapeRegExpChars,
+  replaceTagForbiddenChars,
+} from './utils/string';
 
 export { prompt } from './cli/prompt';
 export {
@@ -18,6 +21,7 @@ export {
   escapeUnescapedColons,
   replacePathForbiddenChars,
   replacePathForbiddenCharsInArray,
+  replaceTagForbiddenChars,
 } from './utils/string';
 export { isEmptyPlainObject } from './utils/type-guards';
 export { downloadFile } from './web/download-file';
@@ -64,11 +68,6 @@ export function removeFilenameExtension(filePath: string): string {
     name: parsed.name,
     ext: '',
   });
-}
-
-export function replaceTagForbiddenChars(str: string): string {
-  return str
-    .replace(/[`’]/g, '\''); // replace weird apostrophes with '
 }
 
 export function splitTrackNameIntoKeywords(name: string | string[]): string[] {
