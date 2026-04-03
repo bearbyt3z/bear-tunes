@@ -62,7 +62,7 @@ const pathForbiddenCharsRegExp = /[/\\*?<>|:"]/g;
 /**
  * Replaces path-forbidden characters with a hyphen.
  *
- * This helper replaces characters matched by `pathForbiddenCharsRegExp`,
+ * This helper replaces characters matched by {@link pathForbiddenCharsRegExp},
  * to make strings safer for cross-platform file and directory names.
  *
  * It is intended as a lightweight character replacement helper, not as a full
