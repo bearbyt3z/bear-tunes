@@ -167,18 +167,49 @@ export function slugify(text: string): string {
   return slug;
 }
 
+/**
+ * Converts a duration in seconds to a human-readable time string.
+ *
+ * The result uses `m:ss` format for durations shorter than one hour and
+ * `h:mm:ss` format when at least one full hour is present.
+ *
+ * The input is first rounded to the nearest whole second with `Math.round()`,
+ * then split into hours, minutes, and seconds using integer division.
+ *
+ * Only non-negative finite numbers are accepted. A `TypeError` is thrown for
+ * invalid input such as `NaN`, `Infinity`, or negative values.
+ *
+ * @example
+ * ```ts
+ * secondsToTimeFormat(73); // "1:13"
+ * secondsToTimeFormat(253); // "4:13"
+ * secondsToTimeFormat(3853); // "1:04:13"
+ * ```
+ *
+ * @param inputSeconds - Duration in seconds.
+ * @returns Formatted duration string.
+ * @throws {TypeError} When `inputSeconds` is not a non-negative finite number.
+ *
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isFinite | MDN: Number.isFinite()}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round | MDN: Math.round()}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/floor | MDN: Math.floor()}
+ */
 export function secondsToTimeFormat(inputSeconds : number): string {
-  inputSeconds = Math.round(inputSeconds);
-  const hours = Math.floor(inputSeconds / 3600);
-  const minutes = Math.floor((inputSeconds % 3600) / 60);
-  const seconds = Math.floor(inputSeconds % 60);
+  if (!Number.isFinite(inputSeconds) || inputSeconds < 0) {
+    throw new TypeError('inputSeconds must be a non-negative finite number.');
+  }
+
+  const totalSeconds = Math.round(inputSeconds);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
 
   let result = '';
   if (hours > 0) {
     result += `${hours}:`;
 
     if (minutes < 10) {
-      result += '0'; // minutes variable with zeroPad() below would end up in "04:13"-like format...
+      result += '0'; // Zero-pad minutes only when hours are present.
     }
   }
 
