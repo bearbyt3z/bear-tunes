@@ -1,6 +1,5 @@
 import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 
 import logger from '@/logger';
 import {
@@ -14,6 +13,10 @@ export {
   arrayIntersection,
   arrayToLowerCase,
 } from './utils/array';
+export {
+  removeFilenameExtension,
+  replaceFilenameExtension,
+} from './utils/path';
 export { generateRandomHexString } from './utils/random';
 export {
   capitalize,
@@ -27,48 +30,6 @@ export { isEmptyPlainObject } from './utils/type-guards';
 export { downloadFile } from './web/download-file';
 export { downloadImage, downloadAndSaveArtwork } from './web/download-image';
 export { fetchWebPage } from './web/fetch-web-page';
-
-/**
- * Replaces the filename extension in a filesystem path.
- *
- * @param filePath The filesystem path whose filename extension should be replaced.
- * @param replacement The new filename extension, with or without a leading dot.
- * @returns The input path with its filename extension replaced.
- * @throws {TypeError} If replacement is not a non-empty string.
- */
-export function replaceFilenameExtension(filePath: string, replacement: string): string {
-  if (typeof replacement !== 'string' || replacement === '') {
-    throw new TypeError('Replacement must be a non-empty string.');
-  }
-
-  const parsed = path.parse(filePath);
-
-  return path.format({
-    dir: parsed.dir,
-    root: parsed.root,
-    // Omit `base`, because it takes priority over `name` and `ext`.
-    name: parsed.name,
-    ext: replacement,
-  });
-}
-
-/**
- * Removes the filename extension from a filesystem path.
- *
- * @param filePath The filesystem path whose filename extension should be removed.
- * @returns The input path without its filename extension.
- */
-export function removeFilenameExtension(filePath: string): string {
-  const parsed = path.parse(filePath);
-
-  return path.format({
-    dir: parsed.dir,
-    root: parsed.root,
-    // Omit `base`, because it takes priority over `name` and `ext`.
-    name: parsed.name,
-    ext: '',
-  });
-}
 
 export function splitTrackNameIntoKeywords(name: string | string[]): string[] {
   let nameComputed = (name instanceof Array) ? name.join(' ') : name;
