@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-import { getRandomString } from '@/tools';
+import { generateRandomHexString } from '@/tools';
 
 import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
 
@@ -31,7 +31,7 @@ function bodyToReadable(body: ReadableStream<Uint8Array>): Readable {
 function resolveDownloadFilename(url: URL, filename?: string): string {
   // URL.pathname always uses forward-slash-separated URL paths,
   // so use path.posix helpers instead of platform-dependent path parsing.
-  const urlFilename = path.posix.basename(url.pathname) || `unnamed-download-${getRandomString(6)}`;
+  const urlFilename = path.posix.basename(url.pathname) || `unnamed-download-${generateRandomHexString(6)}`;
 
   if (!filename || filename.length < 1) {
     return urlFilename;
