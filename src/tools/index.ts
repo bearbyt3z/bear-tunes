@@ -229,8 +229,17 @@ export function getUrlFromFile(filePath: string): URL | null {
   return new URL(fileContent.substring(urlIndex + 4).split('\n')[0]);
 }
 
-function zeroPad(number: number): string {
-  return (number < 10) ? `0${number}` : number.toString();
+/**
+ * Converts a number to a string and prefixes it with `0` when it is a single digit.
+ *
+ * This helper is intended for time formatting such as seconds in `m:ss`
+ * or `h:mm:ss` output.
+ *
+ * @param value - Number to format.
+ * @returns A zero-padded string for values below `10`, otherwise the original number as a string.
+ */
+function zeroPad(value: number): string {
+  return (value < 10) ? `0${value}` : value.toString();
 }
 
 export function convertDateToString(date: Date): string {
