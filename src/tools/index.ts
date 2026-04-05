@@ -14,7 +14,9 @@ export {
   arrayToLowerCase,
 } from './utils/array';
 export {
+  formatLocalDateToIsoDateString,
   roundToDecimalPlaces,
+  secondsToTimeFormat,
 } from './utils/format'
 export {
   tryParsePositiveInteger,
@@ -167,57 +169,6 @@ export function slugify(text: string): string {
   return slug;
 }
 
-/**
- * Converts a duration in seconds to a human-readable time string.
- *
- * The result uses `m:ss` format for durations shorter than one hour and
- * `h:mm:ss` format when at least one full hour is present.
- *
- * The input is first rounded to the nearest whole second with `Math.round()`,
- * then split into hours, minutes, and seconds using integer division.
- *
- * Only non-negative finite numbers are accepted. A `TypeError` is thrown for
- * invalid input such as `NaN`, `Infinity`, or negative values.
- *
- * @example
- * ```ts
- * secondsToTimeFormat(73); // "1:13"
- * secondsToTimeFormat(253); // "4:13"
- * secondsToTimeFormat(3853); // "1:04:13"
- * ```
- *
- * @param inputSeconds - Duration in seconds.
- * @returns Formatted duration string.
- * @throws {TypeError} When `inputSeconds` is not a non-negative finite number.
- *
- * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isFinite | MDN: Number.isFinite()}
- * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round | MDN: Math.round()}
- * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/floor | MDN: Math.floor()}
- */
-export function secondsToTimeFormat(inputSeconds : number): string {
-  if (!Number.isFinite(inputSeconds) || inputSeconds < 0) {
-    throw new TypeError('inputSeconds must be a non-negative finite number.');
-  }
-
-  const totalSeconds = Math.round(inputSeconds);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = Math.floor(totalSeconds % 60);
-
-  let result = '';
-  if (hours > 0) {
-    result += `${hours}:`;
-
-    if (minutes < 10) {
-      result += '0'; // Zero-pad minutes only when hours are present.
-    }
-  }
-
-  result += `${minutes}:${zeroPad(seconds)}`;
-
-  return result;
-}
-
 export function leaveOnlyFirstLine(text: string): string {
   return text.replace(/\n.*/gmi, '');
 }
@@ -227,40 +178,6 @@ export function getUrlFromFile(filePath: string): URL | null {
   const urlIndex = fileContent.indexOf('URL=');
   if (urlIndex < 0) return null;
   return new URL(fileContent.substring(urlIndex + 4).split('\n')[0]);
-}
-
-/**
- * Converts a number to a string and prefixes it with `0` when it is a single digit.
- *
- * This helper is intended for time formatting such as seconds in `m:ss`
- * or `h:mm:ss` output.
- *
- * @param value - Number to format.
- * @returns A zero-padded string for values below `10`, otherwise the original number as a string.
- */
-function zeroPad(value: number): string {
-  return (value < 10) ? `0${value}` : value.toString();
-}
-
-/**
- * Formats a local date as an ISO 8601 calendar date string.
- *
- * The returned string uses the `YYYY-MM-DD` format based on the date's local
- * year, month, and day values.
- *
- * This helper uses local date getters (`getFullYear()`, `getMonth()`, and
- * `getDate()`), so the result is based on the local time zone rather than UTC.
- *
- * @param date - Date to format.
- * @returns A local date string in `YYYY-MM-DD` format.
- *
- * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getFullYear | MDN: Date.prototype.getFullYear()}
- * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getMonth | MDN: Date.prototype.getMonth()}
- * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getDate | MDN: Date.prototype.getDate()}
- * @see {@link https://www.iso.org/iso-8601-date-and-time-format.html | ISO 8601 date format}
- */
-export function formatLocalDateToIsoDateString(date: Date): string {
-  return `${date.getFullYear()}-${zeroPad(date.getMonth() + 1)}-${zeroPad(date.getDate())}`;
 }
 
 export function executeChildProcess(
