@@ -125,3 +125,38 @@ export function roundToDecimalPlaces(num: number, decimalPlaces: number = 0): nu
 export function getFirstLine(text: string): string {
   return text.split(/\r?\n/, 1)[0];
 }
+
+/**
+ * Converts a string into a URL-friendly slug.
+ *
+ * The resulting slug is normalized to lowercase ASCII, with diacritics removed,
+ * non-alphanumeric characters stripped, whitespace converted to hyphens, and
+ * duplicate or edge hyphens removed.
+ *
+ * This helper is intended for generating readable identifiers such as file
+ * names, path segments, or other slug-like strings.
+ *
+ * @example
+ * ```ts
+ * slugify('Hello World'); // "hello-world"
+ * slugify('Zażółć gęślą jaźń'); // "zazolc-gesla-jazn"
+ * slugify('  Foo --- Bar!  '); // "foo-bar"
+ * ```
+ *
+ * @param text - Text to convert into a slug.
+ * @returns A lowercase, hyphen-separated ASCII slug.
+ *
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/normalize | MDN: String.prototype.normalize()}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replaceAll | MDN: String.prototype.replaceAll()}
+ */
+export function slugify(text: string): string {
+  return text
+    .normalize('NFD') // Decompose accented characters into base characters and combining marks.
+    .replaceAll(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks, e.g. "ą" -> "a".
+    .toLowerCase() // Convert the entire string to lowercase.
+    .trim() // Remove leading and trailing whitespace.
+    .replaceAll(/[^a-z0-9\s-]/g, '') // Keep only ASCII letters, digits, spaces, and hyphens.
+    .replaceAll(/\s+/g, '-') // Replace one or more spaces with a single hyphen.
+    .replaceAll(/-+/g, '-') // Collapse consecutive hyphens into a single hyphen.
+    .replaceAll(/^-+|-+$/g, ''); // Remove hyphens from the beginning and the end of the slug.
+}
