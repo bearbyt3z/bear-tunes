@@ -169,7 +169,7 @@ export class BearTunesTagger {
       encoding: 'utf-8',
     });
     if (displayPluginOutput.stderr) {
-      logger.warn(`Cannot read ID3 tag of ${path.basename(trackPath)}:\n${tools.leaveOnlyFirstLine(displayPluginOutput.stderr)}`); // show only first line of error from plugin (ommit traceback)
+      logger.warn(`Cannot read ID3 tag of ${path.basename(trackPath)}:\n${tools.getFirstLine(displayPluginOutput.stderr)}`); // show only first line of error from plugin (ommit traceback)
       return {};
     }
     // console.log(displayPluginOutput.stdout);
