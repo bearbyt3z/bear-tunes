@@ -1,9 +1,10 @@
 /**
  * Converts a number to a string and prefixes it with `0` when it is a single digit.
  *
- * This helper is intended for time formatting such as seconds in `m:ss`
- * or `h:mm:ss` output.
+ * This is a local helper used internally by date and time formatting utilities.
+ * It is intended for values such as month, day, minute, or second components.
  *
+ * @internal
  * @param value - Number to format.
  * @returns A zero-padded string for values below `10`, otherwise the original number as a string.
  */
