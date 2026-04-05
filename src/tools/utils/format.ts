@@ -109,3 +109,19 @@ export function roundToDecimalPlaces(num: number, decimalPlaces: number = 0): nu
   const n = (num * p) * (1 + Number.EPSILON);
   return Math.round(n) / p;
 }
+
+/**
+ * Returns the first line of a string.
+ *
+ * This helper splits the input on the first Unix (`\n`) or Windows (`\r\n`)
+ * line break and returns only the text before it.
+ *
+ * It is useful for shortening multi-line messages, for example when logging
+ * only the first line of an error and omitting the remaining stack trace.
+ *
+ * @param text - Text from which to extract the first line.
+ * @returns The first line of the input string, or the whole string if it does not contain a line break.
+ */
+export function getFirstLine(text: string): string {
+  return text.split(/\r?\n/, 1)[0];
+}
