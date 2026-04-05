@@ -147,7 +147,7 @@ export class BearTunesConverter {
         tagOptions.push(`--ty "${flacTrackInfo.year}"`);
       }
       if (flacTrackInfo.released) {
-        tagOptions.push(`--tv TORY=${tools.convertDateToString(flacTrackInfo.released)}`);
+        tagOptions.push(`--tv TORY=${tools.formatLocalDateToIsoDateString(flacTrackInfo.released)}`);
       }
 
       if (flacTrackInfo.album) {

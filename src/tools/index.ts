@@ -242,7 +242,24 @@ function zeroPad(value: number): string {
   return (value < 10) ? `0${value}` : value.toString();
 }
 
-export function convertDateToString(date: Date): string {
+/**
+ * Formats a local date as an ISO 8601 calendar date string.
+ *
+ * The returned string uses the `YYYY-MM-DD` format based on the date's local
+ * year, month, and day values.
+ *
+ * This helper uses local date getters (`getFullYear()`, `getMonth()`, and
+ * `getDate()`), so the result is based on the local time zone rather than UTC.
+ *
+ * @param date - Date to format.
+ * @returns A local date string in `YYYY-MM-DD` format.
+ *
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getFullYear | MDN: Date.prototype.getFullYear()}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getMonth | MDN: Date.prototype.getMonth()}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getDate | MDN: Date.prototype.getDate()}
+ * @see {@link https://www.iso.org/iso-8601-date-and-time-format.html | ISO 8601 date format}
+ */
+export function formatLocalDateToIsoDateString(date: Date): string {
   return `${date.getFullYear()}-${zeroPad(date.getMonth() + 1)}-${zeroPad(date.getDate())}`;
 }
 

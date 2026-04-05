@@ -485,7 +485,7 @@ export class BearTunesTagger {
       eyeD3Options.push('--text-frame', `TYER:${trackData.year}`);
     }
     if (trackData.released) {
-      const releasedString = tools.convertDateToString(trackData.released);
+      const releasedString = tools.formatLocalDateToIsoDateString(trackData.released);
       eyeD3Options.push('--text-frame', `TORY:${releasedString}`);
       eyeD3Options.push('--text-frame', `TRDA:${releasedString}`);
       eyeD3Options.push('--text-frame', `TDAT:${releasedString}`);
@@ -706,7 +706,7 @@ export class BearTunesTagger {
     }
 
     if (trackData.released) {
-      const releasedString = tools.convertDateToString(trackData.released);
+      const releasedString = tools.formatLocalDateToIsoDateString(trackData.released);
       BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'RELEASE DATE', releasedString);
       BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ORIGINAL RELEASE DATE', releasedString);
     }
