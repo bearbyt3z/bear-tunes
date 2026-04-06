@@ -226,14 +226,14 @@ export class BearTunesTagger {
     };
 
     for (const trackEntry of trackArray) {
-      const trackTitle = tools.createTitle(trackEntry.track_name, trackEntry.mix_name);
+      const trackTitle = tools.buildTitle(trackEntry.track_name, trackEntry.mix_name);
 
-      const trackArtists = tools.createArtistArray(trackEntry.artists
+      const trackArtists = tools.buildArtistArray(trackEntry.artists
         .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Artist)
         .map((x: BeatportSearchResultArtistInfo) => x.artist_name)
       );
 
-      const trackRemixers = tools.createArtistArray(trackEntry.artists
+      const trackRemixers = tools.buildArtistArray(trackEntry.artists
         .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Remixer)
         .map((x: BeatportSearchResultArtistInfo) => x.artist_name)
       );
@@ -278,7 +278,7 @@ export class BearTunesTagger {
   async extractTrackData(trackUrl: URL, forceRadioEdit: boolean): Promise<TrackInfo> {
     const trackData = await BearTunesTagger.extractNextJSData(trackUrl) as BeatportTrackInfo;
 
-    let title = tools.createTitle(trackData.name, trackData.mix_name);
+    let title = tools.buildTitle(trackData.name, trackData.mix_name);
 
     if (forceRadioEdit) {
       const match = title.match(/Original Mix|Extended Mix/i);
@@ -289,15 +289,15 @@ export class BearTunesTagger {
       }
     }
 
-    const artists = tools.createArtistArray(trackData.artists.map((x: BeatportArtistInfo) => x.name));
-    const remixers = tools.createArtistArray(trackData.remixers.map((x: BeatportArtistInfo) => x.name));
+    const artists = tools.buildArtistArray(trackData.artists.map((x: BeatportArtistInfo) => x.name));
+    const remixers = tools.buildArtistArray(trackData.remixers.map((x: BeatportArtistInfo) => x.name));
 
     const released = new Date(trackData.new_release_date); // or publish_date???
     const year = tools.tryParsePositiveInteger(released.getFullYear());
 
     const bpm = tools.tryParsePositiveInteger(trackData.bpm);
-    const key = tools.createKeyTag(trackData.key?.name);
-    const genre = tools.createGenreTag(trackData.genre?.name, trackData.sub_genre?.name);
+    const key = tools.buildKeyTag(trackData.key?.name);
+    const genre = tools.buildGenreTag(trackData.genre?.name, trackData.sub_genre?.name);
 
     const duration = tools.roundToDecimalPlaces(trackData.length_ms / 1000.0, 2);
 
@@ -336,7 +336,7 @@ export class BearTunesTagger {
   static async extractAlbumData(albumUrl: URL, trackNumber: number): Promise<AlbumInfo> {
     const albumData = await BearTunesTagger.extractNextJSData(albumUrl) as BeatportAlbumInfo;
 
-    const artists = tools.createArtistArray(albumData.artists.map((x: BeatportArtistInfo) => x.name));
+    const artists = tools.buildArtistArray(albumData.artists.map((x: BeatportArtistInfo) => x.name));
     const title = tools.replaceTagForbiddenChars(albumData.name);
     const catalogNumber = albumData.catalog_number;
     const trackTotal = tools.tryParsePositiveInteger(albumData.track_count);

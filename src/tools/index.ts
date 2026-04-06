@@ -58,7 +58,7 @@ export function splitTrackNameIntoKeywords(name: string | string[]): string[] {
   return Array.from(new Set(nameComputed.split(' '))); // set to avoid repetitions
 }
 
-export function createTitle(trackName?: string, trackMixName?: string): string {
+export function buildTitle(trackName?: string, trackMixName?: string): string {
   let title = trackName?.trim();
   if (!title || title.length < 1) return '';
 
@@ -95,7 +95,7 @@ export function createTitle(trackName?: string, trackMixName?: string): string {
 }
 
 // if title provided => remove featuring artists from artist list
-export function createArtistArray(artistArray: string[] | null, title?: string): string[] {
+export function buildArtistArray(artistArray: string[] | null, title?: string): string[] {
   const result: string[] = []; // => delete frame if there is no artist information
 
   if (!artistArray) return result;
@@ -123,7 +123,7 @@ export function createArtistArray(artistArray: string[] | null, title?: string):
  *
  * @see {@link https://greenroomsupport.beatport.com/hc/en-us/articles/9709209306772-Beatport-Genres-and-Sub-Genres | Beatport Genres and Sub-Genres }
  */
-export function createGenreTag(genreName?: string, subgenreName?: string): string | undefined {
+export function buildGenreTag(genreName?: string, subgenreName?: string): string | undefined {
   if (!genreName) return undefined;
 
   return subgenreName ? `${genreName} | ${subgenreName}` : genreName;
@@ -145,7 +145,7 @@ export function createGenreTag(genreName?: string, subgenreName?: string): strin
  * @see {@link https://mutagen-specs.readthedocs.io/en/latest/id3/id3v2.2.html | Mutagen ID3 specification}
  * @see {@link https://docs.mp3tag.de/mapping/ | Mp3tag field mappings}
  */
-export function createKeyTag(keyString?: string): string | undefined {
+export function buildKeyTag(keyString?: string): string | undefined {
   if (!keyString) return undefined;
 
   const keyTag = keyString.trim()
