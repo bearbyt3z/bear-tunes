@@ -95,6 +95,42 @@ export function buildTitle(trackName?: string, trackMixName?: string): string {
 }
 
 /**
+ * Returns whether the given artist entry appears to be a combined value made of
+ * multiple artists that are already present as separate entries in the same list.
+ *
+ * @internal
+ * @param artist - Artist entry to validate.
+ * @param artistList - Deduplicated artist list used as a comparison base.
+ *
+ * @returns `true` when the entry looks like an aggregated artist value such as
+ * `Artist A, Artist B`, while both `Artist A` and `Artist B` are already present
+ * in the list as standalone entries; otherwise `false`.
+ *
+ * @remarks
+ * This helper intentionally uses a narrow heuristic. It only checks comma-separated
+ * entries and removes them only when every comma-separated part already exists as
+ * a separate artist in the same list. The goal is to filter obvious API anomalies
+ * such as duplicated combined artist fields without trying to fully parse all
+ * possible artist separator formats.
+ */
+function isCombinedArtistEntry(artist: string, artistArray: string[]): boolean {
+  if (!artist.includes(',')) return false;
+
+  const artistParts = artist
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (artistParts.length < 2) return false;
+
+  return artistParts.every((artistPart) =>
+    artistArray.some((arrayArtist) =>
+      arrayArtist !== artist && arrayArtist.toLowerCase() === artistPart.toLowerCase(),
+    ),
+  );
+}
+
+/**
  * Builds a normalized artist list for tag writing.
  *
  * @param artistArray - Source artist names read from metadata or an external service.
@@ -118,6 +154,12 @@ export function buildTitle(trackName?: string, trackMixName?: string): string {
  * track-title formats without overfitting to a fixed set of separators between
  * featured artists. This means rare edge cases may still produce false positives
  * or false negatives, but the implementation stays simple and predictable.
+ *
+ * After filtering featured artists, the function also removes obvious combined
+ * artist entries, for example `Artist A, Artist B`, when all combined parts are
+ * already present in the list as standalone artists. This is a narrow heuristic
+ * intended to handle malformed API data without trying to parse every possible
+ * artist-list format.
  *
  * Artist names are trimmed before processing. Blank names are ignored, and the
  * final output is deduplicated while preserving the first surviving occurrence.
@@ -145,7 +187,9 @@ export function buildArtistArray(artistArray: string[] | null, title?: string): 
     }
   }
 
-  return Array.from(new Set(result)); // remove duplicates
+  const uniqueArtists = Array.from(new Set(result)); // remove duplicates
+
+  return uniqueArtists.filter((artist) => !isCombinedArtistEntry(artist, uniqueArtists));
 }
 
 /**
