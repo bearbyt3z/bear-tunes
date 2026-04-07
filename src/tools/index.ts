@@ -94,20 +94,58 @@ export function buildTitle(trackName?: string, trackMixName?: string): string {
   return title;
 }
 
-// if title provided => remove featuring artists from artist list
+/**
+ * Builds a normalized artist list for tag writing.
+ *
+ * @param artistArray - Source artist names read from metadata or an external service.
+ * Empty, blank, and duplicated values are removed from the returned list.
+ *
+ * @param title - Optional track title used to detect artists mentioned after the
+ * `feat` or `ft` marker. When an artist appears in that part of the title, the
+ * artist is excluded from the returned list to avoid duplicating the same artist
+ * in both the main artist tag and the featured-artist part of the title.
+ *
+ * @returns A deduplicated array of normalized artist names with tag-forbidden
+ * characters replaced. Returns an empty array when no artist information is provided.
+ *
+ * @remarks
+ * This function intentionally uses a heuristic instead of trying to fully parse
+ * featured-artist separators. It checks whether a normalized artist name appears
+ * after a standalone `feat` or `ft` token in the title and treats that artist as
+ * already represented by the title.
+ *
+ * The matching is deliberately permissive: it is designed to work well for common
+ * track-title formats without overfitting to a fixed set of separators between
+ * featured artists. This means rare edge cases may still produce false positives
+ * or false negatives, but the implementation stays simple and predictable.
+ *
+ * Artist names are trimmed before processing. Blank names are ignored, and the
+ * final output is deduplicated while preserving the first surviving occurrence.
+ */
 export function buildArtistArray(artistArray: string[] | null, title?: string): string[] {
-  const result: string[] = []; // => delete frame if there is no artist information
+  if (!artistArray) return [];
 
-  if (!artistArray) return result;
+  const result: string[] = [];
+  const normalizedTitle = title?.trim();
 
   for (const artist of artistArray) {
-    if (artist && artist.length > 0
-      && (title === undefined || title.search(new RegExp(`(feat|ft).+${escapeRegExpChars(artist)}`, 'i')) < 0)) { // search for feat/ft before the artist name
-      result.push(replaceTagForbiddenChars(artist));
+    const normalizedArtist = artist?.trim();
+    if (!normalizedArtist) continue;
+
+    // Search for feat/ft before the artist name.
+    const featuredArtistPattern = new RegExp(
+      `\\b(?:feat|ft)\\b.+${escapeRegExpChars(normalizedArtist)}`,
+      'i',
+    );
+
+    const isFeaturedInTitle = !!normalizedTitle && featuredArtistPattern.test(normalizedTitle);
+
+    if (!isFeaturedInTitle) {
+      result.push(replaceTagForbiddenChars(normalizedArtist));
     }
   }
 
-  return result;
+  return Array.from(new Set(result)); // remove duplicates
 }
 
 /**
