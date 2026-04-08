@@ -44,6 +44,26 @@ export { downloadFile } from './web/download-file';
 export { downloadImage, downloadAndSaveArtwork } from './web/download-image';
 export { fetchWebPage } from './web/fetch-web-page';
 
+/**
+ * Extracts normalized keywords from a track name.
+ *
+ * The function accepts either a single track name string or an array of track
+ * name fragments, joins the input into one string when needed, normalizes common
+ * separators and punctuation, sanitizes problematic tag characters, and returns
+ * a de-duplicated array of keywords.
+ *
+ * @param trackName - Track name as a single string or an array of string fragments.
+ * @returns Array of normalized keywords, or an empty array when no keywords can
+ * be extracted from the input.
+ *
+ * @example
+ * extractTrackNameKeywords('01 - Artist - Title (Original Mix)')
+ * // => ['Artist', 'Title', 'Original', 'Mix']
+ *
+ * @example
+ * extractTrackNameKeywords(['Artist', 'Title (Extended Remix)'])
+ * // => ['Artist', 'Title', 'Extended', 'Remix']
+ */
 export function extractTrackNameKeywords(trackName: string | string[]): string[] {
   const joinedTrackName = Array.isArray(trackName) ? trackName.join(' ') : trackName;
 
