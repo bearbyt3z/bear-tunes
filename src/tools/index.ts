@@ -4,6 +4,7 @@ import * as fs from 'node:fs';
 import logger from '@/logger';
 import { getFirstLine } from './utils/format';
 import {
+  capitalize,
   escapeRegExpChars,
   replaceTagForbiddenChars,
 } from './utils/string';
@@ -58,41 +59,238 @@ export function splitTrackNameIntoKeywords(name: string | string[]): string[] {
   return Array.from(new Set(nameComputed.split(' '))); // set to avoid repetitions
 }
 
-export function buildTitle(trackName?: string, trackMixName?: string): string {
-  let title = trackName?.trim();
-  if (!title || title.length < 1) return '';
+/**
+ * A single step in the title normalization pipeline.
+ *
+ * Each step receives the current title value and returns the normalized value
+ * passed to the next step.
+ */
+type TitleNormalizationStep = (title: string) => string;
 
-  if (title.match(/\bfeat\b/i)) {
-    title = title.replace(/\bfeat\.? /i, 'feat. '); // add missing dot after "feat" shortcut, and replace "Feat" with "feat"
+/**
+ * Ordered pipeline used to normalize a built track title.
+ *
+ * The order is intentional and must be preserved, because some steps depend on
+ * the output produced by earlier ones.
+ */
+const titleNormalizationPipeline = [
+  normalizeTitleSpacingAndParentheses,
+  normalizeTitleMixNames,
+  normalizeTitleCapitalization,
+] as const satisfies readonly TitleNormalizationStep[];
 
-    if (title.indexOf('(feat') < 0) { // if "feat" isn't in parentheses add them
-      title = `${title.replace(/\bfeat\. /, '(feat. ')})`;
-    }
+/**
+ * Normalizes the "feat" fragment inside a title.
+ *
+ * Standardizes the featuring marker to `feat.` and wraps it in parentheses when
+ * it is present but not already enclosed.
+ *
+ * @param title - Raw track title.
+ * @returns Title with normalized featuring notation.
+ *
+ * @example
+ * normalizeFeaturingInTitle('Title of a Track feat Someone')
+ * // => 'Title of a Track (feat. Someone)'
+ *
+ * @example
+ * normalizeFeaturingInTitle('Title of a Track (feat. Someone)')
+ * // => 'Title of a Track (feat. Someone)'
+ */
+function normalizeFeaturingInTitle(title: string): string {
+  if (!/\bfeat\b/i.test(title)) {
+    return title;
   }
 
-  const mixName = trackMixName?.trim();
-  if (mixName && mixName.length > 0) {
-    title += ` (${mixName})`;
+  // add a missing dot after the "feat" marker and normalize "Feat" to "feat"
+  let normalizedTitle = title.replace(/\bfeat\.? /i, 'feat. ');
+
+  // if "feat" is not enclosed in parentheses, add them
+  if (!normalizedTitle.includes('(feat')) {
+    normalizedTitle = `${normalizedTitle.replace(/\bfeat\. /, '(feat. ')})`;
   }
 
-  title = title
-    .replace(/\)\(/g, ') (') // add space between parentheses
-    .replace(/\s+\)/g, ')')  // remove spaces before closing parentheses
-    .replace(/\(\s+/g, '(')  // remove spaces after opening parentheses
-    .replace(/\s{2,}/g, ' ')   // replace multiple whitespace chars with a single space
-    .replace(/\[(.*)\]/g, '($1)') // replace square brackets by parentheses
-    .replace(/\({2}(.*)\){2}/g, '($1)') // replace doubled parentheses with a single one
-    .replace(/\((Original|Extended|Instrumental|Dub)\)/i, '($1 Mix)') // add missing 'Mix' word
-    .replace(/\((.*)RMX(.*)\)/i, '($1Remix$2)') // RMX to Remix
-    .replace(/(\(.*\b(\sMix|Mix\s|\sRemix|Remix\s)\b.*\))\s*(\(.*\b(Mix|Remix)\b.*\))/i, '$1') // remove doubled (* Mix/Remix *) mix name (one from name, another from mix_name)
-    .replace(/(-|–)\s+(.*Remix)\s+\(Original Mix\)/i, '($2)') // e.g.: Bassturbation - Oyaebu Remix (Original Mix) => Bassturbation (Oyaebu Remix)
-    .replace(/(\(.*\sRemix(\s+\(.*\))\))/, (unused, g1, g2) => g1.replace(g2, '') + g2) // e.g.: It's Our Future (Deadmau5 Remix (Cubrik Re-Edit)) => It's Our Future (Deadmau5 Remix) (Cubrik Re-Edit)
-    .replace(/\b(original|extended|instrumental|dub|radio|mix|remix|edit|demo|tape)\b/g, (match, g1) => g1.charAt(0).toUpperCase() + g1.slice(1)); // first capital letter
-
-  title = replaceTagForbiddenChars(title);
-
-  return title;
+  return normalizedTitle;
 }
+
+/**
+ * Normalizes spacing and bracket usage in a title.
+ *
+ * This step fixes spacing around parentheses, collapses repeated whitespace,
+ * converts square brackets to parentheses, and removes duplicated outer
+ * parentheses created by earlier transformations or input inconsistencies.
+ *
+ * @param title - Title to normalize.
+ * @returns Title with normalized spacing and parentheses.
+ */
+function normalizeTitleSpacingAndParentheses(title: string): string {
+  return title
+    .replaceAll(/\)\(/g, ') (') // add space between parentheses
+    .replaceAll(/\s+\)/g, ')') // remove spaces before closing parentheses
+    .replaceAll(/\(\s+/g, '(') // remove spaces after opening parentheses
+    .replaceAll(/\s{2,}/g, ' ') // replace multiple whitespace chars with a single space
+    .replaceAll(/\[(.*)\]/g, '($1)') // replace square brackets by parentheses
+    .replaceAll(/\({2}(.*)\){2}/g, '($1)'); // replace doubled parentheses with a single one
+}
+
+/**
+ * Reorders nested remix parentheses into separate title fragments.
+ *
+ * This callback is used by `String.prototype.replace()` to transform nested
+ * forms such as `(FirstArtist Remix (SecondArtist Re-Edit))` into
+ * `(FirstArtist Remix) (SecondArtist Re-Edit)`.
+ *
+ * @param _fullMatch - Full regex match, unused by the transformation.
+ * @param remixPart - Main remix fragment.
+ * @param nestedPart - Nested fragment that should become a separate parenthesized part.
+ * @returns Reordered remix fragments.
+ */
+function normalizeNestedRemixParentheses(
+  _fullMatch: string,
+  remixPart: string,
+  nestedPart: string,
+): string {
+  return remixPart.replace(nestedPart, '') + nestedPart;
+}
+
+/**
+ * Normalizes mix and remix naming inside a title.
+ *
+ * This step repairs common mix-label inconsistencies, such as missing `Mix`,
+ * shorthand `RMX`, duplicated mix fragments, and nested remix parentheses.
+ *
+ * @param title - Title to normalize.
+ * @returns Title with normalized mix and remix naming.
+ *
+ * @example
+ * normalizeTitleMixNames('Title of a Track (Original)')
+ * // => 'Title of a Track (Original Mix)'
+ *
+ * @example
+ * normalizeTitleMixNames('Title of a Track - Artist Remix (Original Mix)')
+ * // => 'Title of a Track (Artist Remix)'
+ */
+function normalizeTitleMixNames(title: string): string {
+  return title
+    // add the missing "Mix" suffix
+    .replace(/\((Original|Extended|Instrumental|Dub)\)/i, '($1 Mix)')
+    // replace the "RMX" shorthand with "Remix"
+    .replace(/\((.*)RMX(.*)\)/i, '($1Remix$2)')
+    // remove a duplicated mix/remix fragment (for example one coming from both the title and mix_name)
+    .replace(/(\(.*\b(\sMix|Mix\s|\sRemix|Remix\s)\b.*\))\s*(\(.*\b(Mix|Remix)\b.*\))/i, '$1')
+    // e.g.: "Title of a Track - Artist Remix (Original Mix)"
+    // => "Title of a Track (Artist Remix)"
+    .replace(/(-|–)\s+(.*Remix)\s+\(Original Mix\)/i, '($2)')
+    // e.g.: "Title of a Track (FirstArtist Remix (SecondArtist Re-Edit))"
+    // => "Title of a Track (FirstArtist Remix) (SecondArtist Re-Edit)"
+    .replace(/(\(.*\sRemix(\s+\(.*\))\))/, normalizeNestedRemixParentheses);
+}
+
+/**
+ * Normalizes capitalization of common release and mix keywords.
+ *
+ * This step capitalizes well-known release and version markers used in track
+ * titles, such as `Original`, `Extended`, `Mix`, `Remix`, and `Edit`.
+ *
+ * @param title - Title to normalize.
+ * @returns Title with normalized keyword capitalization.
+ */
+function normalizeTitleCapitalization(title: string): string {
+  return title.replaceAll(
+    /\b(original|extended|instrumental|dub|radio|mix|remix|edit|demo|tape)\b/g,
+    capitalize,
+  );
+}
+
+/**
+ * Runs the ordered title normalization pipeline.
+ *
+ * The function applies all defined normalization steps sequentially. The
+ * pipeline order is part of the normalization contract and should not be changed
+ * casually.
+ *
+ * @param title - Title to normalize.
+ * @returns Fully normalized title.
+ */
+function runTitleNormalizationPipeline(title: string): string {
+  let normalizedTitle = title;
+
+  for (const normalizeTitle of titleNormalizationPipeline) {
+    normalizedTitle = normalizeTitle(normalizedTitle);
+  }
+
+  return normalizedTitle;
+}
+
+/**
+ * Builds a normalized track title from a track name and optional mix name.
+ *
+ * The function trims inputs, normalizes featuring notation in the base title,
+ * appends the mix name when provided, runs the title normalization pipeline,
+ * and finally normalizes characters that are problematic in tag values.
+ *
+ * @param trackName - Base track name.
+ * @param trackMixName - Optional mix/version name appended in parentheses.
+ * @returns Normalized title ready to be stored in tags, or an empty string when
+ * the base track name is missing.
+ *
+ * @example
+ * buildTitle('Title of a Track feat Someone', 'Original')
+ * // => 'Title of a Track (feat. Someone) (Original Mix)'
+ */
+export function buildTitle(trackName?: string, trackMixName?: string): string {
+  const normalizedTrackName = trackName?.trim();
+  if (!normalizedTrackName) {
+    return '';
+  }
+
+  let title = normalizeFeaturingInTitle(normalizedTrackName);
+
+  const normalizedMixName = trackMixName?.trim();
+  if (normalizedMixName) {
+    title += ` (${normalizedMixName})`;
+  }
+
+  title = runTitleNormalizationPipeline(title);
+
+  return replaceTagForbiddenChars(title);
+}
+
+
+// export function buildTitle(trackName?: string, trackMixName?: string): string {
+//   let title = trackName?.trim();
+//   if (!title || title.length < 1) return '';
+
+//   if (title.match(/\bfeat\b/i)) {
+//     title = title.replace(/\bfeat\.? /i, 'feat. '); // add missing dot after "feat" shortcut, and replace "Feat" with "feat"
+
+//     if (title.indexOf('(feat') < 0) { // if "feat" isn't in parentheses add them
+//       title = `${title.replace(/\bfeat\. /, '(feat. ')})`;
+//     }
+//   }
+
+//   const mixName = trackMixName?.trim();
+//   if (mixName && mixName.length > 0) {
+//     title += ` (${mixName})`;
+//   }
+
+//   title = title
+//     .replace(/\)\(/g, ') (') // add space between parentheses
+//     .replace(/\s+\)/g, ')')  // remove spaces before closing parentheses
+//     .replace(/\(\s+/g, '(')  // remove spaces after opening parentheses
+//     .replace(/\s{2,}/g, ' ')   // replace multiple whitespace chars with a single space
+//     .replace(/\[(.*)\]/g, '($1)') // replace square brackets by parentheses
+//     .replace(/\({2}(.*)\){2}/g, '($1)') // replace doubled parentheses with a single one
+//     .replace(/\((Original|Extended|Instrumental|Dub)\)/i, '($1 Mix)') // add missing 'Mix' word
+//     .replace(/\((.*)RMX(.*)\)/i, '($1Remix$2)') // RMX to Remix
+//     .replace(/(\(.*\b(\sMix|Mix\s|\sRemix|Remix\s)\b.*\))\s*(\(.*\b(Mix|Remix)\b.*\))/i, '$1') // remove doubled (* Mix/Remix *) mix name (one from name, another from mix_name)
+//     .replace(/(-|–)\s+(.*Remix)\s+\(Original Mix\)/i, '($2)') // e.g.: Bassturbation - Oyaebu Remix (Original Mix) => Bassturbation (Oyaebu Remix)
+//     .replace(/(\(.*\sRemix(\s+\(.*\))\))/, (unused, g1, g2) => g1.replace(g2, '') + g2) // e.g.: It's Our Future (Deadmau5 Remix (Cubrik Re-Edit)) => It's Our Future (Deadmau5 Remix) (Cubrik Re-Edit)
+//     .replace(/\b(original|extended|instrumental|dub|radio|mix|remix|edit|demo|tape)\b/g, (match, g1) => g1.charAt(0).toUpperCase() + g1.slice(1)); // first capital letter
+
+//   title = replaceTagForbiddenChars(title);
+
+//   return title;
+// }
 
 /**
  * Returns whether the given artist entry appears to be a combined value made of
