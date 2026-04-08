@@ -80,7 +80,7 @@ export class BearTunesTagger {
 
     const trackFilename = path.basename(trackPath);
     const trackFilenameWithoutExtension = tools.removeFilenameExtension(trackFilename);
-    const trackFilenameKeywords = tools.splitTrackNameIntoKeywords(trackFilenameWithoutExtension);
+    const trackFilenameKeywords = tools.extractTrackNameKeywords(trackFilenameWithoutExtension);
 
     logger.silly('########################################');
     logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
@@ -240,7 +240,7 @@ export class BearTunesTagger {
 
       const trackReleased = new Date(trackEntry.release_date);
 
-      const trackKeywords = tools.splitTrackNameIntoKeywords([trackArtists.join(' '), trackTitle]);
+      const trackKeywords = tools.extractTrackNameKeywords([trackArtists.join(' '), trackTitle]);
       // const trackKeywords = Array.from(new Set([
       //   ...trackTitle.split(/\s+/),
       //   ...trackRemixed.split(/\s+/),

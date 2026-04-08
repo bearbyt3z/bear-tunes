@@ -44,19 +44,28 @@ export { downloadFile } from './web/download-file';
 export { downloadImage, downloadAndSaveArtwork } from './web/download-image';
 export { fetchWebPage } from './web/fetch-web-page';
 
-export function splitTrackNameIntoKeywords(name: string | string[]): string[] {
-  let nameComputed = (name instanceof Array) ? name.join(' ') : name;
+export function extractTrackNameKeywords(trackName: string | string[]): string[] {
+  const joinedTrackName = Array.isArray(trackName) ? trackName.join(' ') : trackName;
 
-  nameComputed = nameComputed
-    .replace(/(^|(\s+-\s+))\d+\s*[-.]\s+/, ' ') // remove track number (at the beginning or in the middle)
-    .replace(/[()[\],]/g, ' ') // replace brackets & comma with a single space
-    .replace(/\s+[-–&]\s+/g, ' ') // replace dash & ampersand (etc.) surrounded by spaces with a single space
-    .replace(/\s{2,}/g, ' ') // replace multiple whitespace chars with a single space
-    .trim(); // remove spaces at the beginning & end
-  
-  nameComputed = replaceTagForbiddenChars(nameComputed);
+  const normalizedTrackName = replaceTagForbiddenChars(
+    joinedTrackName
+      // remove a track number prefix at the beginning or after a separated title segment
+      .replace(/(^|(\s+-\s+))\d+\s*[-.]\s+/, ' ')
+      // replace brackets and commas with a single space
+      .replaceAll(/[()[\],]/g, ' ')
+      // replace dash-like separators and ampersands surrounded by spaces with a single space
+      .replaceAll(/\s+[-–&]\s+/g, ' ')
+      // collapse repeated whitespace into a single space
+      .replaceAll(/\s{2,}/g, ' ')
+      // remove leading and trailing whitespace
+      .trim()
+  );
 
-  return Array.from(new Set(nameComputed.split(' '))); // set to avoid repetitions
+  if (!normalizedTrackName) {
+    return [];
+  }
+
+  return Array.from(new Set(normalizedTrackName.split(' '))); // remove duplicates
 }
 
 /**
