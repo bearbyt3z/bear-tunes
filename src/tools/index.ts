@@ -430,11 +430,11 @@ export function buildKeyTag(keyString?: string): string | undefined {
   if (!keyString) return undefined;
 
   const keyTag = keyString.trim()
-    .replace(/♭\s*/g, 'b')
-    .replace(/♯\s*/g, '#')
+    .replaceAll(/♭\s*/g, 'b')
+    .replaceAll(/♯\s*/g, '#')
     .replace(/maj(or)?/i, '')
     .replace(/min(or)?/i, 'm')
-    .replace(/\s+/g, ''); // key signatures do not contain whitespace, e.g. Cbm, G#m, B#, B
+    .replaceAll(/\s+/g, ''); // key signatures do not contain whitespace, e.g. Cbm, G#m, B#, B
 
   if (keyTag.length > 3) {
     throw new Error(`Invalid key tag "${keyTag}": maximum length for TKEY / INITIALKEY is 3 characters.`);
