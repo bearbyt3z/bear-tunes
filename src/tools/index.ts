@@ -8,6 +8,7 @@ import {
   escapeRegExpChars,
   replaceTagForbiddenChars,
 } from './utils/string';
+import { isReadonlyStringArray } from './utils/type-guards';
 
 export { prompt } from './cli/prompt';
 export {
@@ -39,7 +40,10 @@ export {
   replacePathForbiddenCharsInArray,
   replaceTagForbiddenChars,
 } from './utils/string';
-export { isEmptyPlainObject } from './utils/type-guards';
+export {
+  isReadonlyStringArray,
+  isEmptyPlainObject,
+} from './utils/type-guards';
 export { downloadFile } from './web/download-file';
 export { downloadImage, downloadAndSaveArtwork } from './web/download-image';
 export { fetchWebPage } from './web/fetch-web-page';
@@ -64,8 +68,8 @@ export { fetchWebPage } from './web/fetch-web-page';
  * extractTrackNameKeywords(['Artist', 'Title (Extended Remix)'])
  * // => ['Artist', 'Title', 'Extended', 'Remix']
  */
-export function extractTrackNameKeywords(trackName: string | string[]): string[] {
-  const joinedTrackName = Array.isArray(trackName) ? trackName.join(' ') : trackName;
+export function extractTrackNameKeywords(trackName: string | readonly string[]): string[] {
+  const joinedTrackName = isReadonlyStringArray(trackName) ? trackName.join(' ') : trackName;
 
   const normalizedTrackName = replaceTagForbiddenChars(
     joinedTrackName
