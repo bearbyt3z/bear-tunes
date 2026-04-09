@@ -89,7 +89,8 @@ export function extractTrackNameKeywords(trackName: string | readonly string[]):
     return [];
   }
 
-  return Array.from(new Set(normalizedTrackName.split(' '))); // remove duplicates
+  // de-duplicate keywords while preserving their first occurrence order
+  return Array.from(new Set(normalizedTrackName.split(' ')));
 }
 
 /**
