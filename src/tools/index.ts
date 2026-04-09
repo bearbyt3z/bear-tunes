@@ -358,7 +358,7 @@ function isCombinedArtistEntry(artist: string, artistArray: readonly string[]): 
  * Artist names are trimmed before processing. Blank names are ignored, and the
  * final output is deduplicated while preserving the first surviving occurrence.
  */
-export function buildArtistArray(artistArray: string[] | null, title?: string): string[] {
+export function buildArtistArray(artistArray: readonly string[] | null, title?: string): string[] {
   if (!artistArray) return [];
 
   const result: string[] = [];
