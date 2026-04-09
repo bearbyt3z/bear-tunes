@@ -290,7 +290,7 @@ export function buildTitle(trackName?: string, trackMixName?: string): string {
  *
  * @internal
  * @param artist - Artist entry to validate.
- * @param artistList - Deduplicated artist list used as a comparison base.
+ * @param artistArray - Deduplicated artist list used as a comparison base.
  *
  * @returns `true` when the entry looks like an aggregated artist value such as
  * `Artist A, Artist B`, while both `Artist A` and `Artist B` are already present
