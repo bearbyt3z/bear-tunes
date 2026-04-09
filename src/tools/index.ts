@@ -434,7 +434,7 @@ export function buildKeyTag(keyString?: string): string | undefined {
     .replace(/♯\s*/g, '#')
     .replace(/maj(or)?/i, '')
     .replace(/min(or)?/i, 'm')
-    .replace(/\s+/g, ''); // there are no whitespaces in key signature e.g.: Cbm, G#m, B#, B etc.
+    .replace(/\s+/g, ''); // key signatures do not contain whitespace, e.g. Cbm, G#m, B#, B
 
   if (keyTag.length > 3) {
     throw new Error(`Invalid key tag "${keyTag}": maximum length for TKEY / INITIALKEY is 3 characters.`);
