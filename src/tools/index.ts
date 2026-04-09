@@ -307,7 +307,7 @@ export function buildTitle(trackName?: string, trackMixName?: string): string {
  * such as duplicated combined artist fields without trying to fully parse all
  * possible artist separator formats.
  */
-function isCombinedArtistEntry(artist: string, artistArray: string[]): boolean {
+function isCombinedArtistEntry(artist: string, artistArray: readonly string[]): boolean {
   if (!artist.includes(',')) return false;
 
   const artistParts = artist
