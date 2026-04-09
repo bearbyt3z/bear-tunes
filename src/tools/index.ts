@@ -284,43 +284,6 @@ export function buildTitle(trackName?: string, trackMixName?: string): string {
   return replaceTagForbiddenChars(title);
 }
 
-
-// export function buildTitle(trackName?: string, trackMixName?: string): string {
-//   let title = trackName?.trim();
-//   if (!title || title.length < 1) return '';
-
-//   if (title.match(/\bfeat\b/i)) {
-//     title = title.replace(/\bfeat\.? /i, 'feat. '); // add missing dot after "feat" shortcut, and replace "Feat" with "feat"
-
-//     if (title.indexOf('(feat') < 0) { // if "feat" isn't in parentheses add them
-//       title = `${title.replace(/\bfeat\. /, '(feat. ')})`;
-//     }
-//   }
-
-//   const mixName = trackMixName?.trim();
-//   if (mixName && mixName.length > 0) {
-//     title += ` (${mixName})`;
-//   }
-
-//   title = title
-//     .replace(/\)\(/g, ') (') // add space between parentheses
-//     .replace(/\s+\)/g, ')')  // remove spaces before closing parentheses
-//     .replace(/\(\s+/g, '(')  // remove spaces after opening parentheses
-//     .replace(/\s{2,}/g, ' ')   // replace multiple whitespace chars with a single space
-//     .replace(/\[(.*)\]/g, '($1)') // replace square brackets by parentheses
-//     .replace(/\({2}(.*)\){2}/g, '($1)') // replace doubled parentheses with a single one
-//     .replace(/\((Original|Extended|Instrumental|Dub)\)/i, '($1 Mix)') // add missing 'Mix' word
-//     .replace(/\((.*)RMX(.*)\)/i, '($1Remix$2)') // RMX to Remix
-//     .replace(/(\(.*\b(\sMix|Mix\s|\sRemix|Remix\s)\b.*\))\s*(\(.*\b(Mix|Remix)\b.*\))/i, '$1') // remove doubled (* Mix/Remix *) mix name (one from name, another from mix_name)
-//     .replace(/(-|–)\s+(.*Remix)\s+\(Original Mix\)/i, '($2)') // e.g.: Bassturbation - Oyaebu Remix (Original Mix) => Bassturbation (Oyaebu Remix)
-//     .replace(/(\(.*\sRemix(\s+\(.*\))\))/, (unused, g1, g2) => g1.replace(g2, '') + g2) // e.g.: It's Our Future (Deadmau5 Remix (Cubrik Re-Edit)) => It's Our Future (Deadmau5 Remix) (Cubrik Re-Edit)
-//     .replace(/\b(original|extended|instrumental|dub|radio|mix|remix|edit|demo|tape)\b/g, (match, g1) => g1.charAt(0).toUpperCase() + g1.slice(1)); // first capital letter
-
-//   title = replaceTagForbiddenChars(title);
-
-//   return title;
-// }
-
 /**
  * Returns whether the given artist entry appears to be a combined value made of
  * multiple artists that are already present as separate entries in the same list.
