@@ -396,9 +396,14 @@ export function buildArtistArray(artistArray: string[] | null, title?: string): 
  * @see {@link https://greenroomsupport.beatport.com/hc/en-us/articles/9709209306772-Beatport-Genres-and-Sub-Genres | Beatport Genres and Sub-Genres }
  */
 export function buildGenreTag(genreName?: string, subgenreName?: string): string | undefined {
-  if (!genreName) return undefined;
+  const normalizedGenreName = genreName?.trim();
+  if (!normalizedGenreName) {
+    return undefined;
+  }
 
-  return subgenreName ? `${genreName} | ${subgenreName}` : genreName;
+  const normalizedSubgenreName = subgenreName?.trim();
+
+  return normalizedSubgenreName ? `${normalizedGenreName} | ${normalizedSubgenreName}` : normalizedGenreName;
 }
 
 /**
