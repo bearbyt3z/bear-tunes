@@ -55,6 +55,8 @@ export function extractTrackNameKeywords(trackName: string | readonly string[]):
  *
  * Each step receives the current title value and returns the normalized value
  * passed to the next step.
+ *
+ * @internal
  */
 type TitleNormalizationStep = (title: string) => string;
 
@@ -75,6 +77,8 @@ const titleNormalizationPipeline = [
  *
  * Standardizes the featuring marker to `feat.` and wraps it in parentheses when
  * it is present but not already enclosed.
+ *
+ * @internal
  *
  * @param title - Raw track title.
  * @returns Title with normalized featuring notation.
@@ -110,6 +114,8 @@ function normalizeFeaturingInTitle(title: string): string {
  * converts square brackets to parentheses, and removes duplicated outer
  * parentheses created by earlier transformations or input inconsistencies.
  *
+ * @internal
+ *
  * @param title - Title to normalize.
  * @returns Title with normalized spacing and parentheses.
  */
@@ -130,6 +136,8 @@ function normalizeTitleSpacingAndParentheses(title: string): string {
  * forms such as `(FirstArtist Remix (SecondArtist Re-Edit))` into
  * `(FirstArtist Remix) (SecondArtist Re-Edit)`.
  *
+ * @internal
+ *
  * @param _fullMatch - Full regex match, unused by the transformation.
  * @param remixPart - Main remix fragment.
  * @param nestedPart - Nested fragment that should become a separate parenthesized part.
@@ -148,6 +156,8 @@ function normalizeNestedRemixParentheses(
  *
  * This step repairs common mix-label inconsistencies, such as missing `Mix`,
  * shorthand `RMX`, duplicated mix fragments, and nested remix parentheses.
+ *
+ * @internal
  *
  * @param title - Title to normalize.
  * @returns Title with normalized mix and remix naming.
@@ -182,6 +192,8 @@ function normalizeTitleMixNames(title: string): string {
  * This step capitalizes well-known release and version markers used in track
  * titles, such as `Original`, `Extended`, `Mix`, `Remix`, and `Edit`.
  *
+ * @internal
+ *
  * @param title - Title to normalize.
  * @returns Title with normalized keyword capitalization.
  */
@@ -198,6 +210,8 @@ function normalizeTitleCapitalization(title: string): string {
  * The function applies all defined normalization steps sequentially. The
  * pipeline order is part of the normalization contract and should not be changed
  * casually.
+ *
+ * @internal
  *
  * @param title - Title to normalize.
  * @returns Fully normalized title.
@@ -251,6 +265,7 @@ export function buildTitle(trackName?: string, trackMixName?: string): string {
  * multiple artists that are already present as separate entries in the same list.
  *
  * @internal
+ *
  * @param artist - Artist entry to validate.
  * @param artistArray - Deduplicated artist list used as a comparison base.
  *
