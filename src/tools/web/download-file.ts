@@ -3,11 +3,11 @@ import * as path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-import { generateRandomHexString } from '@/tools';
+import { generateRandomHexString } from '@/tools/index.js';
 
 import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
 
-import type { DownloadFileOptions } from './download.types';
+import type { DownloadFileOptions } from './download.types.js';
 
 /**
  * Converts a Fetch API response body into a Node.js readable stream.

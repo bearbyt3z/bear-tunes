@@ -1,16 +1,17 @@
 {
   "name": "bear-tunes",
-  "version": "0.19.69",
+  "version": "0.20.0",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
-  "main": "./dist/main.js",
+  "main": "./dist/main.cjs",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "setup": "npx playwright install chromium",
-    "start": "node ./dist/main.js",
+    "start": "node ./dist/main.cjs",
     "tsc": "npx tsc",
     "typecheck": "npx tsc --noEmit",
-    "build-prod": "webpack --config webpack.config.prod.js",
-    "build": "webpack --config webpack.config.dev.js",
+    "build-prod": "webpack --config webpack.config.prod.cjs",
+    "build": "webpack --config webpack.config.dev.cjs",
     "build-start": "npm run build && npm run start"
   },
   "author": "bearbyt3z",

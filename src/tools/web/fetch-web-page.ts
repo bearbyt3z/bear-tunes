@@ -1,8 +1,8 @@
 import { JSDOM } from 'jsdom';
 
-import { fetchPageWithPersistentProfile } from './browser-session';
-import { looksLikeChallengeResponse } from './challenge-detection';
-import { getClientProfile, buildFetchHeaders } from './request-identity';
+import { fetchPageWithPersistentProfile } from './browser-session.js';
+import { looksLikeChallengeResponse } from './challenge-detection.js';
+import { getClientProfile, buildFetchHeaders } from './request-identity.js';
 
 /**
  * Fetches an HTML page and returns it as a parsed DOM document.

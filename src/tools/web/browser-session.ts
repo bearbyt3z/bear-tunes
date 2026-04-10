@@ -3,12 +3,12 @@ import * as path from 'node:path';
 
 import { chromium } from 'playwright';
 
-import { looksLikeChallengeHtml } from './challenge-detection';
-import { buildPlaywrightContextOptions, getClientProfile } from './request-identity';
+import { looksLikeChallengeHtml } from './challenge-detection.js';
+import { buildPlaywrightContextOptions, getClientProfile } from './request-identity.js';
 
 import type { Page, BrowserContextOptions } from 'playwright';
 
-import type { BrowserFetchOptions, PageChallengeState } from './browser-session.types';
+import type { BrowserFetchOptions, PageChallengeState } from './browser-session.types.js';
 
 /** Returns the persistent Playwright profile directory, creating it if needed. */
 function getUserDataDir(cacheDir?: string): string {

@@ -1,11 +1,11 @@
 import * as path from 'node:path';
 
-import { downloadFile } from './download-file';
-import { getClientProfile, buildImageDownloadHeaders } from './request-identity';
-import { replaceFilenameExtension } from '@/tools';
+import { downloadFile } from './download-file.js';
+import { getClientProfile, buildImageDownloadHeaders } from './request-identity.js';
+import { replaceFilenameExtension } from '@/tools/index.js';
 
-import type { DownloadImageOptions } from './download.types';
-import type { TrackInfo } from '@/types';
+import type { DownloadImageOptions } from './download.types.js';
+import type { TrackInfo } from '@/types.js';
 
 /**
  * Returns the expected MIME type for an image file based on its extension.

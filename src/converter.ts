@@ -2,8 +2,8 @@ import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import logger from '@/logger';
-import * as tools from '@/tools';
+import logger from '@/logger.js';
+import * as tools from '@/tools/index.js';
 
 import {
   BitrateMethod,
@@ -11,15 +11,15 @@ import {
   ChannelMode,
   ReplayGain,
   FlacImageBlockType,
-} from './converter.types';
+} from './converter.types.js';
 
 import type {
   BearTunesConverterOptions,
   BearTunesConverterResult,
   FlacImageBlockExport,
-} from './converter.types';
+} from './converter.types.js';
 
-import type { TrackInfo } from '@/types';
+import type { TrackInfo } from '@/types.js';
 
 // reexporting enums & types, so they will be included in the converter import
 export {

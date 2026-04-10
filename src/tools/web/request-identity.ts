@@ -6,7 +6,7 @@ import UserAgent from 'user-agents';
 
 import type { BrowserContextOptions } from 'playwright';
 
-import type { UACache, UAProfile, ClientProfile } from './request-identity.types';
+import type { UACache, UAProfile, ClientProfile } from './request-identity.types.js';
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 

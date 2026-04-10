@@ -2,8 +2,8 @@ import {
   capitalize,
   escapeRegExpChars,
   replaceTagForbiddenChars,
-} from '../utils/string';
-import { isReadonlyStringArray } from '../utils/type-guards';
+} from '../utils/string.js';
+import { isReadonlyStringArray } from '../utils/type-guards.js';
 
 /**
  * A single step in the title normalization pipeline.

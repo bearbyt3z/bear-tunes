@@ -2,15 +2,15 @@ import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import logger from '@/logger';
-import * as tools from '@/tools';
+import logger from '@/logger.js';
+import * as tools from '@/tools/index.js';
 
-import { prompt } from '@/tools';
+import { prompt } from '@/tools/index.js';
 
 import {
   BeatportSearchResultArtistType,
   ID3Version,
-} from './tagger.types';
+} from './tagger.types.js';
 
 import type {
   BearTunesTaggerOptions,
@@ -24,13 +24,13 @@ import type {
   DownloadImageAssetOptions, // @internal
   MatchingTrack,
   TrackArtworkFiles,
-} from './tagger.types';
+} from './tagger.types.js';
 
 import type {
   TrackInfo,
   AlbumInfo,
   PublisherInfo,
-} from '@/types';
+} from '@/types.js';
 
 // exporting enums & types, so they will be included in the tagger import
 export {

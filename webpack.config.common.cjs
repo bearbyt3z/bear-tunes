@@ -5,7 +5,7 @@ module.exports = {
   externalsPresets: { node: true },
   entry: './src/index.ts',
   output: {
-    filename: 'main.js',
+    filename: 'main.cjs',
     path: path.resolve(__dirname, 'dist'),
   },
   module: {
@@ -29,6 +29,11 @@ module.exports = {
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js'],
+    extensionAlias: {
+      '.js': ['.ts', '.js'],
+      '.mjs': ['.mts', '.mjs'],
+      '.cjs': ['.cts', '.cjs'],
+    },
     alias: {
       '@': path.resolve(__dirname, 'src/'), // Absolute import path for cleaner src/ imports
     },

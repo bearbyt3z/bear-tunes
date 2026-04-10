@@ -17,12 +17,12 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import process from 'node:process';
 
-import { BearTunesConverter } from '@/converter';
-import { BearTunesRenamer } from '@/renamer';
-import { BearTunesTagger } from '@/tagger';
+import { BearTunesConverter } from '@/converter.js';
+import { BearTunesRenamer } from '@/renamer.js';
+import { BearTunesTagger } from '@/tagger.js';
 
-import logger from '@/logger';
-import * as tools from '@/tools';
+import logger from '@/logger.js';
+import * as tools from '@/tools/index.js';
 
 // const { createLogger, format, transports } = require('winston');
 // const { combine, timestamp, label, printf } = format;

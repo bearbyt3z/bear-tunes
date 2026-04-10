@@ -3,8 +3,9 @@
     "target": "ES2024",
     "lib": ["ES2024", "DOM"],
 
-    "module": "node16",
-    "moduleResolution": "node16",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "verbatimModuleSyntax": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]

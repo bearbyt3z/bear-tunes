@@ -1,8 +1,8 @@
 import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 
-import logger from '@/logger';
-import { getFirstLine } from './utils/format';
+import logger from '@/logger.js';
+import { getFirstLine } from './utils/format.js';
 
 export {
   buildArtistArray,
@@ -10,29 +10,29 @@ export {
   buildKeyTag,
   buildTitle,
   extractTrackNameKeywords,
-} from './audio/metadata';
-export { prompt } from './cli/prompt';
+} from './audio/metadata.js';
+export { prompt } from './cli/prompt.js';
 export {
   arrayDifference,
   arrayIntersection,
   arrayToLowerCase,
-} from './utils/array';
+} from './utils/array.js';
 export {
   formatLocalDateToIsoDateString,
   getFirstLine,
   roundToDecimalPlaces,
   secondsToTimeFormat,
   slugify,
-} from './utils/format';
+} from './utils/format.js';
 export {
   tryParsePositiveInteger,
   tryParseUrl,
-} from './utils/parse';
+} from './utils/parse.js';
 export {
   removeFilenameExtension,
   replaceFilenameExtension,
-} from './utils/path';
-export { generateRandomHexString } from './utils/random';
+} from './utils/path.js';
+export { generateRandomHexString } from './utils/random.js';
 export {
   capitalize,
   escapeRegExpChars,
@@ -40,14 +40,14 @@ export {
   replacePathForbiddenChars,
   replacePathForbiddenCharsInArray,
   replaceTagForbiddenChars,
-} from './utils/string';
+} from './utils/string.js';
 export {
   isReadonlyStringArray,
   isEmptyPlainObject,
-} from './utils/type-guards';
-export { downloadFile } from './web/download-file';
-export { downloadImage, downloadAndSaveArtwork } from './web/download-image';
-export { fetchWebPage } from './web/fetch-web-page';
+} from './utils/type-guards.js';
+export { downloadFile } from './web/download-file.js';
+export { downloadImage, downloadAndSaveArtwork } from './web/download-image.js';
+export { fetchWebPage } from './web/fetch-web-page.js';
 
 export function getUrlFromFile(filePath: string): URL | null {
   const fileContent = fs.readFileSync(filePath, 'utf8');
