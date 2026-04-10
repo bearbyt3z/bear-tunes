@@ -6,51 +6,6 @@ import {
 import { isReadonlyStringArray } from '../utils/type-guards';
 
 /**
- * Extracts normalized keywords from a track name.
- *
- * The function accepts either a single track name string or an array of track
- * name fragments, joins the input into one string when needed, normalizes common
- * separators and punctuation, sanitizes problematic tag characters, and returns
- * a de-duplicated array of keywords.
- *
- * @param trackName - Track name as a single string or an array of string fragments.
- * @returns Array of normalized keywords, or an empty array when no keywords can
- * be extracted from the input.
- *
- * @example
- * extractTrackNameKeywords('01 - Artist - Title (Original Mix)')
- * // => ['Artist', 'Title', 'Original', 'Mix']
- *
- * @example
- * extractTrackNameKeywords(['Artist', 'Title (Extended Remix)'])
- * // => ['Artist', 'Title', 'Extended', 'Remix']
- */
-export function extractTrackNameKeywords(trackName: string | readonly string[]): string[] {
-  const joinedTrackName = isReadonlyStringArray(trackName) ? trackName.join(' ') : trackName;
-
-  const normalizedTrackName = replaceTagForbiddenChars(
-    joinedTrackName
-      // remove a track number prefix at the beginning or after a separated title segment
-      .replace(/(^|(\s+-\s+))\d+\s*[-.]\s+/, ' ')
-      // replace brackets and commas with a single space
-      .replaceAll(/[()[\],]/g, ' ')
-      // replace dash-like separators and ampersands surrounded by spaces with a single space
-      .replaceAll(/\s+[-–&]\s+/g, ' ')
-      // collapse repeated whitespace into a single space
-      .replaceAll(/\s{2,}/g, ' ')
-      // remove leading and trailing whitespace
-      .trim()
-  );
-
-  if (!normalizedTrackName) {
-    return [];
-  }
-
-  // de-duplicate keywords while preserving their first occurrence order
-  return Array.from(new Set(normalizedTrackName.split(' ')));
-}
-
-/**
  * A single step in the title normalization pipeline.
  *
  * Each step receives the current title value and returns the normalized value
@@ -414,4 +369,49 @@ export function buildKeyTag(keyString?: string): string | undefined {
   }
     
   return keyTag;
+}
+
+/**
+ * Extracts normalized keywords from a track name.
+ *
+ * The function accepts either a single track name string or an array of track
+ * name fragments, joins the input into one string when needed, normalizes common
+ * separators and punctuation, sanitizes problematic tag characters, and returns
+ * a de-duplicated array of keywords.
+ *
+ * @param trackName - Track name as a single string or an array of string fragments.
+ * @returns Array of normalized keywords, or an empty array when no keywords can
+ * be extracted from the input.
+ *
+ * @example
+ * extractTrackNameKeywords('01 - Artist - Title (Original Mix)')
+ * // => ['Artist', 'Title', 'Original', 'Mix']
+ *
+ * @example
+ * extractTrackNameKeywords(['Artist', 'Title (Extended Remix)'])
+ * // => ['Artist', 'Title', 'Extended', 'Remix']
+ */
+export function extractTrackNameKeywords(trackName: string | readonly string[]): string[] {
+  const joinedTrackName = isReadonlyStringArray(trackName) ? trackName.join(' ') : trackName;
+
+  const normalizedTrackName = replaceTagForbiddenChars(
+    joinedTrackName
+      // remove a track number prefix at the beginning or after a separated title segment
+      .replace(/(^|(\s+-\s+))\d+\s*[-.]\s+/, ' ')
+      // replace brackets and commas with a single space
+      .replaceAll(/[()[\],]/g, ' ')
+      // replace dash-like separators and ampersands surrounded by spaces with a single space
+      .replaceAll(/\s+[-–&]\s+/g, ' ')
+      // collapse repeated whitespace into a single space
+      .replaceAll(/\s{2,}/g, ' ')
+      // remove leading and trailing whitespace
+      .trim()
+  );
+
+  if (!normalizedTrackName) {
+    return [];
+  }
+
+  // de-duplicate keywords while preserving their first occurrence order
+  return Array.from(new Set(normalizedTrackName.split(' ')));
 }
