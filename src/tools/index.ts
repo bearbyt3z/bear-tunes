@@ -22,7 +22,7 @@ export {
   roundToDecimalPlaces,
   secondsToTimeFormat,
   slugify,
-} from './utils/format'
+} from './utils/format';
 export {
   tryParsePositiveInteger,
   tryParseUrl,
