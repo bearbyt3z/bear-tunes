@@ -1,7 +1,7 @@
 import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 
-import logger from '@/logger.js';
+import logger from '#logger';
 import { getFirstLine } from './utils/format.js';
 
 export {

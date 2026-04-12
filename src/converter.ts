@@ -2,8 +2,8 @@ import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import logger from '@/logger.js';
-import * as tools from '@/tools/index.js';
+import logger from '#logger';
+import * as tools from '#tools';
 
 import {
   BitrateMethod,
@@ -19,7 +19,7 @@ import type {
   FlacImageBlockExport,
 } from './converter.types.js';
 
-import type { TrackInfo } from '@/types.js';
+import type { TrackInfo } from '#types';
 
 // reexporting enums & types, so they will be included in the converter import
 export {

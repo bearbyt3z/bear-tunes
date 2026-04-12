@@ -1,9 +1,17 @@
 {
   "name": "bear-tunes",
-  "version": "0.21.0",
+  "version": "0.21.1",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./dist/main.cjs",
   "type": "module",
+  "imports": {
+    "#tools": "./dist/tools/index.js",
+    "#converter": "./dist/converter.js",
+    "#renamer": "./dist/renamer.js",
+    "#tagger": "./dist/tagger.js",
+    "#logger": "./dist/logger.js",
+    "#types": "./dist/types.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "setup": "npx playwright install chromium",
@@ -13,7 +21,7 @@
     "build-prod": "rm -rf ./dist && webpack --config webpack.config.prod.cjs",
     "build": "rm -rf ./dist && webpack --config webpack.config.dev.cjs",
     "build-start": "npm run build && npm run start",
-    "build:native": "rm -rf ./dist && npx tsc && npx tsc-alias",
+    "build:native": "rm -rf ./dist && npx tsc",
     "start:native": "node ./dist/index.js",
     "build-start:native": "npm run build:native && npm run start:native"
   },
@@ -40,7 +48,6 @@
     "eslint-config-airbnb-typescript": "^18.0.0",
     "node-loader": "^2.1.0",
     "ts-loader": "^9.5.4",
-    "tsc-alias": "^1.8.16",
     "typescript": "^5.9.3",
     "webpack": "^5.105.4",
     "webpack-cli": "^7.0.1",

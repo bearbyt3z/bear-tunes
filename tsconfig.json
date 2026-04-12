@@ -8,7 +8,13 @@
     "verbatimModuleSyntax": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "#tools": ["src/tools/index.ts"],
+      "#converter": ["./src/tools/converter.js"],
+      "#renamer": ["./src/tools/renamer.js"],
+      "#tagger": ["./src/tools/tagger.js"],
+      "#logger": ["./src/tools/logger.js"],
+      "#types": ["./src/tools/types.js"],
     },
 
     "outDir": "./dist",

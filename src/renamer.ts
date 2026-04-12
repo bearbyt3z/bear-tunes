@@ -1,11 +1,11 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import logger from '@/logger.js';
-import * as tools from '@/tools/index.js';
+import logger from '#logger';
+import * as tools from '#tools';
 
 import type { BearTunesRenamerOptions } from './renamer.types.js';
-import type { TrackInfo } from '@/types.js';
+import type { TrackInfo } from '#types';
 
 // reexporting type, so it will be included in the renamer module import
 export type { BearTunesRenamerOptions };
