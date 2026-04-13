@@ -54,88 +54,96 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
     // process.exit(2);
   }
 
-  fs.readdir(inputDirectory, async (error, files) => {
-    let noFilesWereProcessed = true;
-    if (error) {
-      logger.error(`Couldn't read directory: ${inputDirectory}`);
-      process.exitCode = 3;
-      return;
-      // process.exit(3);
+  let noFilesWereProcessed = true;
+  let files: string[];
+
+  try {
+    files = await fs.promises.readdir(inputDirectory);
+  } catch {
+    logger.error(`Couldn't read directory: ${inputDirectory}`);
+    process.exitCode = 3;
+    return;
+    // process.exit(3);
+  }
+  // if (files.length < 1) {
+  //   console.error(`There are no files in a directory: ${inputDirectory}`);
+  //   process.exit(4);  // breaks process when no files in subdirectory!!!
+  // }
+
+  const flacFiles: string[] = [];
+
+  for (const file of files) {
+    const filePath = path.join(inputDirectory, file);
+
+    let fileStat;
+    try {
+      fileStat = fs.statSync(filePath);
+    } catch {
+      logger.error(`Path does not exist or is not accessible: ${filePath}`);
+      continue;
     }
-    // if (files.length < 1) {
-    //   console.error(`There are no files in a directory: ${inputDirectory}`);
-    //   process.exit(4);  // breaks process when no files in subdirectory!!!
-    // }
-    const flacFiles: Array<string> = [];
 
-    for (const file of files) {
-      const filePath = path.join(inputDirectory, file);
+    if (fileStat.isDirectory()) {
+      await processAllFilesInDirectory(filePath);
+    } else if (path.extname(file) === '.mp3') {
+      const flacIndex = flacFiles.indexOf(filePath);
 
-      let fileStat;
-      try {
-        fileStat = fs.statSync(filePath);
-      } catch (error: unknown) {
-        logger.error(`Path does not exist or is not accessible: ${filePath}`);
-        continue;
-      }
-
-      if (fileStat.isDirectory()) {
-        processAllFilesInDirectory(filePath);
-      } else if (path.extname(file) === '.mp3') {
-        const flacIndex = flacFiles.indexOf(filePath);
-        if (flacIndex > -1) {
-          flacFiles.splice(flacIndex, 1);
-        } else {
-          noFilesWereProcessed = false;
-          const trackInfo = await tagger.processTrack(filePath);
-          if (!tools.isEmptyPlainObject(trackInfo)) {
-            const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
-
-            await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
-          }
-        }
-      } else if (path.extname(file) === '.flac') {
+      if (flacIndex > -1) {
+        flacFiles.splice(flacIndex, 1);
+      } else {
         noFilesWereProcessed = false;
-        logger.silly('########################################');
-        logger.info(`Converting flac to mp3: ${filePath}`);
-        const result = converter.flacToMp3(filePath);
-        if (result.status === 0 && result.outputPath) {
-          logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
-          flacFiles.push(result.outputPath);
-          const trackInfo = await tagger.processTrack(result.outputPath);
-          if (!tools.isEmptyPlainObject(trackInfo)) {
-            renamer.rename(result.outputPath, trackInfo, outputDirectory);
+        const trackInfo = await tagger.processTrack(filePath);
 
-            await tagger.saveId3TagToFlacFile(filePath, trackInfo);
-
-            const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
-
-            try {
-              const artworkPath = await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
-
-              if (artworkPath) {
-                logger.info(`Artwork written to: "${artworkPath}"`);
-              } else {
-                logger.info('No artwork to download.');
-              }
-            } catch (error) {
-              logger.error('Artwork download failed', { error });
-            }
-          }
-        } else {
-          let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
-          warnMessage += `${result.error?.message}:\nLame stderr: ${result.lameStderr}`;
-          logger.warn(warnMessage);
+        if (!tools.isEmptyPlainObject(trackInfo)) {
+          const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
+          await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
         }
       }
-    }
+    } else if (path.extname(file) === '.flac') {
+      noFilesWereProcessed = false;
+      logger.silly('########################################');
+      logger.info(`Converting flac to mp3: ${filePath}`);
 
-    if (noFilesWereProcessed) {
-      logger.error(`There are no suitable files in directory: ${inputDirectory}`);
-      process.exitCode = 1;
+      const result = converter.flacToMp3(filePath);
+
+      if (result.status === 0 && result.outputPath) {
+        logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
+        flacFiles.push(result.outputPath);
+
+        const trackInfo = await tagger.processTrack(result.outputPath);
+
+        if (!tools.isEmptyPlainObject(trackInfo)) {
+          renamer.rename(result.outputPath, trackInfo, outputDirectory);
+
+          await tagger.saveId3TagToFlacFile(filePath, trackInfo);
+
+          const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
+
+          try {
+            const artworkPath = await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
+
+            if (artworkPath) {
+              logger.info(`Artwork written to: "${artworkPath}"`);
+            } else {
+              logger.info('No artwork to download.');
+            }
+          } catch (error) {
+            logger.error('Artwork download failed', { error });
+          }
+        }
+      } else {
+        let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
+        warnMessage += `${result.error?.message}:\nLame stderr: ${result.lameStderr}`;
+        logger.warn(warnMessage);
+      }
     }
-  });
-};
+  }
+
+  if (noFilesWereProcessed) {
+    logger.error(`There are no suitable files in directory: ${inputDirectory}`);
+    process.exitCode = 1;
+  }
+}
 
 // Last-resort handlers for errors that escape normal try/catch.
 // - `unhandledRejection`: a rejected Promise with no handler.
