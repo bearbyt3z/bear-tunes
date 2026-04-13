@@ -40,14 +40,21 @@ export class BearTunesRenamer {
     try {
       if (!outputDirectory) {
         outputPath = path.dirname(trackPath);
-      } else if (outputDirectory && fs.lstatSync(outputDirectory).isDirectory()) {
-        outputPath = outputDirectory.replace(/[/\\]+$/, path.sep) + tools.replacePathForbiddenChars(BearTunesRenamer.bindValues(this.options.directoryPattern, trackInfo));
+      } else if (fs.lstatSync(outputDirectory).isDirectory()) {
+        const normalizedOutputDirectory = outputDirectory.replace(/[/\\]+$/, path.sep);
+        const boundDirectory = BearTunesRenamer.bindValues(
+          this.options.directoryPattern,
+          trackInfo,
+        );
+
+        outputPath = normalizedOutputDirectory + tools.replacePathForbiddenChars(boundDirectory);
+
         fs.mkdirSync(outputPath, { recursive: true });
       } else {
         throw new TypeError(`${this.constructor.name}: Specified output directory path ${outputDirectory} is not a valid directory`);
       }
     } catch (error) {
-      throw new ReferenceError(`${this.constructor.name}: Cannot access directory ${outputDirectory} (incorrect path?)`);
+      throw new ReferenceError(`${this.constructor.name}: Cannot access directory ${outputDirectory} (incorrect path?)`, { cause: error });
     }
 
     outputPath += path.sep + tools.replacePathForbiddenChars(filename);
@@ -65,10 +72,29 @@ export class BearTunesRenamer {
     const result = pattern.replace(/%\w+%/ig, (match) => {
       const keyName = match.replace(/%/g, '');
       const key: keyof TrackInfo = keyName as keyof TrackInfo;
-      if (!key) throw new TypeError(`${this.constructor.name}: Rename pattern contains illegal property name: ${keyName}`);
-      if (trackInfo[key] === undefined) throw new ReferenceError(`${this.constructor.name}: Property ${keyName} wasn't defined in ${typeof trackInfo} parameter`);
-      if (trackInfo[key] instanceof Array) return (trackInfo[key] as string[]).join(', ');
-      return trackInfo[key]?.toString() ?? '';
+      const value = trackInfo[key];
+
+      if (!key) {
+        throw new TypeError(`${this.constructor.name}: Rename pattern contains illegal property name: ${keyName}`);
+      }
+
+      if (value === undefined) {
+        throw new ReferenceError(`${this.constructor.name}: Property ${keyName} wasn't defined in ${typeof trackInfo} parameter`);
+      }
+
+      if (Array.isArray(value)) {
+        return value.join(', ');
+      }
+
+      if (typeof value === 'object' && value !== null) {
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return '[Unserializable object]';
+        }
+      }
+
+      return String(value);
     });
 
     return result.replace(/[/\\]+/, path.sep); // changing for the right path separator
