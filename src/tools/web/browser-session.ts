@@ -5,6 +5,7 @@ import { chromium } from 'playwright';
 
 import { looksLikeChallengeHtml } from './challenge-detection.js';
 import { buildPlaywrightContextOptions, getClientProfile } from './request-identity.js';
+import { ignoreError } from '../utils/error.js';
 
 import type { Page, BrowserContextOptions } from 'playwright';
 
@@ -37,9 +38,9 @@ async function safeGetPageState(page: Page): Promise<PageChallengeState> {
 
 /** Waits for the page to finish its main navigation and post-load updates. */
 async function waitUntilPageSettles(page: Page): Promise<void> {
-  await page.waitForLoadState('domcontentloaded').catch(() => {});
-  await page.waitForLoadState('load').catch(() => {});
-  await page.waitForURL('**', { timeout: 10_000 }).catch(() => {});
+  await page.waitForLoadState('domcontentloaded').catch(ignoreError);
+  await page.waitForLoadState('load').catch(ignoreError);
+  await page.waitForURL('**', { timeout: 10_000 }).catch(ignoreError);
   await page.waitForTimeout(1000);
 }
 
