@@ -2,14 +2,22 @@ import process from 'node:process';
 
 import * as winston from 'winston';
 
-const level = process.env.LOG_LEVEL || 'debug';
+import type { LoggerInfo } from './logger.types.js';
 
-const normalizeError = winston.format((info) => {
-  const error = info.error as unknown;
+const level = process.env.LOG_LEVEL ?? 'debug';
+
+const normalizeError = winston.format((info: LoggerInfo) => {
+  const error = info.error;
 
   if (error instanceof Error) {
     info.errorMessage = error.message;
     info.errorStack = error.stack;
+  } else if (typeof error === 'object' && error !== null) {
+    try {
+      info.errorMessage = JSON.stringify(error);
+    } catch {
+      info.errorMessage = '[Unserializable object]';
+    }
   } else if (error !== undefined) {
     info.errorMessage = String(error);
   }
@@ -20,11 +28,10 @@ const normalizeError = winston.format((info) => {
 const consoleFormat = winston.format.combine(
   normalizeError(),
 
-  winston.format.printf((info) => {
-    const message = info.message as string;
-    const errorMessage = info.errorMessage as string | undefined;
+  winston.format.printf((info: LoggerInfo) => {
+    const message = String(info.message);
 
-    return errorMessage ? `${message}: ${errorMessage}` : message;
+    return info.errorMessage ? `${message}: ${info.errorMessage}` : message;
   }),
 
   winston.format.colorize({ all: true }),
@@ -36,10 +43,13 @@ const fileErrorFormat = winston.format.combine(
 
   normalizeError(),
 
-  winston.format.printf((info) => {
-    const base = `${info.timestamp} ${info.level.toUpperCase()}: ${info.message}`;
-    const errorMessage = info.errorMessage as string | undefined;
-    const errorStack = info.errorStack as string | undefined;
+  winston.format.printf((info: LoggerInfo) => {
+    const timestamp = info.timestamp ?? '';
+    const levelName = info.level.toUpperCase();
+    const message = String(info.message);
+    const base = `${timestamp} ${levelName}: ${message}`;
+    const errorMessage = info.errorMessage;
+    const errorStack = info.errorStack;
 
     if (errorStack) {
       return `${base}: ${errorMessage}\n${errorStack}`;
