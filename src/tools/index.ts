@@ -60,7 +60,7 @@ export function executeChildProcess(
   commandName: string,
   options: string[],
   successMessage: string,
-  verbose: boolean = false
+  verbose = false
 ): number {
   const child = childProcess.spawnSync(commandName, options, { encoding: 'utf8' });
 
