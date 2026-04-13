@@ -104,7 +104,7 @@ export function secondsToTimeFormat(inputSeconds : number): string {
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/EPSILON | MDN: Number.EPSILON}
  * @see {@link https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary/48764436#48764436 | Stack Overflow: explanation of the EPSILON-based rounding method}
  */
-export function roundToDecimalPlaces(num: number, decimalPlaces: number = 0): number {
+export function roundToDecimalPlaces(num: number, decimalPlaces = 0): number {
   const p = Math.pow(10, decimalPlaces);
   const n = (num * p) * (1 + Number.EPSILON);
   return Math.round(n) / p;
