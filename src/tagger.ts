@@ -86,7 +86,7 @@ export class BearTunesTagger {
     logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
 
     const trackUrlFilename = path.join(path.dirname(trackPath), `${trackFilenameWithoutExtension}.url`);
-    let trackUrl: URL | null = null;
+    let trackUrl: URL | null;
 
     if (fs.existsSync(trackUrlFilename)) {
       trackUrl = tools.getUrlFromFile(trackUrlFilename);
@@ -111,9 +111,14 @@ export class BearTunesTagger {
       trackUrl = bestMatchingTrack.url ?? null;
 
       if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
-        let warnMessage = `Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n${bestMatchingTrack.fullName}\n`;
-        warnMessage += `Score keywords: ${bestMatchingTrack.scoreKeywords}\nName  keywords: ${trackFilenameKeywords}`;
-        if (trackUrl) warnMessage += `\nURL: ${trackUrl}`;
+        let warnMessage = `Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n`;
+        warnMessage += `${bestMatchingTrack.fullName}\n`;
+        warnMessage += `Score keywords: ${bestMatchingTrack.scoreKeywords.join(', ')}\n`;
+        warnMessage += `Name  keywords: ${trackFilenameKeywords.join(', ')}`;
+        if (trackUrl) {
+          warnMessage += `\nURL: ${trackUrl}`;
+        }
+
         logger.warn(warnMessage);
 
         const proceedWithFound = await prompt('Proceed with the found track? (y/n) ');
@@ -125,8 +130,13 @@ export class BearTunesTagger {
       logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullName}`);
       logger.info(`Matched  URL: ${bestMatchingTrack.url ?? 'Undefined'}`);
 
-      if (trackInfo.details && bestMatchingTrack.details && Math.abs(bestMatchingTrack.details.duration - trackInfo.details.duration) > this.options.lengthDifferenceAccepted) {
-        logger.warn(`Matched track has different duration: ${tools.secondsToTimeFormat(bestMatchingTrack.details.duration)} vs. ${tools.secondsToTimeFormat(trackInfo.details.duration)} (original)\nURL: ${trackUrl}`);
+      if (
+        trackInfo.details
+        && bestMatchingTrack.details
+        && Math.abs(bestMatchingTrack.details.duration - trackInfo.details.duration) > this.options.lengthDifferenceAccepted
+      ) {
+        logger.warn(`Matched track has different duration: ${tools.secondsToTimeFormat(bestMatchingTrack.details.duration)}`
+          + ` vs. ${tools.secondsToTimeFormat(trackInfo.details.duration)} (original)\nURL: ${trackUrl}`);
 
         const changeToRadioEdit = await prompt('Change it to "Radio Edit"? (y)es/(n)o/(s)kip: ');
         if (changeToRadioEdit === 's' || changeToRadioEdit === 'skip') {
