@@ -16,6 +16,19 @@ export default defineConfig(
   js.configs.recommended,
 
   {
+    // Treat .cjs files as CommonJS explicitly, because ESLint does not apply
+    // the correct module/runtime context for them by default.
+    files: ['**/*.cjs'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'commonjs',
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
+  {
     files: ['**/*.ts'],
     extends: [
       ...tseslint.configs.recommendedTypeChecked,
