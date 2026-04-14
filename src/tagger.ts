@@ -871,7 +871,7 @@ export class BearTunesTagger {
     BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
   }
 
-  static addMetaflacTaggingOption(optionArray: string[], tagName: string, tagValue: string) {
+  static addMetaflacTaggingOption(optionArray: string[], tagName: string, tagValue: string): void {
     optionArray.push(`--remove-tag=${tagName}`);
     optionArray.push(`--set-tag=${tagName}=${tagValue}`);
   }
