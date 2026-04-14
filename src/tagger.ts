@@ -186,7 +186,7 @@ export class BearTunesTagger {
     return id3TagJson;
   }
 
-  static async extractNextJSData(url: URL): Promise<BeatportTrackInfo | BeatportAlbumInfo | BeatportPublisherInfo | BeatportSearchResultTrackInfo[]> {
+  static async extractNextJSData(url: URL): Promise<unknown> {
     const doc = await tools.fetchWebPage(url);
 
     const nextJSElement = doc.querySelector('#__NEXT_DATA__'); // Next.js object containing element
@@ -194,18 +194,61 @@ export class BearTunesTagger {
 
     if (!nextJSText) throw new TypeError('Cannot obtain Next.js object.');
 
-    let data;
+    let data: unknown;
     try {
       data = JSON.parse(nextJSText);
     } catch(error) {
-      throw new TypeError(`Cannot parse Next.js object: ${error}`);
+      throw new TypeError(`Cannot parse Next.js object.`, { cause: error });
     }
 
-    const stateData = data?.props?.pageProps?.dehydratedState?.queries[0]?.state?.data;
+    if (!tools.isObjectRecord(data)) {
+      throw new TypeError('Parsed Next.js object is not an object.');
+    }
 
-    if (!stateData) throw new TypeError('Cannot unpack state data from Next.js object.');
+    const props = data.props;
+    if (!tools.isObjectRecord(props)) {
+      throw new TypeError('Cannot unpack props from Next.js object.');
+    }
 
-    return ('data' in stateData && stateData.data instanceof Array) ? stateData.data : stateData;
+    const pageProps = props.pageProps;
+    if (!tools.isObjectRecord(pageProps)) {
+      throw new TypeError('Cannot unpack pageProps from Next.js object.');
+    }
+
+    const dehydratedState = pageProps.dehydratedState;
+    if (!tools.isObjectRecord(dehydratedState)) {
+      throw new TypeError('Cannot unpack dehydratedState from Next.js object.');
+    }
+
+    const queries = dehydratedState.queries;
+    if (!tools.isUnknownArray(queries) || queries.length < 1) {
+      throw new TypeError('Cannot unpack queries from Next.js object.');
+    }
+
+    const firstQuery = queries[0];
+    if (!tools.isObjectRecord(firstQuery)) {
+      throw new TypeError('Cannot unpack first query from Next.js object.');
+    }
+
+    const state = firstQuery.state;
+    if (!tools.isObjectRecord(state)) {
+      throw new TypeError('Cannot unpack state from Next.js object.');
+    }
+
+    const stateData = state.data;
+    if (!stateData) {
+      throw new TypeError('Cannot unpack state data from Next.js object.');
+    }
+
+    if (
+      tools.isObjectRecord(stateData)
+      && 'data' in stateData
+      && tools.isUnknownArray(stateData.data)
+    ) {
+      return stateData.data;
+    }
+
+    return stateData;
   }
 
   async findBestMatchingTrack(trackInfo: TrackInfo, inputKeywords: string[]): Promise<MatchingTrack> {

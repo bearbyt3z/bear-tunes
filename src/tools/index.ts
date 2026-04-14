@@ -42,8 +42,10 @@ export {
   replaceTagForbiddenChars,
 } from './utils/string.js';
 export {
-  isReadonlyStringArray,
   isEmptyPlainObject,
+  isObjectRecord,
+  isReadonlyStringArray,
+  isUnknownArray,
 } from './utils/type-guards.js';
 export { downloadFile } from './web/download-file.js';
 export { downloadImage, downloadAndSaveArtwork } from './web/download-image.js';

@@ -25,6 +25,28 @@ export function isEmptyPlainObject(value: unknown): value is Record<string, neve
 }
 
 /**
+ * Checks if a value is a non-null object accessible through string keys.
+ *
+ * Type guard returns `value is Record<string, unknown>`, meaning:
+ * - Runtime: non-null value with the `object` type
+ * - TypeScript: object properties can be accessed safely after further narrowing
+ *
+ * Usage:
+ * ```ts
+ * if (isObjectRecord(value)) {
+ *   // value has type Record<string, unknown>
+ *   const prop = value.someKey;
+ * }
+ * ```
+ *
+ * @param value - Value to check.
+ * @returns `true` if the value is a non-null object.
+ */
+export function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
+}
+
+/**
  * Returns whether the given value is a readonly array of strings.
  *
  * This helper exists primarily as a TypeScript narrowing workaround. In some
@@ -36,5 +58,27 @@ export function isEmptyPlainObject(value: unknown): value is Record<string, neve
  * @returns `true` when the value is a readonly string array; otherwise `false`.
  */
 export function isReadonlyStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value);
+}
+
+/**
+ * Checks if a value is an array.
+ *
+ * Type guard returns `value is unknown[]`, meaning:
+ * - Runtime: the value is an array
+ * - TypeScript: array elements keep the `unknown` type instead of `any`
+ *
+ * Usage:
+ * ```ts
+ * if (isUnknownArray(value)) {
+ *   // value has type unknown[]
+ *   const firstItem = value;
+ * }
+ * ```
+ *
+ * @param value - Value to check.
+ * @returns `true` if the value is an array.
+ */
+export function isUnknownArray(value: unknown): value is unknown[] {
   return Array.isArray(value);
 }
