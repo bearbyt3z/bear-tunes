@@ -376,10 +376,10 @@ export class BearTunesTagger {
     const trackUfid = `track-${trackData.id}`;
 
     const publisherUrl = trackData.release?.label ? new URL(`${this.options.domainURL}/label/${trackData.release.label.slug}/${trackData.release.label.id}`) : undefined;
-    const publisher = publisherUrl && await BearTunesTagger.extractPublisherData(publisherUrl) || undefined;
+    const publisher = publisherUrl ? await BearTunesTagger.extractPublisherData(publisherUrl) : undefined;
 
     const albumUrl = trackData.release ? new URL(`${this.options.domainURL}/release/${trackData.release.slug}/${trackData.release.id}`) : undefined;
-    const album = albumUrl && await BearTunesTagger.extractAlbumData(albumUrl, trackData.number) || undefined;
+    const album = albumUrl ? await BearTunesTagger.extractAlbumData(albumUrl, trackData.number) : undefined;
 
     return {
       url: trackUrl,
