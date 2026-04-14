@@ -179,7 +179,7 @@ export class BearTunesTagger {
       const id3TagJson: unknown = JSON.parse(
         displayPluginOutput.stdout
           .replaceAll('\u0003', '') // replace unicode characters that break parse() (e.g. Beatoprt's ETX 0x03 at the beginning of URL)
-          .replace(/,\s*\}/mgi, '}') // remove trailing commas that comes from plugin pattern (text-fields)
+          .replaceAll(/,\s*\}/g, '}') // remove trailing commas that comes from plugin pattern (text-fields)
       );
 
       return id3TagJson as TrackInfo;
