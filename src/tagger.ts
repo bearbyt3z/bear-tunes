@@ -484,6 +484,29 @@ export class BearTunesTagger {
     }
   }
 
+  static cleanupTrackArtworkFiles(imagePaths: TrackArtworkFiles): void {
+    Object.values(imagePaths).forEach((imagePath) => {
+      if (imagePath !== undefined) {
+        /*
+         * TypeScript/ESLint incorrectly infers `Object.values(imagePaths)` as producing `any` elements,
+         * despite `imagePaths` being typed as `TrackArtworkFiles` (with optional `string` properties).
+         *
+         * This is a known limitation in TS inference for `Object.values()` with optional object properties:
+         * optional fields (`string | undefined`) are not properly preserved in the array result.
+         *
+         * Runtime guard `if (imagePath !== undefined)` ensures safety before `unlinkSync()`.
+         *
+         * Refs:
+         * - [TS #44494](https://github.com/microsoft/TypeScript/issues/44494)
+         * - [TS #48587](https://github.com/microsoft/TypeScript/issues/48587)
+         *
+         */
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        fs.unlinkSync(imagePath);
+      }
+    });
+  }
+
   async saveId3TagToMp3File(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}): Promise<void> {
     const imagePaths: TrackArtworkFiles = {};
 
@@ -533,7 +556,7 @@ export class BearTunesTagger {
       // eyeD3Options.push('--album', trackData.album.title.replace(/^-/, '- '));
       eyeD3Options.push('--text-frame', `TALB:${tools.escapeUnescapedColons(trackData.album.title)}`); // the same as with --title
     }
-    if (trackData.album && trackData.album.artists && trackData.album.artists.length > 0) {
+    if (trackData.album?.artists && trackData.album.artists.length > 0) {
       eyeD3Options.push('--album-artist', trackData.album.artists.join(', '));
     }
     if (trackData.album?.trackNumber) {
@@ -639,7 +662,7 @@ export class BearTunesTagger {
     //   console.log(`File was renamed to: ${correctedFilename}`);
     // });
 
-    Object.values(imagePaths).forEach((imagePath) => path && fs.unlinkSync(imagePath));
+    BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
   }
 
   static executeEyeD3Tool(version: ID3Version, options: string[], successMessage: string, verbose: boolean = false): number {
@@ -845,7 +868,7 @@ export class BearTunesTagger {
 
     BearTunesTagger.executeMetaflacTool(metaflacOptions, `Flac ID3 tag was saved to "${path.basename(trackPath)}"`, this.options.verbose);
 
-    Object.values(imagePaths).forEach((imagePath) => path && fs.unlinkSync(imagePath));
+    BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
   }
 
   static addMetaflacTaggingOption(optionArray: string[], tagName: string, tagValue: string) {
