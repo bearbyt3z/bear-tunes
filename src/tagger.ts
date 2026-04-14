@@ -302,9 +302,32 @@ export class BearTunesTagger {
       const score = keywordsIntersection.length;
       const trackLength = tools.roundToDecimalPlaces(trackEntry.length / 1000.0, 2);
 
-      if ((score > winner.score)
-        || ((score === winner.score) && (!winner.released || trackReleased < winner.released))
-        || ((score === winner.score) && trackLength > 0 && trackInfo.details && Math.abs(trackLength - trackInfo.details.duration) < Math.abs(winner.details!.duration - trackInfo.details.duration))) {
+      const hasBetterScore = score > winner.score;
+
+      const hasSameScoreButEarlierRelease = (
+        score === winner.score
+        && (!winner.released || trackReleased < winner.released)
+      );
+
+      const currentDurationDistance = trackInfo.details
+        ? Math.abs(trackLength - trackInfo.details.duration)
+        : undefined;
+
+      const winnerDurationDistance = trackInfo.details
+        ? Math.abs(winner.details!.duration - trackInfo.details.duration)
+        : undefined;
+
+      const hasSameScoreButCloserDuration = (
+        score === winner.score
+        && trackLength > 0
+        && currentDurationDistance !== undefined
+        && winnerDurationDistance !== undefined
+        && currentDurationDistance < winnerDurationDistance
+      );
+
+      if (hasBetterScore
+        || hasSameScoreButEarlierRelease
+        || hasSameScoreButCloserDuration) {
         winner.details!.duration = trackLength; // the initialization of the winner variable (at the beginning) ensures that details prop is defined
         winner.score = score;
         winner.scoreKeywords = keywordsIntersection;
