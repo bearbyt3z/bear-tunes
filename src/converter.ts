@@ -78,16 +78,20 @@ export class BearTunesConverter {
       );
     }
 
-    let outputPathComputed = outputPath;
+    let outputPathComputed: string | undefined;
 
     try {
-      if (outputPathComputed === undefined) {
+      if (outputPath === undefined) {
         outputPathComputed = flacFilePath.replace(/\.flac$/, '.mp3');
-      } else if (fs.lstatSync(outputPathComputed).isDirectory()) {
-        outputPathComputed = outputPathComputed.replace(/\/+$/, path.sep) + path.basename(flacFilePath).replace(/\.flac$/, '.mp3');
-      } else if (fs.lstatSync(outputPathComputed).isFile() && /\.mp3$/.exec(flacFilePath) === null) {
-        result.status = 103;
-        result.error = new TypeError(`${this.constructor.name}: Specified output path ${outputPath} is a file but does not have *.mp3 extension`);
+      } else if (fs.lstatSync(outputPath).isDirectory()) {
+        outputPathComputed = outputPath.replace(/\/+$/, path.sep) + path.basename(flacFilePath).replace(/\.flac$/, '.mp3');
+      } else if (fs.lstatSync(outputPath).isFile()) {
+        if (/\.mp3$/.exec(outputPath) === null) {
+          result.status = 103;
+          result.error = new TypeError(`${this.constructor.name}: Specified output path ${outputPath} is a file but does not have *.mp3 extension`);
+        } else {
+          outputPathComputed = outputPath;
+        }
       } else {
         result.status = 104;
         result.error = new TypeError(`${this.constructor.name}: Specified output path ${outputPath} is neither a file nor directory`);
@@ -100,7 +104,7 @@ export class BearTunesConverter {
       );
     }
 
-    if (result.status !== 0) {
+    if (result.status !== 0 || outputPathComputed === undefined) {
       return result;
     }
 
