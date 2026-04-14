@@ -782,7 +782,7 @@ export class BearTunesTagger {
       BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ALBUM', trackData.album.title);
     }
 
-    if (trackData.album && trackData.album.artists && trackData.album.artists.length > 0) {
+    if (trackData.album?.artists && trackData.album.artists.length > 0) {
       BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ALBUMARTIST', trackData.album.artists.join(', '));
     }
 
