@@ -172,18 +172,21 @@ export class BearTunesTagger {
       logger.warn(`Cannot read ID3 tag of ${path.basename(trackPath)}:\n${tools.getFirstLine(displayPluginOutput.stderr)}`); // show only first line of error from plugin (ommit traceback)
       return {};
     }
+
     // console.log(displayPluginOutput.stdout);
-    let id3TagJson: TrackInfo;
+
     try {
-      id3TagJson = JSON.parse(displayPluginOutput.stdout
-        // eslint-disable-next-line no-control-regex
-        .replace(//mgi, '') // replace unicode characters that break parse() (e.g. Beatoprt's heart before links!)
-        .replace(/,\s*\}/mgi, '}')); // remove trailing commas that comes from plugin pattern (text-fields)
+      const id3TagJson: unknown = JSON.parse(
+        displayPluginOutput.stdout
+          .replaceAll('\u0003', '') // replace unicode characters that break parse() (e.g. Beatoprt's ETX 0x03 at the beginning of URL)
+          .replace(/,\s*\}/mgi, '}') // remove trailing commas that comes from plugin pattern (text-fields)
+      );
+
+      return id3TagJson as TrackInfo;
     } catch (error) {
-      logger.warn(`Cannot parse ID3 tag output from display plugin: ${error}`);
+      logger.warn('Cannot parse ID3 tag output from display plugin', {error});
       return {};
     }
-    return id3TagJson;
   }
 
   static async extractNextJSData(url: URL): Promise<unknown> {
