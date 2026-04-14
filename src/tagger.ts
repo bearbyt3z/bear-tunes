@@ -876,7 +876,7 @@ export class BearTunesTagger {
     optionArray.push(`--set-tag=${tagName}=${tagValue}`);
   }
 
-  static executeMetaflacTool(options: string[], successMessage: string, verbose: boolean = false): number {
+  static executeMetaflacTool(options: string[], successMessage: string, verbose = false): number {
     return tools.executeChildProcess(
       'metaflac',
       [
