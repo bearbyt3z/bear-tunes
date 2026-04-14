@@ -665,7 +665,7 @@ export class BearTunesTagger {
     BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
   }
 
-  static executeEyeD3Tool(version: ID3Version, options: string[], successMessage: string, verbose: boolean = false): number {
+  static executeEyeD3Tool(version: ID3Version, options: string[], successMessage: string, verbose = false): number {
     return tools.executeChildProcess(
       'eyeD3',
       [
