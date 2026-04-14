@@ -66,7 +66,7 @@ export class BearTunesConverter {
     };
 
     try {
-      if (!fs.lstatSync(flacFilePath).isFile() || /\.flac$/.exec(flacFilePath) === null) {
+      if (!fs.lstatSync(flacFilePath).isFile() || !flacFilePath.match(/\.flac$/)) {
         result.status = 101;
         result.error = new TypeError(`${this.constructor.name}: Specified path ${flacFilePath} is not a file or does not have *.flac extension`);
       }
@@ -86,11 +86,11 @@ export class BearTunesConverter {
       } else if (fs.lstatSync(outputPath).isDirectory()) {
         outputPathComputed = outputPath.replace(/\/+$/, path.sep) + path.basename(flacFilePath).replace(/\.flac$/, '.mp3');
       } else if (fs.lstatSync(outputPath).isFile()) {
-        if (/\.mp3$/.exec(outputPath) === null) {
+        if (outputPath.match(/\.mp3$/)) {
+          outputPathComputed = outputPath;
+        } else {
           result.status = 103;
           result.error = new TypeError(`${this.constructor.name}: Specified output path ${outputPath} is a file but does not have *.mp3 extension`);
-        } else {
-          outputPathComputed = outputPath;
         }
       } else {
         result.status = 104;
@@ -240,8 +240,8 @@ export class BearTunesConverter {
     let year: number | undefined;
     let released: Date | undefined;
     if (dateTag && dateTag.length > 0) {
-      const yearMatch = /\d{4}/.exec(dateTag);
-      if (yearMatch !== null) {
+      const yearMatch = dateTag.match(/\d{4}/);
+      if (yearMatch !== null && yearMatch.length > 0) {
         year = Number(yearMatch[0]);
         if (Number.isNaN(year)) year = undefined;
       }
