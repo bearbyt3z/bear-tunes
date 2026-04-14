@@ -56,7 +56,7 @@ export class BearTunesConverter {
     Object.assign(this.options, options);
   }
 
-  flacToMp3(flacFilePath: string, outputPath: string | undefined = undefined, deleteFlacAfterConvertion: boolean = false): BearTunesConverterResult {
+  flacToMp3(flacFilePath: string, outputPath: string | undefined = undefined, deleteFlacAfterConvertion = false): BearTunesConverterResult {
     const result: BearTunesConverterResult = {
       status: 0,
       error: undefined,
@@ -66,13 +66,16 @@ export class BearTunesConverter {
     };
 
     try {
-      if (!fs.lstatSync(flacFilePath).isFile() || !flacFilePath.match(/\.flac$/)) {
+      if (!fs.lstatSync(flacFilePath).isFile() || /\.flac$/.exec(flacFilePath) === null) {
         result.status = 101;
         result.error = new TypeError(`${this.constructor.name}: Specified path ${flacFilePath} is not a file or does not have *.flac extension`);
       }
     } catch (error) {
       result.status = 102;
-      result.error = new ReferenceError(`${this.constructor.name}: Cannot access file ${flacFilePath} (incorrect path?)`);
+      result.error = new ReferenceError(
+        `${this.constructor.name}: Cannot access file ${flacFilePath} (incorrect path?)`,
+        { cause: error },
+      );
     }
 
     let outputPathComputed = outputPath;
@@ -82,7 +85,7 @@ export class BearTunesConverter {
         outputPathComputed = flacFilePath.replace(/\.flac$/, '.mp3');
       } else if (fs.lstatSync(outputPathComputed).isDirectory()) {
         outputPathComputed = outputPathComputed.replace(/\/+$/, path.sep) + path.basename(flacFilePath).replace(/\.flac$/, '.mp3');
-      } else if (fs.lstatSync(outputPathComputed).isFile() && !flacFilePath.match(/\.mp3$/)) {
+      } else if (fs.lstatSync(outputPathComputed).isFile() && /\.mp3$/.exec(flacFilePath) === null) {
         result.status = 103;
         result.error = new TypeError(`${this.constructor.name}: Specified output path ${outputPath} is a file but does not have *.mp3 extension`);
       } else {
@@ -91,7 +94,10 @@ export class BearTunesConverter {
       }
     } catch (error) {
       result.status = 105;
-      result.error = new ReferenceError(`${this.constructor.name}: Cannot access file ${outputPath} (incorrect path?)`);
+      result.error = new ReferenceError(
+        `${this.constructor.name}: Cannot access file ${outputPath} (incorrect path?)`,
+        { cause: error },
+      );
     }
 
     if (result.status !== 0) {
@@ -185,7 +191,7 @@ export class BearTunesConverter {
 
     if (childResult.status === null) {
       result.status = 106;
-      result.error = new Error(`Convertion failed due to a signal: ${childResult.signal ? childResult.signal : 'signal is null'}`);
+      result.error = new Error(`Convertion failed due to a signal: ${childResult.signal ?? 'signal is null'}`);
       return result;
     }
 
@@ -230,8 +236,8 @@ export class BearTunesConverter {
     let year: number | undefined;
     let released: Date | undefined;
     if (dateTag && dateTag.length > 0) {
-      const yearMatch = dateTag.match(/\d{4}/);
-      if (yearMatch !== null && yearMatch.length > 0) {
+      const yearMatch = /\d{4}/.exec(dateTag);
+      if (yearMatch !== null) {
         year = Number(yearMatch[0]);
         if (Number.isNaN(year)) year = undefined;
       }
@@ -265,7 +271,7 @@ export class BearTunesConverter {
     return (matchArray !== null && matchArray.length > 0) ? matchArray : undefined;
   }
 
-  static getMetaflacTagEntries(metaflacOutput: string, tagName: string, multi: boolean = false): string[] | null {
+  static getMetaflacTagEntries(metaflacOutput: string, tagName: string, multi = false): string[] | null {
     return metaflacOutput.match(new RegExp(`(?<=^${tagName}=).+$`, multi ? 'gm' : 'm'));
   }
 
@@ -329,7 +335,7 @@ export class BearTunesConverter {
 
     for (let i = 0; i < minLength; i += 1) {
       result.push({
-        blockType: <FlacImageBlockType>Number(blockNumbers[i]),
+        blockType: Number(blockNumbers[i]) as FlacImageBlockType,
         mimeType: mimeTypes[i],
       });
     }
