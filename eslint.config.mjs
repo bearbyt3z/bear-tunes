@@ -73,6 +73,9 @@ export default defineConfig(
 
       '@typescript-eslint/use-unknown-in-catch-callback-variable': 'error',
 
+      '@typescript-eslint/restrict-template-expressions': 'error',
+      '@typescript-eslint/restrict-plus-operands': 'error',
+
       'max-len': ['error', {
         code: 150,
         ignoreComments: true,
