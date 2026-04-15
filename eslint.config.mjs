@@ -76,6 +76,10 @@ export default defineConfig(
       '@typescript-eslint/restrict-template-expressions': 'error',
       '@typescript-eslint/restrict-plus-operands': 'error',
 
+      // Core stylistic rules (from `stylisticTypeChecked`, but explicitly enabled for clarity)
+      '@typescript-eslint/prefer-optional-chain': 'error',
+      '@typescript-eslint/prefer-nullish-coalescing': 'error',
+
       'max-len': ['error', {
         code: 150,
         ignoreComments: true,
