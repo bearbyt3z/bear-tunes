@@ -169,7 +169,7 @@ process.on('uncaughtException', (error) => {
 // We set `process.exitCode` instead of calling `process.exit(1)` to let Node finish
 // any pending I/O (e.g., flushing stderr) and exit naturally.
 processAllFilesInDirectory(inputDirectory, outputDirectory)
-  .catch((error) => {
+  .catch((error: unknown) => {
     logger.error(error);
     process.exitCode = 1;
   });

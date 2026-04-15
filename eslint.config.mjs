@@ -68,6 +68,11 @@ export default defineConfig(
       '@typescript-eslint/no-unsafe-return': 'error',
       '@typescript-eslint/no-unsafe-argument': 'error',
 
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/only-throw-error': 'error',
+
+      '@typescript-eslint/use-unknown-in-catch-callback-variable': 'error',
+
       'max-len': ['error', {
         code: 150,
         ignoreComments: true,
