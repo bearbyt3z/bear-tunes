@@ -80,6 +80,8 @@ export default defineConfig(
       '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
 
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
+
       // Import ordering is intentionally not enforced for now.
       // The preferred long-term rule is `import/order`, grouped by import origin
       // and alphabetized within groups, but `eslint-plugin-import` is currently
