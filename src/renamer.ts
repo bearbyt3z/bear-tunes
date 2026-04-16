@@ -71,12 +71,13 @@ export class BearTunesRenamer {
   static bindValues(pattern: string, trackInfo: TrackInfo): string {
     const result = pattern.replace(/%\w+%/ig, (match) => {
       const keyName = match.replace(/%/g, '');
-      const key: keyof TrackInfo = keyName as keyof TrackInfo;
-      const value = trackInfo[key];
 
-      if (!key) {
+      if (!keyName || !(keyName in trackInfo)) {
         throw new TypeError(`${this.constructor.name}: Rename pattern contains illegal property name: ${keyName}`);
       }
+
+      const key = keyName as keyof TrackInfo;
+      const value = trackInfo[key];
 
       if (value === undefined) {
         throw new ReferenceError(`${this.constructor.name}: Property ${keyName} wasn't defined in ${typeof trackInfo} parameter`);
