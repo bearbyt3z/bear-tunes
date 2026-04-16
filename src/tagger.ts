@@ -642,6 +642,16 @@ export class BearTunesTagger {
     eyeD3Options.push(trackPath);
 
     if (id3v2) {
+      // Remove embedded images (only id3v2 has image frames)
+      BearTunesTagger.executeEyeD3Tool(
+        ID3Version.ID3v2_4,
+        [
+          '--remove-all-images',
+        ],
+        `All picture blocks of ID3v${ID3Version.ID3v2_4} MP3 tag removed in "${path.basename(trackPath)}"`,
+        this.options.verbose
+      );
+
       BearTunesTagger.executeEyeD3Tool(
         ID3Version.ID3v2_4,
         eyeD3Options,
