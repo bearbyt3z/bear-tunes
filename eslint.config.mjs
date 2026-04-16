@@ -80,6 +80,20 @@ export default defineConfig(
       '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
 
+      // Import ordering is intentionally not enforced for now.
+      // The preferred long-term rule is `import/order`, grouped by import origin
+      // and alphabetized within groups, but `eslint-plugin-import` is currently
+      // incompatible with the ESLint v10 rule API.
+      // Re-enable once compatibility lands.
+      // Tracking: https://github.com/import-js/eslint-plugin-import/issues/3227
+      //
+      // TODO: Planned config:
+      // 'import/order': ['error', {
+      //   groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index', 'type'],
+      //   'newlines-between': 'always',
+      //   alphabetize: { order: 'asc', caseInsensitive: true },
+      // }],
+
       'max-len': ['error', {
         code: 150,
         ignoreComments: true,
