@@ -96,6 +96,15 @@ export default defineConfig(
       //   alphabetize: { order: 'asc', caseInsensitive: true },
       // }],
 
+      'no-restricted-imports': ['error', {
+        patterns: [
+          {
+            group: ['@/*'],
+            message: 'Do not use @/ aliases. Use relative imports or package.json imports like #tools.',
+          },
+        ],
+      }],
+
       'max-len': ['error', {
         code: 150,
         ignoreComments: true,
