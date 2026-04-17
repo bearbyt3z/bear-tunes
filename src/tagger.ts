@@ -744,81 +744,26 @@ export class BearTunesTagger {
   async saveId3TagToFlacFile(trackPath: string, trackData: TrackInfo, { verbose = false } = {}): Promise<void> {
     const imagePaths: TrackArtworkFiles = {};
 
-    const publisherLogotypeUrl = trackData.publisher?.logotype;
+    imagePaths.publisherLogotype = await BearTunesTagger.tryDownloadImageAsset({
+      imageUrl: trackData.publisher?.logotype,
+      sourcePageUrl: trackData.publisher?.url,
+      label: 'publisher logotype',
+      verbose,
+    });
 
-    if (!publisherLogotypeUrl) {
-      logger.warn('Publisher logotype is missing.', {
-        publisherUrl: trackData.publisher?.url?.toString(),
-      });
-    } else {
-      try {
-        const filename = await downloadImage(publisherLogotypeUrl, {
-          referer: trackData.publisher?.url,
-        });
-        if (verbose) {
-          logger.debug(`Publisher logotype written to: ${filename}`);
-        }
-        imagePaths.publisherLogotype = filename;
-      } catch (error: unknown) {
-        logger.error('Failed to download publisher logotype.', {
-          publisherLogotypeUrl: publisherLogotypeUrl.toString(),
-          publisherUrl: trackData.publisher?.url?.toString(),
-          error,
-        });
-      }
-    }
+    imagePaths.frontCover = await BearTunesTagger.tryDownloadImageAsset({
+      imageUrl: trackData.album?.artwork,
+      sourcePageUrl: trackData.album?.url,
+      label: 'album artwork',
+      verbose,
+    });
 
-    const albumArtworkUrl = trackData.album?.artwork;
-
-    if (!albumArtworkUrl) {
-      logger.warn('Album artwork is missing.', {
-        albumUrl: trackData.album?.url?.toString(),
-      });
-    } else {
-      try {
-        const filename = await downloadImage(albumArtworkUrl, {
-          referer: trackData.album?.url,
-        });
-
-        if (verbose) {
-          logger.debug(`Album artwork written to: ${filename}`);
-        }
-
-        imagePaths.frontCover = filename;
-      } catch (error: unknown) {
-        logger.error('Failed to download album artwork.', {
-          albumArtworkUrl: albumArtworkUrl.toString(),
-          albumUrl: trackData.album?.url?.toString(),
-          error,
-        });
-      }
-    }
-
-    const waveformUrl = trackData.waveform;
-
-    if (!waveformUrl) {
-      logger.warn('Waveform is missing.', {
-        trackUrl: trackData.url?.toString(),
-      });
-    } else {
-      try {
-        const filename = await downloadImage(waveformUrl, {
-          referer: trackData.url,
-        });
-
-        if (verbose) {
-          logger.debug(`Waveform written to: ${filename}`);
-        }
-
-        imagePaths.waveform = filename;
-      } catch (error: unknown) {
-        logger.error('Failed to download waveform.', {
-          waveformUrl: waveformUrl.toString(),
-          trackUrl: trackData.url?.toString(),
-          error,
-        });
-      }
-    }
+    imagePaths.waveform = await BearTunesTagger.tryDownloadImageAsset({
+      imageUrl: trackData.waveform,
+      sourcePageUrl: trackData.url,
+      label: 'waveform',
+      verbose,
+    });
 
     const metaflacOptions: string[] = [
       '--remove-tag=PRIV', '--remove-tag=COMMENT',
