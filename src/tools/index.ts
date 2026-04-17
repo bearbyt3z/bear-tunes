@@ -1,5 +1,4 @@
 import * as childProcess from 'node:child_process';
-import * as fs from 'node:fs';
 
 import logger from '#logger';
 import { getFirstLine } from './utils/format.js';
@@ -16,6 +15,9 @@ export {
   extractTrackNameKeywords,
 } from './audio/metadata.js';
 export { prompt } from './cli/prompt.js';
+export {
+  tryGetUrlFromFile,
+} from './files/url-file.js';
 export {
   arrayDifference,
   arrayIntersection,
@@ -54,13 +56,6 @@ export {
 export { downloadFile } from './web/download-file.js';
 export { downloadImage, downloadAndSaveArtwork } from './web/download-image.js';
 export { fetchWebPage } from './web/fetch-web-page.js';
-
-export function getUrlFromFile(filePath: string): URL | null {
-  const fileContent = fs.readFileSync(filePath, 'utf8');
-  const urlIndex = fileContent.indexOf('URL=');
-  if (urlIndex < 0) return null;
-  return new URL(fileContent.substring(urlIndex + 4).split('\n')[0]);
-}
 
 export function executeChildProcess(
   commandName: string,

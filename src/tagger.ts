@@ -86,10 +86,10 @@ export class BearTunesTagger {
     logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
 
     const trackUrlFilename = path.join(path.dirname(trackPath), `${trackFilenameWithoutExtension}.url`);
-    let trackUrl: URL | null;
+    let trackUrl: URL | undefined;
 
     if (fs.existsSync(trackUrlFilename)) {
-      trackUrl = tools.getUrlFromFile(trackUrlFilename);
+      trackUrl = await tools.tryGetUrlFromFile(trackUrlFilename);
 
       if (trackUrl === null) {
         logger.warn(`URL file is present but no URL found inside (skipping): ${trackUrlFilename}`);
@@ -108,7 +108,7 @@ export class BearTunesTagger {
         return {};
       }
 
-      trackUrl = bestMatchingTrack.url ?? null;
+      trackUrl = bestMatchingTrack.url ?? undefined;
 
       if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
         let warnMessage = `Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n`;
