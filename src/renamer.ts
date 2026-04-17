@@ -2,7 +2,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import logger from '#logger';
-import * as tools from '#tools';
+import {
+  replacePathForbiddenChars,
+} from '#tools';
 
 import type { BearTunesRenamerOptions } from './renamer.types.js';
 import type { TrackInfo } from '#types';
@@ -47,7 +49,7 @@ export class BearTunesRenamer {
           trackInfo,
         );
 
-        outputPath = normalizedOutputDirectory + tools.replacePathForbiddenChars(boundDirectory);
+        outputPath = normalizedOutputDirectory + replacePathForbiddenChars(boundDirectory);
 
         fs.mkdirSync(outputPath, { recursive: true });
       } else {
@@ -57,7 +59,7 @@ export class BearTunesRenamer {
       throw new ReferenceError(`${this.constructor.name}: Cannot access directory ${outputDirectory} (incorrect path?)`, { cause: error });
     }
 
-    outputPath += path.sep + tools.replacePathForbiddenChars(filename);
+    outputPath += path.sep + replacePathForbiddenChars(filename);
 
     fs.renameSync(trackPath, outputPath);
 
