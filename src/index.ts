@@ -17,12 +17,15 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import process from 'node:process';
 
+import logger from '#logger';
+import {
+  downloadAndSaveArtwork,
+  isEmptyPlainObject,
+} from '#tools';
+
 import { BearTunesConverter } from '#converter';
 import { BearTunesRenamer } from '#renamer';
 import { BearTunesTagger } from '#tagger';
-
-import logger from '#logger';
-import * as tools from '#tools';
 
 // const { createLogger, format, transports } = require('winston');
 // const { combine, timestamp, label, printf } = format;
@@ -94,9 +97,9 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
         noFilesWereProcessed = false;
         const trackInfo = await tagger.processTrack(filePath);
 
-        if (!tools.isEmptyPlainObject(trackInfo)) {
+        if (!isEmptyPlainObject(trackInfo)) {
           const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
-          await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
+          await downloadAndSaveArtwork(filePathRenamed, trackInfo);
         }
       }
     } else if (path.extname(file) === '.flac') {
@@ -112,7 +115,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
 
         const trackInfo = await tagger.processTrack(result.outputPath);
 
-        if (!tools.isEmptyPlainObject(trackInfo)) {
+        if (!isEmptyPlainObject(trackInfo)) {
           renamer.rename(result.outputPath, trackInfo, outputDirectory);
 
           await tagger.saveId3TagToFlacFile(filePath, trackInfo);
@@ -120,7 +123,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
           const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
 
           try {
-            const artworkPath = await tools.downloadAndSaveArtwork(filePathRenamed, trackInfo);
+            const artworkPath = await downloadAndSaveArtwork(filePathRenamed, trackInfo);
 
             if (artworkPath) {
               logger.info(`Artwork written to: "${artworkPath}"`);
