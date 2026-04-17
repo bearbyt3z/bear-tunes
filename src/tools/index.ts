@@ -1,8 +1,3 @@
-import * as childProcess from 'node:child_process';
-
-import logger from '#logger';
-import { getFirstLine } from './utils/format.js';
-
 export {
   isSupportedArtworkFile,
   tryGetMimeTypeFromFile,
@@ -18,6 +13,9 @@ export { prompt } from './cli/prompt.js';
 export {
   tryGetUrlFromFile,
 } from './files/url-file.js';
+export {
+  executeCommandSync,
+} from './system/command.js';
 export {
   arrayDifference,
   arrayIntersection,
@@ -56,25 +54,3 @@ export {
 export { downloadFile } from './web/download-file.js';
 export { downloadImage, downloadAndSaveArtwork } from './web/download-image.js';
 export { fetchWebPage } from './web/fetch-web-page.js';
-
-export function executeChildProcess(
-  commandName: string,
-  options: string[],
-  successMessage: string,
-  verbose = false
-): number {
-  const child = childProcess.spawnSync(commandName, options, { encoding: 'utf8' });
-
-  if (child.error) {
-    logger.error(`ERROR: Failed to start child process: ${child.error}`);
-    return -1;
-  }
-  
-  if (child.status && child.status !== 0) {
-    logger.error(`ERROR: Child process exited with code ${child.status}:\n${getFirstLine(child.stderr)}`);
-    return child.status;
-  }
-
-  logger.info(verbose ? child.stdout : successMessage);
-  return 0;
-}

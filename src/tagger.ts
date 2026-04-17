@@ -687,17 +687,32 @@ export class BearTunesTagger {
     BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
   }
 
-  static executeEyeD3Tool(version: ID3Version, options: string[], successMessage: string, verbose = false): number {
-    return tools.executeChildProcess(
-      'eyeD3',
-      [
-        '--v2',
-        `--to-v${version.toString()}`, // overwrite other versions of id3
-        ...options,
-      ],
-      successMessage,
-      verbose,
-    );
+  static executeEyeD3Tool(
+    version: ID3Version,
+    options: string[],
+    successMessage: string,
+    verbose = false
+  ): boolean {
+    try {
+      const result = tools.executeCommandSync(
+        'eyeD3',
+        [
+          '--v2',
+          `--to-v${version.toString()}`, // overwrite other versions of id3
+          ...options,
+        ],
+      );
+
+      logger.info(verbose ? result.stdout : successMessage);
+      return true;
+    } catch (error) {
+      logger.error('Failed to save MP3 ID3 tag.', {
+        tool: 'eyeD3',
+        id3Version: version,
+        error,
+      });
+      return false;
+    }
   }
 
   async saveId3TagToFlacFile(trackPath: string, trackData: TrackInfo, { verbose = false } = {}): Promise<void> {
@@ -898,16 +913,29 @@ export class BearTunesTagger {
     optionArray.push(`--set-tag=${tagName}=${tagValue}`);
   }
 
-  static executeMetaflacTool(options: string[], successMessage: string, verbose = false): number {
-    return tools.executeChildProcess(
-      'metaflac',
-      [
-        '--preserve-modtime',
-        '--dont-use-padding',
-        ...options,
-      ],
-      successMessage,
-      verbose,
-    );
+  static executeMetaflacTool(
+    options: string[],
+    successMessage: string,
+    verbose = false
+  ): boolean {
+    try {
+      const result = tools.executeCommandSync(
+        'metaflac',
+        [
+          '--preserve-modtime',
+          '--dont-use-padding',
+          ...options,
+        ],
+      );
+
+      logger.info(verbose ? result.stdout : successMessage);
+      return true;
+    } catch (error) {
+      logger.error('Failed to save FLAC ID3 tag', {
+        tool: 'metaflac',
+        error,
+      });
+      return false;
+    }
   }
 }
