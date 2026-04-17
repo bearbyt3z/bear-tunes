@@ -3,7 +3,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import logger from '#logger';
-import * as tools from '#tools';
+import {
+  formatLocalDateToIsoDateString,
+  generateRandomHexString,
+  tryParsePositiveInteger,
+} from '#tools';
 
 import {
   BitrateMethod,
@@ -157,7 +161,7 @@ export class BearTunesConverter {
         tagOptions.push(`--ty "${flacTrackInfo.year}"`);
       }
       if (flacTrackInfo.released) {
-        tagOptions.push(`--tv TORY=${tools.formatLocalDateToIsoDateString(flacTrackInfo.released)}`);
+        tagOptions.push(`--tv TORY=${formatLocalDateToIsoDateString(flacTrackInfo.released)}`);
       }
 
       if (flacTrackInfo.album) {
@@ -257,8 +261,8 @@ export class BearTunesConverter {
       album: {
         artists: BearTunesConverter.extractMultiTagFromMetaflacOutput(metaflacOutput, 'albumartist'),
         title: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'album'),
-        trackNumber: tools.tryParsePositiveInteger(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracknumber')),
-        trackTotal: tools.tryParsePositiveInteger(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracktotal')),
+        trackNumber: tryParsePositiveInteger(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracknumber')),
+        trackTotal: tryParsePositiveInteger(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracktotal')),
       },
     };
 
@@ -294,7 +298,7 @@ export class BearTunesConverter {
 
     for (const imageBlockInfo of matchingImageBlocks) {
       const imageFileExtension = imageBlockInfo.mimeType.replace('image/', '');
-      const imageFilePath = `${tools.generateRandomHexString()}.${imageFileExtension}`;
+      const imageFilePath = `${generateRandomHexString()}.${imageFileExtension}`;
 
       const metaflacResult = childProcess.spawnSync('metaflac', [
         `--block-number=${imageBlockInfo.blockType.toString()}`,
