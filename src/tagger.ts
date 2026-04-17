@@ -3,9 +3,35 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import logger from '#logger';
-import * as tools from '#tools';
-
-import { prompt } from '#tools';
+import {
+  arrayIntersection,
+  arrayToLowerCase,
+  buildArtistArray,
+  buildGenreTag,
+  buildKeyTag,
+  buildTitle,
+  capitalize,
+  downloadImage,
+  escapeUnescapedColons,
+  executeCommandSync,
+  extractTrackNameKeywords,
+  fetchWebPage,
+  formatLocalDateToIsoDateString,
+  getFirstLine,
+  isObjectRecord,
+  isSupportedArtworkFile,
+  isUnknownArray,
+  prompt,
+  removeFilenameExtension,
+  replacePathForbiddenCharsInArray,
+  replaceTagForbiddenChars,
+  roundToDecimalPlaces,
+  secondsToTimeFormat,
+  slugify,
+  tryGetUrlFromFile,
+  tryParsePositiveInteger,
+  tryParseUrl,
+} from '#tools';
 
 import {
   BeatportSearchResultArtistType,
@@ -79,8 +105,8 @@ export class BearTunesTagger {
     let forceRadioEdit = false;
 
     const trackFilename = path.basename(trackPath);
-    const trackFilenameWithoutExtension = tools.removeFilenameExtension(trackFilename);
-    const trackFilenameKeywords = tools.extractTrackNameKeywords(trackFilenameWithoutExtension);
+    const trackFilenameWithoutExtension = removeFilenameExtension(trackFilename);
+    const trackFilenameKeywords = extractTrackNameKeywords(trackFilenameWithoutExtension);
 
     logger.silly('########################################');
     logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
@@ -89,7 +115,7 @@ export class BearTunesTagger {
     let trackUrl: URL | undefined;
 
     if (fs.existsSync(trackUrlFilename)) {
-      trackUrl = await tools.tryGetUrlFromFile(trackUrlFilename);
+      trackUrl = await tryGetUrlFromFile(trackUrlFilename);
 
       if (trackUrl === null) {
         logger.warn(`URL file is present but no URL found inside (skipping): ${trackUrlFilename}`);
@@ -135,8 +161,8 @@ export class BearTunesTagger {
         && bestMatchingTrack.details
         && Math.abs(bestMatchingTrack.details.duration - trackInfo.details.duration) > this.options.lengthDifferenceAccepted
       ) {
-        logger.warn(`Matched track has different duration: ${tools.secondsToTimeFormat(bestMatchingTrack.details.duration)}`
-          + ` vs. ${tools.secondsToTimeFormat(trackInfo.details.duration)} (original)\nURL: ${trackUrl}`);
+        logger.warn(`Matched track has different duration: ${secondsToTimeFormat(bestMatchingTrack.details.duration)}`
+          + ` vs. ${secondsToTimeFormat(trackInfo.details.duration)} (original)\nURL: ${trackUrl}`);
 
         const changeToRadioEdit = await prompt('Change it to "Radio Edit"? (y)es/(n)o/(s)kip: ');
         if (changeToRadioEdit === 's' || changeToRadioEdit === 'skip') {
@@ -179,7 +205,7 @@ export class BearTunesTagger {
       encoding: 'utf-8',
     });
     if (displayPluginOutput.stderr) {
-      logger.warn(`Cannot read ID3 tag of ${path.basename(trackPath)}:\n${tools.getFirstLine(displayPluginOutput.stderr)}`); // show only first line of error from plugin (ommit traceback)
+      logger.warn(`Cannot read ID3 tag of ${path.basename(trackPath)}:\n${getFirstLine(displayPluginOutput.stderr)}`); // show only first line of error from plugin (ommit traceback)
       return {};
     }
 
@@ -200,7 +226,7 @@ export class BearTunesTagger {
   }
 
   static async extractNextJSData(url: URL): Promise<unknown> {
-    const doc = await tools.fetchWebPage(url);
+    const doc = await fetchWebPage(url);
 
     const nextJSElement = doc.querySelector('#__NEXT_DATA__'); // Next.js object containing element
     const nextJSText = nextJSElement?.textContent; // Next.js object text
@@ -214,37 +240,37 @@ export class BearTunesTagger {
       throw new TypeError(`Cannot parse Next.js object.`, { cause: error });
     }
 
-    if (!tools.isObjectRecord(data)) {
+    if (!isObjectRecord(data)) {
       throw new TypeError('Parsed Next.js object is not an object.');
     }
 
     const props = data.props;
-    if (!tools.isObjectRecord(props)) {
+    if (!isObjectRecord(props)) {
       throw new TypeError('Cannot unpack props from Next.js object.');
     }
 
     const pageProps = props.pageProps;
-    if (!tools.isObjectRecord(pageProps)) {
+    if (!isObjectRecord(pageProps)) {
       throw new TypeError('Cannot unpack pageProps from Next.js object.');
     }
 
     const dehydratedState = pageProps.dehydratedState;
-    if (!tools.isObjectRecord(dehydratedState)) {
+    if (!isObjectRecord(dehydratedState)) {
       throw new TypeError('Cannot unpack dehydratedState from Next.js object.');
     }
 
     const queries = dehydratedState.queries;
-    if (!tools.isUnknownArray(queries) || queries.length < 1) {
+    if (!isUnknownArray(queries) || queries.length < 1) {
       throw new TypeError('Cannot unpack queries from Next.js object.');
     }
 
     const firstQuery = queries[0];
-    if (!tools.isObjectRecord(firstQuery)) {
+    if (!isObjectRecord(firstQuery)) {
       throw new TypeError('Cannot unpack first query from Next.js object.');
     }
 
     const state = firstQuery.state;
-    if (!tools.isObjectRecord(state)) {
+    if (!isObjectRecord(state)) {
       throw new TypeError('Cannot unpack state from Next.js object.');
     }
 
@@ -254,9 +280,9 @@ export class BearTunesTagger {
     }
 
     if (
-      tools.isObjectRecord(stateData)
+      isObjectRecord(stateData)
       && 'data' in stateData
-      && tools.isUnknownArray(stateData.data)
+      && isUnknownArray(stateData.data)
     ) {
       return stateData.data;
     }
@@ -282,21 +308,21 @@ export class BearTunesTagger {
     };
 
     for (const trackEntry of trackArray) {
-      const trackTitle = tools.buildTitle(trackEntry.track_name, trackEntry.mix_name);
+      const trackTitle = buildTitle(trackEntry.track_name, trackEntry.mix_name);
 
-      const trackArtists = tools.buildArtistArray(trackEntry.artists
+      const trackArtists = buildArtistArray(trackEntry.artists
         .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Artist)
         .map((x: BeatportSearchResultArtistInfo) => x.artist_name)
       );
 
-      const trackRemixers = tools.buildArtistArray(trackEntry.artists
+      const trackRemixers = buildArtistArray(trackEntry.artists
         .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Remixer)
         .map((x: BeatportSearchResultArtistInfo) => x.artist_name)
       );
 
       const trackReleased = new Date(trackEntry.release_date);
 
-      const trackKeywords = tools.extractTrackNameKeywords([trackArtists.join(' '), trackTitle]);
+      const trackKeywords = extractTrackNameKeywords([trackArtists.join(' '), trackTitle]);
       // const trackKeywords = Array.from(new Set([
       //   ...trackTitle.split(/\s+/),
       //   ...trackRemixed.split(/\s+/),
@@ -304,13 +330,13 @@ export class BearTunesTagger {
       //   ...trackRemixers.split(/[\s,]+/),
       // ]));
 
-      const keywordsIntersection = tools.arrayIntersection(
-        tools.arrayToLowerCase(inputKeywords),
-        tools.replacePathForbiddenCharsInArray(tools.arrayToLowerCase(trackKeywords)),
+      const keywordsIntersection = arrayIntersection(
+        arrayToLowerCase(inputKeywords),
+        replacePathForbiddenCharsInArray(arrayToLowerCase(trackKeywords)),
       );
 
       const score = keywordsIntersection.length;
-      const trackLength = tools.roundToDecimalPlaces(trackEntry.length / 1000.0, 2);
+      const trackLength = roundToDecimalPlaces(trackEntry.length / 1000.0, 2);
 
       const hasBetterScore = score > winner.score;
 
@@ -345,7 +371,7 @@ export class BearTunesTagger {
         winner.title = trackTitle;
         winner.artists = trackArtists;
         winner.remixers = trackRemixers;
-        winner.url = new URL(`${this.options.domainURL}/track/${tools.slugify(trackEntry.track_name)}/${trackEntry.track_id}`);
+        winner.url = new URL(`${this.options.domainURL}/track/${slugify(trackEntry.track_name)}/${trackEntry.track_id}`);
 
         // if (score === inputKeywords.length) break;  // winner has been found (but maybe not the earliest release!)
       }
@@ -357,7 +383,7 @@ export class BearTunesTagger {
   async extractTrackData(trackUrl: URL, forceRadioEdit: boolean): Promise<TrackInfo> {
     const trackData = await BearTunesTagger.extractNextJSData(trackUrl) as BeatportTrackInfo;
 
-    let title = tools.buildTitle(trackData.name, trackData.mix_name);
+    let title = buildTitle(trackData.name, trackData.mix_name);
 
     if (forceRadioEdit) {
       const match = title.match(/Original Mix|Extended Mix/i);
@@ -368,19 +394,19 @@ export class BearTunesTagger {
       }
     }
 
-    const artists = tools.buildArtistArray(trackData.artists.map((x: BeatportArtistInfo) => x.name));
-    const remixers = tools.buildArtistArray(trackData.remixers.map((x: BeatportArtistInfo) => x.name));
+    const artists = buildArtistArray(trackData.artists.map((x: BeatportArtistInfo) => x.name));
+    const remixers = buildArtistArray(trackData.remixers.map((x: BeatportArtistInfo) => x.name));
 
     const released = new Date(trackData.new_release_date); // or publish_date???
-    const year = tools.tryParsePositiveInteger(released.getFullYear());
+    const year = tryParsePositiveInteger(released.getFullYear());
 
-    const bpm = tools.tryParsePositiveInteger(trackData.bpm);
-    const key = tools.buildKeyTag(trackData.key?.name);
-    const genre = tools.buildGenreTag(trackData.genre?.name, trackData.sub_genre?.name);
+    const bpm = tryParsePositiveInteger(trackData.bpm);
+    const key = buildKeyTag(trackData.key?.name);
+    const genre = buildGenreTag(trackData.genre?.name, trackData.sub_genre?.name);
 
-    const duration = tools.roundToDecimalPlaces(trackData.length_ms / 1000.0, 2);
+    const duration = roundToDecimalPlaces(trackData.length_ms / 1000.0, 2);
 
-    const waveform = tools.tryParseUrl(trackData.image?.uri);
+    const waveform = tryParseUrl(trackData.image?.uri);
 
     const isrc = trackData.isrc;
     const trackUfid = `track-${trackData.id}`;
@@ -415,11 +441,11 @@ export class BearTunesTagger {
   static async extractAlbumData(albumUrl: URL, trackNumber: number): Promise<AlbumInfo> {
     const albumData = await BearTunesTagger.extractNextJSData(albumUrl) as BeatportAlbumInfo;
 
-    const artists = tools.buildArtistArray(albumData.artists.map((x: BeatportArtistInfo) => x.name));
-    const title = tools.replaceTagForbiddenChars(albumData.name);
+    const artists = buildArtistArray(albumData.artists.map((x: BeatportArtistInfo) => x.name));
+    const title = replaceTagForbiddenChars(albumData.name);
     const catalogNumber = albumData.catalog_number;
-    const trackTotal = tools.tryParsePositiveInteger(albumData.track_count);
-    const artwork = tools.tryParseUrl(albumData.image?.uri);
+    const trackTotal = tryParsePositiveInteger(albumData.track_count);
+    const artwork = tryParseUrl(albumData.image?.uri);
 
     return {
       artists,
@@ -436,7 +462,7 @@ export class BearTunesTagger {
     const publisherData = await BearTunesTagger.extractNextJSData(publisherUrl) as BeatportPublisherInfo;
 
     const name = publisherData.name;
-    const logotype = tools.tryParseUrl(publisherData.image?.uri);
+    const logotype = tryParseUrl(publisherData.image?.uri);
 
     return {
       name,
@@ -463,7 +489,7 @@ export class BearTunesTagger {
       verbose = false,
     } = options;
 
-    const capitalizedLabel = tools.capitalize(label);
+    const capitalizedLabel = capitalize(label);
 
     if (!imageUrl) {
       logger.warn(`${capitalizedLabel} is missing.`, {
@@ -474,7 +500,7 @@ export class BearTunesTagger {
     }
 
     try {
-      const filename = await tools.downloadImage(imageUrl, {
+      const filename = await downloadImage(imageUrl, {
         referer: sourcePageUrl
       });
 
@@ -557,14 +583,14 @@ export class BearTunesTagger {
     }
     if (trackData.title) {
       // eyeD3Options.push('--title', trackData.title.replace(/^-/, '- '));
-      eyeD3Options.push('--text-frame', `TIT2:${tools.escapeUnescapedColons(trackData.title)}`); // --title option with a parameter starting with a hyphen (-) will cause eyeD3 to report the usage error
+      eyeD3Options.push('--text-frame', `TIT2:${escapeUnescapedColons(trackData.title)}`); // --title option with a parameter starting with a hyphen (-) will cause eyeD3 to report the usage error
     }
     if (trackData.remixers && trackData.remixers.length > 0) {
-      eyeD3Options.push('--text-frame', `TPE4:${tools.escapeUnescapedColons(trackData.remixers.join(', '))}`); // TPE4 => REMIXEDBY
+      eyeD3Options.push('--text-frame', `TPE4:${escapeUnescapedColons(trackData.remixers.join(', '))}`); // TPE4 => REMIXEDBY
     }
     if (trackData.album?.title) {
       // eyeD3Options.push('--album', trackData.album.title.replace(/^-/, '- '));
-      eyeD3Options.push('--text-frame', `TALB:${tools.escapeUnescapedColons(trackData.album.title)}`); // the same as with --title
+      eyeD3Options.push('--text-frame', `TALB:${escapeUnescapedColons(trackData.album.title)}`); // the same as with --title
     }
     if (trackData.album?.artists && trackData.album.artists.length > 0) {
       eyeD3Options.push('--album-artist', trackData.album.artists.join(', '));
@@ -587,7 +613,7 @@ export class BearTunesTagger {
       eyeD3Options.push('--text-frame', `TYER:${trackData.year}`);
     }
     if (trackData.released) {
-      const releasedString = tools.formatLocalDateToIsoDateString(trackData.released);
+      const releasedString = formatLocalDateToIsoDateString(trackData.released);
       eyeD3Options.push('--text-frame', `TORY:${releasedString}`);
       eyeD3Options.push('--text-frame', `TRDA:${releasedString}`);
       eyeD3Options.push('--text-frame', `TDAT:${releasedString}`);
@@ -598,10 +624,10 @@ export class BearTunesTagger {
       // '--orig-release-date', trackData.released,
     }
     if (trackData.url) {
-      eyeD3Options.push('--url-frame', `WOAF:${tools.escapeUnescapedColons(trackData.url.toString())}`); // file webpage
+      eyeD3Options.push('--url-frame', `WOAF:${escapeUnescapedColons(trackData.url.toString())}`); // file webpage
     }
     if (trackData.publisher?.url) {
-      eyeD3Options.push('--url-frame', `WPUB:${tools.escapeUnescapedColons(trackData.publisher.url.toString())}`); // publisher webpage
+      eyeD3Options.push('--url-frame', `WPUB:${escapeUnescapedColons(trackData.publisher.url.toString())}`); // publisher webpage
     }
     if (trackData.bpm) {
       eyeD3Options.push('--bpm', trackData.bpm.toString());
@@ -612,17 +638,17 @@ export class BearTunesTagger {
     }
     if (trackData.album?.catalogNumber) {
       // https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
-      eyeD3Options.push('--user-text-frame', `CATALOGNUMBER:${tools.escapeUnescapedColons(trackData.album.catalogNumber)}`);
-      eyeD3Options.push('--user-text-frame', `CATALOG #:${tools.escapeUnescapedColons(trackData.album.catalogNumber)}`);
+      eyeD3Options.push('--user-text-frame', `CATALOGNUMBER:${escapeUnescapedColons(trackData.album.catalogNumber)}`);
+      eyeD3Options.push('--user-text-frame', `CATALOG #:${escapeUnescapedColons(trackData.album.catalogNumber)}`);
     }
 
-    if (imagePaths.frontCover && await tools.isSupportedArtworkFile(imagePaths.frontCover)) {
+    if (imagePaths.frontCover && await isSupportedArtworkFile(imagePaths.frontCover)) {
       eyeD3Options.push('--add-image', `${imagePaths.frontCover}:FRONT_COVER:Front Cover`); // front cover
     }
-    if (imagePaths.waveform && await tools.isSupportedArtworkFile(imagePaths.waveform)) {
+    if (imagePaths.waveform && await isSupportedArtworkFile(imagePaths.waveform)) {
       eyeD3Options.push('--add-image', `${imagePaths.waveform}:BRIGHT_COLORED_FISH:Waveform`); // waveform
     }
-    if (imagePaths.publisherLogotype && await tools.isSupportedArtworkFile(imagePaths.publisherLogotype)) {
+    if (imagePaths.publisherLogotype && await isSupportedArtworkFile(imagePaths.publisherLogotype)) {
       eyeD3Options.push('--add-image', `${imagePaths.publisherLogotype}:PUBLISHER_LOGO:Publisher Logotype`); // publisher logo
     }
 
@@ -631,14 +657,14 @@ export class BearTunesTagger {
     }
     if (trackData.publisher?.name) {
       eyeD3Options.push('--publisher', trackData.publisher.name);
-      eyeD3Options.push('--text-frame', `TIT1:${tools.escapeUnescapedColons(trackData.publisher.name)}`); // TIT1 => CONTENTGROUP
+      eyeD3Options.push('--text-frame', `TIT1:${escapeUnescapedColons(trackData.publisher.name)}`); // TIT1 => CONTENTGROUP
     }
     if (trackData.isrc) {
-      eyeD3Options.push('--text-frame', `TSRC:${tools.escapeUnescapedColons(trackData.isrc)}`);
+      eyeD3Options.push('--text-frame', `TSRC:${escapeUnescapedColons(trackData.isrc)}`);
     }
     if (trackData.ufid) {
       // '--unique-file-id', `http${colonEscapeChar}://www.id3.org/dummy/ufid.html:${trackData.ufid}`,
-      eyeD3Options.push('--unique-file-id', `${tools.escapeUnescapedColons(this.options.domainURL)}:${trackData.ufid}`);
+      eyeD3Options.push('--unique-file-id', `${escapeUnescapedColons(this.options.domainURL)}:${trackData.ufid}`);
     }
 
     eyeD3Options.push(trackPath);
@@ -694,7 +720,7 @@ export class BearTunesTagger {
     verbose = false
   ): boolean {
     try {
-      const result = tools.executeCommandSync(
+      const result = executeCommandSync(
         'eyeD3',
         [
           '--v2',
@@ -726,7 +752,7 @@ export class BearTunesTagger {
       });
     } else {
       try {
-        const filename = await tools.downloadImage(publisherLogotypeUrl, {
+        const filename = await downloadImage(publisherLogotypeUrl, {
           referer: trackData.publisher?.url,
         });
         if (verbose) {
@@ -750,7 +776,7 @@ export class BearTunesTagger {
       });
     } else {
       try {
-        const filename = await tools.downloadImage(albumArtworkUrl, {
+        const filename = await downloadImage(albumArtworkUrl, {
           referer: trackData.album?.url,
         });
 
@@ -776,7 +802,7 @@ export class BearTunesTagger {
       });
     } else {
       try {
-        const filename = await tools.downloadImage(waveformUrl, {
+        const filename = await downloadImage(waveformUrl, {
           referer: trackData.url,
         });
 
@@ -835,7 +861,7 @@ export class BearTunesTagger {
     }
 
     if (trackData.released) {
-      const releasedString = tools.formatLocalDateToIsoDateString(trackData.released);
+      const releasedString = formatLocalDateToIsoDateString(trackData.released);
       BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'RELEASE DATE', releasedString);
       BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ORIGINAL RELEASE DATE', releasedString);
     }
@@ -891,13 +917,13 @@ export class BearTunesTagger {
       );
     }
 
-    if (imagePaths.frontCover && await tools.isSupportedArtworkFile(imagePaths.frontCover)) {
+    if (imagePaths.frontCover && await isSupportedArtworkFile(imagePaths.frontCover)) {
       metaflacOptions.push(`--import-picture-from=3||Front Cover||${imagePaths.frontCover}`); // front cover
     }
-    if (imagePaths.waveform && await tools.isSupportedArtworkFile(imagePaths.waveform)) {
+    if (imagePaths.waveform && await isSupportedArtworkFile(imagePaths.waveform)) {
       metaflacOptions.push(`--import-picture-from=17||Waveform||${imagePaths.waveform}`); // waveform
     }
-    if (imagePaths.publisherLogotype && await tools.isSupportedArtworkFile(imagePaths.publisherLogotype)) {
+    if (imagePaths.publisherLogotype && await isSupportedArtworkFile(imagePaths.publisherLogotype)) {
       metaflacOptions.push(`--import-picture-from=20||Publisher Logotype||${imagePaths.publisherLogotype}`); // publisher logo
     }
 
@@ -919,7 +945,7 @@ export class BearTunesTagger {
     verbose = false
   ): boolean {
     try {
-      const result = tools.executeCommandSync(
+      const result = executeCommandSync(
         'metaflac',
         [
           '--preserve-modtime',
