@@ -9,7 +9,9 @@ export {
   buildTitle,
   extractTrackNameKeywords,
 } from './audio/metadata.js';
-export { prompt } from './cli/prompt.js';
+export {
+  prompt,
+} from './cli/prompt.js';
 export {
   tryGetUrlFromFile,
 } from './files/url-file.js';
@@ -36,7 +38,9 @@ export {
   removeFilenameExtension,
   replaceFilenameExtension,
 } from './utils/path.js';
-export { generateRandomHexString } from './utils/random.js';
+export {
+  generateRandomHexString,
+} from './utils/random.js';
 export {
   capitalize,
   escapeRegExpChars,
@@ -51,6 +55,13 @@ export {
   isReadonlyStringArray,
   isUnknownArray,
 } from './utils/type-guards.js';
-export { downloadFile } from './web/download-file.js';
-export { downloadImage, downloadAndSaveArtwork } from './web/download-image.js';
-export { fetchWebPage } from './web/fetch-web-page.js';
+export {
+  downloadFile,
+} from './web/download-file.js';
+export {
+  downloadImage,
+  downloadAndSaveArtwork,
+} from './web/download-image.js';
+export {
+  fetchWebPage
+} from './web/fetch-web-page.js';
