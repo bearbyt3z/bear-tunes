@@ -1,3 +1,11 @@
+/**
+ * Public barrel file for the tools module.
+ *
+ * Re-exports the supported helpers from tools submodules so consumers can use:
+ * `import { ... } from '#tools'`
+ * instead of importing from internal module paths directly.
+ */
+
 export {
   isSupportedArtworkFile,
   tryGetMimeTypeFromFile,
