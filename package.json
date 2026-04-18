@@ -1,6 +1,6 @@
 {
   "name": "bear-tunes",
-  "version": "0.23.3",
+  "version": "0.23.4",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./dist/index.js",
   "type": "module",
@@ -20,7 +20,6 @@
     "clean": "rm -rf ./dist",
     "start": "node ./dist/index.js",
     "build": "npm run clean && npx tsc",
-    "rebuild": "npm run clean && npm run build",
     "build-start": "npm run build && npm run start",
     "check": "npm run lint && npm run typecheck && npm run build"
   },
