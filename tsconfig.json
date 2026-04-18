@@ -6,15 +6,6 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "verbatimModuleSyntax": true,
-    "baseUrl": ".",
-    "paths": {
-      "#tools": ["src/tools/index.ts"],
-      "#converter": ["./src/tools/converter.js"],
-      "#renamer": ["./src/tools/renamer.js"],
-      "#tagger": ["./src/tools/tagger.js"],
-      "#logger": ["./src/tools/logger.js"],
-      "#types": ["./src/tools/types.js"],
-    },
 
     "outDir": "./dist",
     "rootDir": "./src",
