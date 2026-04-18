@@ -15,13 +15,13 @@ import {
   ChannelMode,
   ReplayGain,
   FlacImageBlockType,
-} from './converter.types.js';
+} from './types.js';
 
 import type {
   BearTunesConverterOptions,
   BearTunesConverterResult,
   FlacImageBlockExport,
-} from './converter.types.js';
+} from './types.js';
 
 import type { TrackInfo } from '#types';
 

@@ -36,7 +36,7 @@ import {
 import {
   BeatportSearchResultArtistType,
   ID3Version,
-} from './tagger.types.js';
+} from './types.js';
 
 import type {
   BearTunesTaggerOptions,
@@ -50,7 +50,7 @@ import type {
   DownloadImageAssetOptions, // @internal
   MatchingTrack,
   TrackArtworkFiles,
-} from './tagger.types.js';
+} from './types.js';
 
 import type {
   TrackInfo,

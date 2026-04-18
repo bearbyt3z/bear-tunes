@@ -2,7 +2,7 @@ import process from 'node:process';
 
 import * as winston from 'winston';
 
-import type { LoggerInfo } from './logger.types.js';
+import type { LoggerInfo } from './types.js';
 
 const level = process.env.LOG_LEVEL ?? 'debug';
 

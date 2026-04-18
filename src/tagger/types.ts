@@ -1,4 +1,4 @@
-import type { TrackInfo } from './types.js';
+import type { TrackInfo } from '#types';
 
 export interface BearTunesTaggerOptions {
   domainURL: string,
