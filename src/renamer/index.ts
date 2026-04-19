@@ -7,7 +7,7 @@ import {
 } from '#tools';
 
 import type { BearTunesRenamerOptions } from './types.js';
-import type { TrackInfo } from '#types';
+import type { TrackInfo } from '#shared-types';
 
 // reexporting type, so it will be included in the renamer module import
 export type { BearTunesRenamerOptions };

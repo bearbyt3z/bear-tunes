@@ -1,4 +1,4 @@
-import type { TrackInfo } from '#types';
+import type { TrackInfo } from '#shared-types';
 
 export interface BearTunesTaggerOptions {
   domainURL: string,

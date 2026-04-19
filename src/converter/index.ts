@@ -23,7 +23,7 @@ import type {
   FlacImageBlockExport,
 } from './types.js';
 
-import type { TrackInfo } from '#types';
+import type { TrackInfo } from '#shared-types';
 
 // reexporting enums & types, so they will be included in the converter import
 export {

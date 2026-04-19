@@ -56,7 +56,7 @@ import type {
   TrackInfo,
   AlbumInfo,
   PublisherInfo,
-} from '#types';
+} from '#shared-types';
 
 // exporting enums & types, so they will be included in the tagger import
 export {

@@ -5,7 +5,7 @@ import { getClientProfile, buildImageDownloadHeaders } from './request-identity.
 import { replaceFilenameExtension } from '#tools';
 
 import type { DownloadImageOptions } from './download.types.js';
-import type { TrackInfo } from '#types';
+import type { TrackInfo } from '#shared-types';
 
 /**
  * Returns the expected MIME type for an image file based on its extension.
