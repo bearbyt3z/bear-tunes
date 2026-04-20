@@ -405,7 +405,7 @@ export function extractTrackNameKeywords(trackName: string | readonly string[]):
       // collapse repeated whitespace into a single space
       .replaceAll(/\s{2,}/g, ' ')
       // remove leading and trailing whitespace
-      .trim()
+      .trim(),
   );
 
   if (!normalizedTrackName) {

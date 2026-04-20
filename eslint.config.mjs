@@ -85,6 +85,7 @@ export default defineConfig(
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
 
       '@stylistic/semi': ['error', 'always'],
+      '@stylistic/comma-dangle': ['error', 'always-multiline'],
 
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 

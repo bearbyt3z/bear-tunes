@@ -41,7 +41,7 @@ export function executeCommandSync(commandName: string, args: readonly string[])
 
   if (child.status !== 0) {
     throw new Error(
-      `Child process "${commandName}" exited with code ${child.status}: ${getFirstLine(child.stderr)}`
+      `Child process "${commandName}" exited with code ${child.status}: ${getFirstLine(child.stderr)}`,
     );
   }
 

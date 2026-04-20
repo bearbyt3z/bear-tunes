@@ -77,7 +77,7 @@ const options = {
       format: fileErrorFormat,
     }),
     new winston.transports.File({
-      filename: './logs/combined.log'
+      filename: './logs/combined.log',
     }),
   ],
 

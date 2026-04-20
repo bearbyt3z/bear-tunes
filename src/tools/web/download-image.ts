@@ -107,7 +107,7 @@ export async function downloadImage(
  */
 export async function downloadAndSaveArtwork(
   trackPath: string,
-  trackInfo: TrackInfo
+  trackInfo: TrackInfo,
 ): Promise<string | undefined> {
   const artworkUrl = trackInfo.album?.artwork;
 

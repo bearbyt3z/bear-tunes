@@ -72,5 +72,5 @@ export {
   downloadAndSaveArtwork,
 } from './web/download-image.js';
 export {
-  fetchWebPage
+  fetchWebPage,
 } from './web/fetch-web-page.js';

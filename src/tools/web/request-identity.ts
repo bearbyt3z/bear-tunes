@@ -94,7 +94,7 @@ async function writeFileAtomic(filePath: string, content: string): Promise<void>
   const dirPath = path.dirname(filePath);
   const tempFilePath = path.join(
     dirPath,
-    `.tmp-${path.basename(filePath)}-${process.pid}-${crypto.randomUUID()}`
+    `.tmp-${path.basename(filePath)}-${process.pid}-${crypto.randomUUID()}`,
   );
 
   await ensureDir(dirPath);

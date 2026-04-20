@@ -223,7 +223,7 @@ export class BearTunesTagger {
       const id3TagJson: unknown = JSON.parse(
         displayPluginOutput.stdout
           .replaceAll('\u0003', '') // replace unicode characters that break parse() (e.g. Beatoprt's ETX 0x03 at the beginning of URL)
-          .replaceAll(/,\s*\}/g, '}') // remove trailing commas that comes from plugin pattern (text-fields)
+          .replaceAll(/,\s*\}/g, '}'), // remove trailing commas that comes from plugin pattern (text-fields)
       );
 
       const normalizedTrackInfo = normalizeTrackInfo(id3TagJson);
@@ -330,12 +330,12 @@ export class BearTunesTagger {
 
       const trackArtists = buildArtistArray(trackEntry.artists
         .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Artist)
-        .map((x: BeatportSearchResultArtistInfo) => x.artist_name)
+        .map((x: BeatportSearchResultArtistInfo) => x.artist_name),
       );
 
       const trackRemixers = buildArtistArray(trackEntry.artists
         .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Remixer)
-        .map((x: BeatportSearchResultArtistInfo) => x.artist_name)
+        .map((x: BeatportSearchResultArtistInfo) => x.artist_name),
       );
 
       const trackReleased = new Date(trackEntry.release_date);
@@ -519,7 +519,7 @@ export class BearTunesTagger {
 
     try {
       const filename = await downloadImage(imageUrl, {
-        referer: sourcePageUrl
+        referer: sourcePageUrl,
       });
 
       if (verbose) {
@@ -695,14 +695,14 @@ export class BearTunesTagger {
           '--remove-all-images',
         ],
         `All picture blocks of ID3v${ID3Version.ID3v2_4} MP3 tag removed in "${path.basename(trackPath)}"`,
-        this.options.verbose
+        this.options.verbose,
       );
 
       BearTunesTagger.executeEyeD3Tool(
         ID3Version.ID3v2_4,
         eyeD3Options,
         `MP3 ID3v${ID3Version.ID3v2_4} tag was saved to "${trackFilename}"`,
-        this.options.verbose
+        this.options.verbose,
       );
     }
 
@@ -711,7 +711,7 @@ export class BearTunesTagger {
         ID3Version.ID3v1_1,
         eyeD3Options,
         `MP3 ID3v${ID3Version.ID3v1_1} tag was saved to "${trackFilename}"`,
-        this.options.verbose
+        this.options.verbose,
       );
     }
 
@@ -735,7 +735,7 @@ export class BearTunesTagger {
     version: ID3Version,
     options: string[],
     successMessage: string,
-    verbose = false
+    verbose = false,
   ): boolean {
     try {
       const result = executeCommandSync(
@@ -905,7 +905,7 @@ export class BearTunesTagger {
   static executeMetaflacTool(
     options: string[],
     successMessage: string,
-    verbose = false
+    verbose = false,
   ): boolean {
     try {
       const result = executeCommandSync(
