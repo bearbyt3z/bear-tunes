@@ -100,6 +100,8 @@ export default defineConfig(
       '@stylistic/comma-spacing': ['error', { before: false, after: true }],
       '@stylistic/key-spacing': ['error', { beforeColon: false, afterColon: true }],
       '@stylistic/keyword-spacing': ['error', { before: true, after: true }],
+      '@stylistic/space-infix-ops': 'error',
+      '@stylistic/space-before-blocks': ['error', 'always'],
 
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 
