@@ -38,6 +38,14 @@ import {
   ID3Version,
 } from './types.js';
 
+import {
+  normalizeTrackInfo,
+} from '#shared-types-normalizer';
+
+import {
+  trackInfoSchema,
+} from '#shared-types-schema';
+
 import type {
   BearTunesTaggerOptions,
   BeatportAlbumInfo,
@@ -218,7 +226,17 @@ export class BearTunesTagger {
           .replaceAll(/,\s*\}/g, '}') // remove trailing commas that comes from plugin pattern (text-fields)
       );
 
-      return id3TagJson as TrackInfo;
+      const normalizedTrackInfo = normalizeTrackInfo(id3TagJson);
+      const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
+
+      if (!parsedTrackInfo.success) {
+        logger.warn('Cannot validate ID3 tag output from display plugin', { error: parsedTrackInfo.error });
+        return {};
+      }
+
+      return parsedTrackInfo.data;
+
+      // return id3TagJson as TrackInfo;
     } catch (error) {
       logger.warn('Cannot parse ID3 tag output from display plugin', {error});
       return {};

@@ -40,6 +40,7 @@ export {
 } from './utils/format.js';
 export {
   tryParsePositiveInteger,
+  tryParsePositiveNumber,
   tryParseUrl,
 } from './utils/parse.js';
 export {

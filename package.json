@@ -1,6 +1,6 @@
 {
   "name": "bear-tunes",
-  "version": "0.23.6",
+  "version": "0.24.0",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./dist/main.js",
   "type": "module",
@@ -10,7 +10,9 @@
     "#renamer": "./dist/renamer/index.js",
     "#tagger": "./dist/tagger/index.js",
     "#logger": "./dist/logger/index.js",
-    "#shared-types": "./dist/shared-types.js"
+    "#shared-types": "./dist/shared-types.js",
+    "#shared-types-schema": "./dist/shared-types.schema.js",
+    "#shared-types-normalizer": "./dist/shared-types.normalizer.js"
   },
   "scripts": {
     "setup": "npx playwright install chromium",
@@ -33,7 +35,8 @@
     "playwright": "^1.58.2",
     "prompt-sync": "^4.2.0",
     "user-agents": "^1.1.669",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

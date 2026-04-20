@@ -1,15 +1,30 @@
 /**
  * Attempts to parse a value into a positive integer.
  *
- * Returns `undefined` when the input is missing, non-numeric, zero, or negative.
+ * Returns `undefined` when the input is missing, non-numeric, non-integer,
+ * zero, negative, or not finite.
  *
- * @param value - Value to parse as positive integer.
+ * @param value - Value to parse as a positive integer.
  * @returns A parsed positive integer, or `undefined` when the input is invalid.
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number | MDN: Number constructor}
  */
 export function tryParsePositiveInteger(value: string | number | undefined): number | undefined {
+  const result = tryParsePositiveNumber(value);
+  return Number.isInteger(result) ? result : undefined;
+}
+
+/**
+ * Attempts to parse a value into a positive number.
+ *
+ * Returns undefined when the input is missing, non-numeric, zero, negative, or not finite.
+ *
+ * @param value - Value to parse as a positive number.
+ * @returns A parsed positive number, or undefined when the input is invalid.
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number Number constructor}
+ */
+export function tryParsePositiveNumber(value: string | number | undefined): number | undefined {
   const result = Number(value);
-  return (Number.isInteger(result) && result > 0) ? result : undefined;
+  return (Number.isFinite(result) && result > 0) ? result : undefined;
 }
 
 /**
