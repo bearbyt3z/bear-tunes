@@ -6,6 +6,30 @@ import {
 } from '#tools';
 
 /**
+ * Sets a normalized field value on an object or removes the field when the
+ * normalized value is `undefined`.
+ *
+ * This helper is intended for object copies used during normalization, where
+ * invalid raw values should be dropped instead of preserved.
+ *
+ * @param obj - Object copy being normalized.
+ * @param key - Field name to update.
+ * @param value - Normalized field value.
+ */
+function setOrDeleteNormalizedField(
+  obj: Record<string, unknown>,
+  key: string,
+  value: unknown,
+): void {
+  if (value === undefined) {
+    delete obj[key];
+    return;
+  }
+
+  obj[key] = value;
+}
+
+/**
  * Normalizes a raw positive numeric value.
  *
  * Parses a string or number into a positive number and returns `undefined`
@@ -58,6 +82,9 @@ function normalizeUrl(value: unknown): URL | undefined {
  * Parses `trackNumber` and `trackTotal` into positive integers, and `url` and
  * `artwork` into `URL` instances.
  *
+ * Invalid raw values for normalized optional fields are removed from the
+ * returned object.
+ *
  * @param album - Raw `album` value to normalize.
  * @returns The normalized `album` object, or the original input when it cannot be normalized.
  */
@@ -66,28 +93,23 @@ function normalizeAlbumInfo(album: unknown): unknown {
     return album;
   }
 
-  const rawTrackNumber = album.trackNumber;
-  const trackNumber = normalizePositiveInteger(rawTrackNumber);
+  const normalizedAlbum: Record<string, unknown> = { ...album };
 
-  const rawTrackTotal = album.trackTotal;
-  const trackTotal = normalizePositiveInteger(rawTrackTotal);
+  setOrDeleteNormalizedField(normalizedAlbum, 'trackNumber', normalizePositiveInteger(album.trackNumber));
+  setOrDeleteNormalizedField(normalizedAlbum, 'trackTotal', normalizePositiveInteger(album.trackTotal));
+  setOrDeleteNormalizedField(normalizedAlbum, 'url', normalizeUrl(album.url));
+  setOrDeleteNormalizedField(normalizedAlbum, 'artwork', normalizeUrl(album.artwork));
 
-  const url = normalizeUrl(album.url);
-  const artwork = normalizeUrl(album.artwork);
-
-  return {
-    ...album,
-    trackNumber,
-    trackTotal,
-    url,
-    artwork,
-  };
+  return normalizedAlbum;
 }
 
 /**
  * Normalizes the `TrackInfo.publisher` object.
  *
  * Parses `url` and `logotype` fields from string values into `URL` instances.
+ *
+ * Invalid raw values for normalized optional fields are removed from the
+ * returned object.
  *
  * @param publisher - Raw `publisher` value to normalize.
  * @returns The normalized `publisher` object, or the original input when it cannot be normalized.
@@ -103,15 +125,15 @@ function normalizePublisherInfo(publisher: unknown): unknown {
     return publisher;
   }
 
-  const url = normalizeUrl(publisher.url);
-  const logotype = normalizeUrl(publisher.logotype);
-
-  return {
+  const normalizedPublisher: Record<string, unknown> = {
     ...publisher,
     name,
-    url,
-    logotype,
   };
+
+  setOrDeleteNormalizedField(normalizedPublisher, 'url', normalizeUrl(publisher.url));
+  setOrDeleteNormalizedField(normalizedPublisher, 'logotype', normalizeUrl(publisher.logotype));
+
+  return normalizedPublisher;
 }
 
 /**
@@ -128,9 +150,7 @@ function normalizeTrackDetails(details: unknown): unknown {
     return details;
   }
 
-  const rawDuration = details.duration;
-  const duration = normalizePositiveNumber(rawDuration);
-
+  const duration = normalizePositiveNumber(details.duration);
   if (duration === undefined) {
     return details;
   }
@@ -146,6 +166,9 @@ function normalizeTrackDetails(details: unknown): unknown {
  *
  * Normalizes the nested `album`, `publisher`, and `details` objects.
  *
+ * Nested fields whose normalized value is `undefined` are removed from the
+ * returned object.
+ *
  * @param trackInfo - Raw track info value to normalize.
  * @returns A normalized track info value, or the original input when it cannot be normalized.
  */
@@ -154,10 +177,11 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
     return trackInfo;
   }
 
-  return {
-    ...trackInfo,
-    album: normalizeAlbumInfo(trackInfo.album),
-    publisher: normalizePublisherInfo(trackInfo.publisher),
-    details: normalizeTrackDetails(trackInfo.details),
-  };
+  const normalizedTrackInfo: Record<string, unknown> = { ...trackInfo };
+
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'album', normalizeAlbumInfo(trackInfo.album));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'publisher', normalizePublisherInfo(trackInfo.publisher));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'details', normalizeTrackDetails(trackInfo.details));
+
+  return normalizedTrackInfo;
 }
