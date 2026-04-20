@@ -1,5 +1,3 @@
-// type definitions
-
 export interface TrackInfo {
   url?: URL,
   artists?: string[],
