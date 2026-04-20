@@ -146,7 +146,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
     logger.error(`There are no suitable files in directory: ${inputDirectory}`);
     process.exitCode = 1;
   }
-}
+};
 
 // Last-resort handlers for errors that escape normal try/catch.
 // - `unhandledRejection`: a rejected Promise with no handler.

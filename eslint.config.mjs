@@ -3,6 +3,7 @@ import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import importPlugin from 'eslint-plugin-import';
+import stylistic from '@stylistic/eslint-plugin';
 
 export default defineConfig(
   {
@@ -36,6 +37,9 @@ export default defineConfig(
       importPlugin.flatConfigs.recommended,
       importPlugin.flatConfigs.typescript,
     ],
+    plugins: {
+      '@stylistic': stylistic,
+    },
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -79,6 +83,8 @@ export default defineConfig(
       // Core stylistic rules (from `stylisticTypeChecked`, but explicitly enabled for clarity)
       '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
+
+      '@stylistic/semi': ['error', 'always'],
 
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 

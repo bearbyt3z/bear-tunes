@@ -9,7 +9,7 @@
 export {
   isSupportedArtworkFile,
   tryGetMimeTypeFromFile,
-} from './audio/artwork.js'
+} from './audio/artwork.js';
 export {
   buildArtistArray,
   buildGenreTag,
