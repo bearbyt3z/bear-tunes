@@ -1,7 +1,52 @@
 import {
   isObjectRecord,
   tryParsePositiveNumber,
+  tryParseUrl,
 } from '#tools';
+
+/**
+ * Normalizes a raw URL value into a parsed URL instance.
+ *
+ * @param value - Raw URL value to normalize.
+ * @returns Parsed URL instance, or `undefined` when the input is invalid.
+ */
+function normalizeUrl(value: unknown): URL | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  return tryParseUrl(value);
+}
+
+/**
+ * Normalizes the `TrackInfo.publisher` object.
+ *
+ * Parses `url` and `logotype` fields from string values into `URL` instances.
+ *
+ * @param publisher - Raw `publisher` value to normalize.
+ * @returns The normalized `publisher` object, or the original input when it cannot be normalized.
+ */
+function normalizePublisherInfo(publisher: unknown): unknown {
+  if (!isObjectRecord(publisher)) {
+    return publisher;
+  }
+
+  const name = publisher.name;
+
+  if (typeof name !== 'string') {
+    return publisher;
+  }
+
+  const url = normalizeUrl(publisher.url);
+  const logotype = normalizeUrl(publisher.logotype);
+
+  return {
+    ...publisher,
+    name,
+    url,
+    logotype,
+  };
+}
 
 /**
  * Normalizes the `TrackInfo.details` object.
@@ -49,6 +94,7 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
 
   return {
     ...trackInfo,
+    publisher: normalizePublisherInfo(trackInfo.publisher),
     details: normalizeTrackDetails(trackInfo.details),
   };
 }
