@@ -97,6 +97,9 @@ export default defineConfig(
       '@stylistic/object-curly-spacing': ['error', 'always'],
       '@stylistic/quotes': ['error', 'single', { avoidEscape: true }],
       '@stylistic/quote-props': ['error', 'consistent-as-needed'],
+      '@stylistic/comma-spacing': ['error', { before: false, after: true }],
+      '@stylistic/key-spacing': ['error', { beforeColon: false, afterColon: true }],
+      '@stylistic/keyword-spacing': ['error', { before: true, after: true }],
 
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 
