@@ -255,7 +255,7 @@ export class BearTunesTagger {
     try {
       data = JSON.parse(nextJSText);
     } catch(error) {
-      throw new TypeError(`Cannot parse Next.js object.`, { cause: error });
+      throw new TypeError('Cannot parse Next.js object.', { cause: error });
     }
 
     if (!isObjectRecord(data)) {

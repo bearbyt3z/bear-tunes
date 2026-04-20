@@ -95,6 +95,7 @@ export default defineConfig(
       }],
 
       '@stylistic/object-curly-spacing': ['error', 'always'],
+      '@stylistic/quotes': ['error', 'single', { avoidEscape: true }],
 
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 
