@@ -94,6 +94,8 @@ export default defineConfig(
         maxBOF: 0,
       }],
 
+      '@stylistic/object-curly-spacing': ['error', 'always'],
+
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 
       // Import ordering is intentionally not enforced for now.

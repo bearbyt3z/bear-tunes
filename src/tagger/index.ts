@@ -238,7 +238,7 @@ export class BearTunesTagger {
 
       // return id3TagJson as TrackInfo;
     } catch (error) {
-      logger.warn('Cannot parse ID3 tag output from display plugin', {error});
+      logger.warn('Cannot parse ID3 tag output from display plugin', { error });
       return {};
     }
   }
