@@ -350,7 +350,7 @@ export function buildGenreTag(genreName?: string, subgenreName?: string): string
  * @param keyString - Human-readable musical key string, for example `C Major`.
  * @returns Normalized key tag value, or `undefined` when no key is available.
  * @throws Error when the normalized key exceeds the 3-character limit of TKEY / INITIALKEY.
- * 
+ *
  * @see {@link https://mutagen-specs.readthedocs.io/en/latest/id3/id3v2.2.html | Mutagen ID3 specification}
  * @see {@link https://docs.mp3tag.de/mapping/ | Mp3tag field mappings}
  */
@@ -367,7 +367,7 @@ export function buildKeyTag(keyString?: string): string | undefined {
   if (keyTag.length > 3) {
     throw new Error(`Invalid key tag "${keyTag}": maximum length for TKEY / INITIALKEY is 3 characters.`);
   }
-    
+
   return keyTag;
 }
 

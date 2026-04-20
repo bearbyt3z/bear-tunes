@@ -204,7 +204,7 @@ export class BearTunesTagger {
     // ], {
     //   encoding: 'utf-8',
     // });
-    
+
     // Replacing eyeD3 display-plugin with a simple python script:
     const displayPluginOutput = childProcess.spawnSync('./eyed3-display-plugin.py', [
       this.options.eyeD3DisplayPluginPatternFile,

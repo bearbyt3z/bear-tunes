@@ -87,6 +87,7 @@ export default defineConfig(
       '@stylistic/semi': ['error', 'always'],
       '@stylistic/comma-dangle': ['error', 'always-multiline'],
       '@stylistic/eol-last': ['error', 'always'],
+      '@stylistic/no-trailing-spaces': 'error',
 
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 
