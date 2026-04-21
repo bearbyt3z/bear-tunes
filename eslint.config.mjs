@@ -103,6 +103,17 @@ export default defineConfig(
       '@stylistic/space-infix-ops': 'error',
       '@stylistic/space-before-blocks': ['error', 'always'],
 
+      '@stylistic/arrow-spacing': ['error', { before: true, after: true }],
+      '@stylistic/arrow-parens': ['error', 'always'],
+      '@stylistic/block-spacing': ['error', 'always'],
+      '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: true }],
+      '@stylistic/space-before-function-paren': ['error', {
+        named: 'never',
+        anonymous: 'never',
+        asyncArrow: 'always',
+        catch: 'always',
+      }],
+
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 
       // Import ordering is intentionally not enforced for now.
