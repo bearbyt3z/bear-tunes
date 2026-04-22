@@ -116,7 +116,7 @@ function normalizeUrl(value: unknown): URL | undefined {
 }
 
 /**
- * Normalizes a raw released date value.
+ * Normalizes a raw date value.
  *
  * Parses a string into a valid `Date` instance, or returns an existing valid
  * `Date` instance unchanged. Returns `undefined` when the input is not a
