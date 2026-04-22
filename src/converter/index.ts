@@ -6,7 +6,6 @@ import logger from '#logger';
 import {
   formatLocalDateToIsoDateString,
   generateRandomHexString,
-  tryParsePositiveInteger,
 } from '#tools';
 
 import {
@@ -24,6 +23,10 @@ import type {
 } from './types.js';
 
 import type { TrackInfo } from '#shared-types';
+
+import { normalizeTrackInfo } from '#shared-types-normalizer';
+
+import { trackInfoSchema } from '#shared-types-schema';
 
 // reexporting enums & types, so they will be included in the converter import
 export {
@@ -241,32 +244,31 @@ export class BearTunesConverter {
 
     const metaflacOutput = metaflacResult.stdout.toString();
     const dateTag = BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'date');
-    let year: number | undefined;
-    let released: Date | undefined;
-    if (dateTag && dateTag.length > 0) {
-      const yearMatch = dateTag.match(/\d{4}/);
-      if (yearMatch !== null && yearMatch.length > 0) {
-        year = Number(yearMatch[0]);
-        if (Number.isNaN(year)) year = undefined;
-      }
-      released = new Date(dateTag);
-    }
+    const yearMatch = dateTag?.match(/\d{4}/);
 
-    const result: TrackInfo = {
+    const rawTrackInfo = {
       artists: BearTunesConverter.extractMultiTagFromMetaflacOutput(metaflacOutput, 'artist'),
       title: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'title'),
       genre: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'genre'),
-      year,
-      released,
+      year: yearMatch?.[0],
+      released: dateTag,
       album: {
         artists: BearTunesConverter.extractMultiTagFromMetaflacOutput(metaflacOutput, 'albumartist'),
         title: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'album'),
-        trackNumber: tryParsePositiveInteger(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracknumber')),
-        trackTotal: tryParsePositiveInteger(BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracktotal')),
+        trackNumber: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracknumber'),
+        trackTotal: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracktotal'),
       },
     };
 
-    return result;
+    const normalizedTrackInfo = normalizeTrackInfo(rawTrackInfo);
+    const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
+
+    if (!parsedTrackInfo.success) {
+      logger.warn('Cannot validate FLAC tag output from metaflac', { error: parsedTrackInfo.error, flacFilePath });
+      return {};
+    }
+
+    return parsedTrackInfo.data;
   }
 
   static extractSingleTagFromMetaflacOutput(metaflacOutput: string, tagName: string): string | undefined {
