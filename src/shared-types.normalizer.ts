@@ -110,6 +110,29 @@ function normalizeUrl(value: unknown): URL | undefined {
 }
 
 /**
+ * Normalizes a raw released date value.
+ *
+ * Parses a string into a valid `Date` instance, or returns an existing valid
+ * `Date` instance unchanged. Returns `undefined` when the input is not a
+ * string, not a `Date`, or cannot be parsed into a valid date.
+ *
+ * @param value - Raw value to normalize.
+ * @returns Parsed `Date` instance, or `undefined` when the input is invalid.
+ */
+function normalizeDate(value: unknown): Date | undefined {
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  } else if (value instanceof Date && !isNaN(value.getTime())) {
+    return value;
+  }
+
+  return undefined;
+}
+
+/**
  * Normalizes top-level TrackInfo string fields.
  */
 function normalizeTopLevelStrings(trackInfo: Record<string, unknown>): void {
@@ -137,6 +160,13 @@ function normalizeTopLevelNumbers(trackInfo: Record<string, unknown>): void {
 function normalizeTopLevelUrls(trackInfo: Record<string, unknown>): void {
   setOrDeleteNormalizedField(trackInfo, 'url', normalizeUrl(trackInfo.url));
   setOrDeleteNormalizedField(trackInfo, 'waveform', normalizeUrl(trackInfo.waveform));
+}
+
+/**
+ * Normalizes top-level TrackInfo date fields.
+ */
+function normalizeTopLevelDate(trackInfo: Record<string, unknown>): void {
+  setOrDeleteNormalizedField(trackInfo, 'released', normalizeDate(trackInfo.released));
 }
 
 /**
@@ -245,6 +275,7 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
   normalizeTopLevelStrings(normalizedTrackInfo);
   normalizeTopLevelNumbers(normalizedTrackInfo);
   normalizeTopLevelUrls(normalizedTrackInfo);
+  normalizeTopLevelDate(normalizedTrackInfo);
 
   setOrDeleteNormalizedField(normalizedTrackInfo, 'album', normalizeAlbumInfo(trackInfo.album));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'publisher', normalizePublisherInfo(trackInfo.publisher));

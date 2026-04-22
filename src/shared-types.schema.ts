@@ -15,6 +15,7 @@ export const trackInfoSchema = z.looseObject({
   waveform: z.instanceof(URL).optional(),
   year: z.number().int().positive().optional(),
   bpm: z.number().positive().optional(),
+  released: z.instanceof(Date).optional(),
 
   details: z.looseObject({
     duration: z.number().positive(),
