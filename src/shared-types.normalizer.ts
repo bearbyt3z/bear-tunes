@@ -45,6 +45,14 @@ function normalizeString(value: unknown): string | undefined {
 }
 
 /**
+ * Normalizes top-level TrackInfo URL fields.
+ */
+function normalizeTopLevelUrls(trackInfo: Record<string, unknown>): void {
+  setOrDeleteNormalizedField(trackInfo, 'url', normalizeUrl(trackInfo.url));
+  setOrDeleteNormalizedField(trackInfo, 'waveform', normalizeUrl(trackInfo.waveform));
+}
+
+/**
  * Normalizes a raw string array value.
  *
  * Trims each string element and filters out empty strings. Returns `undefined`
@@ -227,6 +235,7 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
   const normalizedTrackInfo: Record<string, unknown> = { ...trackInfo };
 
   normalizeTopLevelStrings(normalizedTrackInfo);
+  normalizeTopLevelUrls(normalizedTrackInfo);
 
   setOrDeleteNormalizedField(normalizedTrackInfo, 'album', normalizeAlbumInfo(trackInfo.album));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'publisher', normalizePublisherInfo(trackInfo.publisher));

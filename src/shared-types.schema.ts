@@ -11,6 +11,8 @@ export const trackInfoSchema = z.looseObject({
   ufid: z.string().optional(),
   artists: z.array(z.string()).optional(),
   remixers: z.array(z.string()).optional(),
+  url: z.instanceof(URL).optional(),
+  waveform: z.instanceof(URL).optional(),
 
   details: z.looseObject({
     duration: z.number().positive(),
