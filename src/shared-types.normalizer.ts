@@ -33,6 +33,9 @@ function setOrDeleteNormalizedField(
  * Normalizes a raw string value.
  *
  * Trims whitespace and returns `undefined` for empty strings after trimming.
+ *
+ * @param value - Raw value to normalize.
+ * @returns Trimmed string, or `undefined` when the input is invalid.
  */
 function normalizeString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
@@ -49,6 +52,9 @@ function normalizeString(value: unknown): string | undefined {
  *
  * Trims each string element and filters out empty strings. Returns `undefined`
  * when the input is not an array or the normalized array is empty.
+ *
+ * @param value - Raw value to normalize.
+ * @returns Array of trimmed strings, or `undefined` when the input is invalid.
  */
 function normalizeStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) {
@@ -134,6 +140,8 @@ function normalizeDate(value: unknown): Date | undefined {
 
 /**
  * Normalizes top-level TrackInfo string fields.
+ *
+ * @param trackInfo - Object copy being normalized.
  */
 function normalizeTopLevelStrings(trackInfo: Record<string, unknown>): void {
   setOrDeleteNormalizedField(trackInfo, 'title', normalizeString(trackInfo.title));
@@ -148,6 +156,8 @@ function normalizeTopLevelStrings(trackInfo: Record<string, unknown>): void {
 
 /**
  * Normalizes top-level TrackInfo numeric fields.
+ *
+ * @param trackInfo - Object copy being normalized.
  */
 function normalizeTopLevelNumbers(trackInfo: Record<string, unknown>): void {
   setOrDeleteNormalizedField(trackInfo, 'year', normalizePositiveInteger(trackInfo.year));
@@ -156,6 +166,8 @@ function normalizeTopLevelNumbers(trackInfo: Record<string, unknown>): void {
 
 /**
  * Normalizes top-level TrackInfo URL fields.
+ *
+ * @param trackInfo - Object copy being normalized.
  */
 function normalizeTopLevelUrls(trackInfo: Record<string, unknown>): void {
   setOrDeleteNormalizedField(trackInfo, 'url', normalizeUrl(trackInfo.url));
@@ -164,6 +176,8 @@ function normalizeTopLevelUrls(trackInfo: Record<string, unknown>): void {
 
 /**
  * Normalizes top-level TrackInfo date fields.
+ *
+ * @param trackInfo - Object copy being normalized.
  */
 function normalizeTopLevelDate(trackInfo: Record<string, unknown>): void {
   setOrDeleteNormalizedField(trackInfo, 'released', normalizeDate(trackInfo.released));
