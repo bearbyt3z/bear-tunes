@@ -4,6 +4,12 @@ import * as path from 'node:path';
 
 import logger from '#logger';
 import {
+  normalizeTrackInfo,
+} from '#shared-types-normalizer';
+import {
+  trackInfoSchema,
+} from '#shared-types-schema';
+import {
   formatLocalDateToIsoDateString,
   generateRandomHexString,
 } from '#tools';
@@ -17,16 +23,13 @@ import {
 } from './types.js';
 
 import type {
+  TrackInfo,
+} from '#shared-types';
+import type {
   BearTunesConverterOptions,
   BearTunesConverterResult,
   FlacImageBlockExport,
 } from './types.js';
-
-import type { TrackInfo } from '#shared-types';
-
-import { normalizeTrackInfo } from '#shared-types-normalizer';
-
-import { trackInfoSchema } from '#shared-types-schema';
 
 // reexporting enums & types, so they will be included in the converter import
 export {
