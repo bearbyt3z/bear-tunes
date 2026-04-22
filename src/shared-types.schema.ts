@@ -13,6 +13,8 @@ export const trackInfoSchema = z.looseObject({
   remixers: z.array(z.string()).optional(),
   url: z.instanceof(URL).optional(),
   waveform: z.instanceof(URL).optional(),
+  year: z.number().int().positive().optional(),
+  bpm: z.number().positive().optional(),
 
   details: z.looseObject({
     duration: z.number().positive(),

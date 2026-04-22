@@ -45,14 +45,6 @@ function normalizeString(value: unknown): string | undefined {
 }
 
 /**
- * Normalizes top-level TrackInfo URL fields.
- */
-function normalizeTopLevelUrls(trackInfo: Record<string, unknown>): void {
-  setOrDeleteNormalizedField(trackInfo, 'url', normalizeUrl(trackInfo.url));
-  setOrDeleteNormalizedField(trackInfo, 'waveform', normalizeUrl(trackInfo.waveform));
-}
-
-/**
  * Normalizes a raw string array value.
  *
  * Trims each string element and filters out empty strings. Returns `undefined`
@@ -68,20 +60,6 @@ function normalizeStringArray(value: unknown): string[] | undefined {
     .filter((item): item is string => item !== undefined);
 
     return normalized.length > 0 ? normalized : undefined;
-}
-
-/**
- * Normalizes top-level TrackInfo string fields.
- */
-function normalizeTopLevelStrings(trackInfo: Record<string, unknown>): void {
-  setOrDeleteNormalizedField(trackInfo, 'title', normalizeString(trackInfo.title));
-  setOrDeleteNormalizedField(trackInfo, 'genre', normalizeString(trackInfo.genre));
-  setOrDeleteNormalizedField(trackInfo, 'key', normalizeString(trackInfo.key));
-  setOrDeleteNormalizedField(trackInfo, 'isrc', normalizeString(trackInfo.isrc));
-  setOrDeleteNormalizedField(trackInfo, 'ufid', normalizeString(trackInfo.ufid));
-
-  setOrDeleteNormalizedField(trackInfo, 'artists', normalizeStringArray(trackInfo.artists));
-  setOrDeleteNormalizedField(trackInfo, 'remixers', normalizeStringArray(trackInfo.remixers));
 }
 
 /**
@@ -129,6 +107,36 @@ function normalizeUrl(value: unknown): URL | undefined {
   }
 
   return tryParseUrl(value);
+}
+
+/**
+ * Normalizes top-level TrackInfo string fields.
+ */
+function normalizeTopLevelStrings(trackInfo: Record<string, unknown>): void {
+  setOrDeleteNormalizedField(trackInfo, 'title', normalizeString(trackInfo.title));
+  setOrDeleteNormalizedField(trackInfo, 'genre', normalizeString(trackInfo.genre));
+  setOrDeleteNormalizedField(trackInfo, 'key', normalizeString(trackInfo.key));
+  setOrDeleteNormalizedField(trackInfo, 'isrc', normalizeString(trackInfo.isrc));
+  setOrDeleteNormalizedField(trackInfo, 'ufid', normalizeString(trackInfo.ufid));
+
+  setOrDeleteNormalizedField(trackInfo, 'artists', normalizeStringArray(trackInfo.artists));
+  setOrDeleteNormalizedField(trackInfo, 'remixers', normalizeStringArray(trackInfo.remixers));
+}
+
+/**
+ * Normalizes top-level TrackInfo numeric fields.
+ */
+function normalizeTopLevelNumbers(trackInfo: Record<string, unknown>): void {
+  setOrDeleteNormalizedField(trackInfo, 'year', normalizePositiveInteger(trackInfo.year));
+  setOrDeleteNormalizedField(trackInfo, 'bpm', normalizePositiveNumber(trackInfo.bpm));
+}
+
+/**
+ * Normalizes top-level TrackInfo URL fields.
+ */
+function normalizeTopLevelUrls(trackInfo: Record<string, unknown>): void {
+  setOrDeleteNormalizedField(trackInfo, 'url', normalizeUrl(trackInfo.url));
+  setOrDeleteNormalizedField(trackInfo, 'waveform', normalizeUrl(trackInfo.waveform));
 }
 
 /**
@@ -235,6 +243,7 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
   const normalizedTrackInfo: Record<string, unknown> = { ...trackInfo };
 
   normalizeTopLevelStrings(normalizedTrackInfo);
+  normalizeTopLevelNumbers(normalizedTrackInfo);
   normalizeTopLevelUrls(normalizedTrackInfo);
 
   setOrDeleteNormalizedField(normalizedTrackInfo, 'album', normalizeAlbumInfo(trackInfo.album));
