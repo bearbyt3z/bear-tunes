@@ -30,6 +30,53 @@ function setOrDeleteNormalizedField(
 }
 
 /**
+ * Normalizes a raw string value.
+ *
+ * Trims whitespace and returns `undefined` for empty strings after trimming.
+ */
+function normalizeString(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
+ * Normalizes a raw string array value.
+ *
+ * Trims each string element and filters out empty strings. Returns `undefined`
+ * when the input is not an array or the normalized array is empty.
+ */
+function normalizeStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const normalized = value
+    .map(normalizeString)
+    .filter((item): item is string => item !== undefined);
+
+    return normalized.length > 0 ? normalized : undefined;
+}
+
+/**
+ * Normalizes top-level TrackInfo string fields.
+ */
+function normalizeTopLevelStrings(trackInfo: Record<string, unknown>): void {
+  setOrDeleteNormalizedField(trackInfo, 'title', normalizeString(trackInfo.title));
+  setOrDeleteNormalizedField(trackInfo, 'genre', normalizeString(trackInfo.genre));
+  setOrDeleteNormalizedField(trackInfo, 'key', normalizeString(trackInfo.key));
+  setOrDeleteNormalizedField(trackInfo, 'isrc', normalizeString(trackInfo.isrc));
+  setOrDeleteNormalizedField(trackInfo, 'ufid', normalizeString(trackInfo.ufid));
+
+  setOrDeleteNormalizedField(trackInfo, 'artists', normalizeStringArray(trackInfo.artists));
+  setOrDeleteNormalizedField(trackInfo, 'remixers', normalizeStringArray(trackInfo.remixers));
+}
+
+/**
  * Normalizes a raw positive numeric value.
  *
  * Parses a string or number into a positive number and returns `undefined`
@@ -178,6 +225,8 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
   }
 
   const normalizedTrackInfo: Record<string, unknown> = { ...trackInfo };
+
+  normalizeTopLevelStrings(normalizedTrackInfo);
 
   setOrDeleteNormalizedField(normalizedTrackInfo, 'album', normalizeAlbumInfo(trackInfo.album));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'publisher', normalizePublisherInfo(trackInfo.publisher));
