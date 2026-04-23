@@ -11,8 +11,8 @@ export interface TrackInfo {
   isrc?: string,
   ufid?: string,
   waveform?: URL,
-  publisher?: PublisherInfo,
   album?: AlbumInfo,
+  publisher?: PublisherInfo,
   details?: TrackDetails,
 }
 

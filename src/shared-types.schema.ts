@@ -17,12 +17,6 @@ export const trackInfoSchema = z.looseObject({
   ufid: z.string().optional(),
   waveform: z.instanceof(URL).optional(),
 
-  publisher: z.looseObject({
-    name: z.string(),
-    url: z.instanceof(URL).optional(),
-    logotype: z.instanceof(URL).optional(),
-  }).optional(),
-
   album: z.looseObject({
     artists: z.array(z.string()).optional(),
     title: z.string().optional(),
@@ -31,6 +25,12 @@ export const trackInfoSchema = z.looseObject({
     trackTotal: z.number().int().positive().optional(),
     url: z.instanceof(URL).optional(),
     artwork: z.instanceof(URL).optional(),
+  }).optional(),
+
+  publisher: z.looseObject({
+    name: z.string(),
+    url: z.instanceof(URL).optional(),
+    logotype: z.instanceof(URL).optional(),
   }).optional(),
 
   details: z.looseObject({
