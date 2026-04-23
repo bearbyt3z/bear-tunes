@@ -202,8 +202,13 @@ function normalizeAlbumInfo(album: unknown): unknown {
 
   const normalizedAlbum: Record<string, unknown> = { ...album };
 
+  setOrDeleteNormalizedField(normalizedAlbum, 'artists', normalizeStringArray(album.artists));
+  setOrDeleteNormalizedField(normalizedAlbum, 'title', normalizeString(album.title));
+  setOrDeleteNormalizedField(normalizedAlbum, 'catalogNumber', normalizeString(album.catalogNumber));
+
   setOrDeleteNormalizedField(normalizedAlbum, 'trackNumber', normalizePositiveInteger(album.trackNumber));
   setOrDeleteNormalizedField(normalizedAlbum, 'trackTotal', normalizePositiveInteger(album.trackTotal));
+
   setOrDeleteNormalizedField(normalizedAlbum, 'url', normalizeUrl(album.url));
   setOrDeleteNormalizedField(normalizedAlbum, 'artwork', normalizeUrl(album.artwork));
 
