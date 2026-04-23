@@ -139,51 +139,6 @@ function normalizeDate(value: unknown): Date | undefined {
 }
 
 /**
- * Normalizes top-level TrackInfo string fields.
- *
- * @param trackInfo - Object copy being normalized.
- */
-function normalizeTopLevelStrings(trackInfo: Record<string, unknown>): void {
-  setOrDeleteNormalizedField(trackInfo, 'title', normalizeString(trackInfo.title));
-  setOrDeleteNormalizedField(trackInfo, 'genre', normalizeString(trackInfo.genre));
-  setOrDeleteNormalizedField(trackInfo, 'key', normalizeString(trackInfo.key));
-  setOrDeleteNormalizedField(trackInfo, 'isrc', normalizeString(trackInfo.isrc));
-  setOrDeleteNormalizedField(trackInfo, 'ufid', normalizeString(trackInfo.ufid));
-
-  setOrDeleteNormalizedField(trackInfo, 'artists', normalizeStringArray(trackInfo.artists));
-  setOrDeleteNormalizedField(trackInfo, 'remixers', normalizeStringArray(trackInfo.remixers));
-}
-
-/**
- * Normalizes top-level TrackInfo numeric fields.
- *
- * @param trackInfo - Object copy being normalized.
- */
-function normalizeTopLevelNumbers(trackInfo: Record<string, unknown>): void {
-  setOrDeleteNormalizedField(trackInfo, 'year', normalizePositiveInteger(trackInfo.year));
-  setOrDeleteNormalizedField(trackInfo, 'bpm', normalizePositiveNumber(trackInfo.bpm));
-}
-
-/**
- * Normalizes top-level TrackInfo URL fields.
- *
- * @param trackInfo - Object copy being normalized.
- */
-function normalizeTopLevelUrls(trackInfo: Record<string, unknown>): void {
-  setOrDeleteNormalizedField(trackInfo, 'url', normalizeUrl(trackInfo.url));
-  setOrDeleteNormalizedField(trackInfo, 'waveform', normalizeUrl(trackInfo.waveform));
-}
-
-/**
- * Normalizes top-level TrackInfo date fields.
- *
- * @param trackInfo - Object copy being normalized.
- */
-function normalizeTopLevelDate(trackInfo: Record<string, unknown>): void {
-  setOrDeleteNormalizedField(trackInfo, 'released', normalizeDate(trackInfo.released));
-}
-
-/**
  * Normalizes the `TrackInfo.album` object.
  *
  * Parses `trackNumber` and `trackTotal` into positive integers, and `url` and
@@ -276,10 +231,10 @@ function normalizeTrackDetails(details: unknown): unknown {
 /**
  * Normalizes a raw `TrackInfo`-like input before schema validation.
  *
- * Normalizes the nested `album`, `publisher`, and `details` objects.
+ * Normalizes all top-level fields in interface order plus nested `album`,
+ * `publisher`, and `details` objects.
  *
- * Nested fields whose normalized value is `undefined` are removed from the
- * returned object.
+ * Invalid or unnormalized fields are removed from the returned object.
  *
  * @param trackInfo - Raw track info value to normalize.
  * @returns A normalized track info value, or the original input when it cannot be normalized.
@@ -291,10 +246,18 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
 
   const normalizedTrackInfo: Record<string, unknown> = { ...trackInfo };
 
-  normalizeTopLevelStrings(normalizedTrackInfo);
-  normalizeTopLevelNumbers(normalizedTrackInfo);
-  normalizeTopLevelUrls(normalizedTrackInfo);
-  normalizeTopLevelDate(normalizedTrackInfo);
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'url', normalizeUrl(trackInfo.url));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'artists', normalizeStringArray(trackInfo.artists));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'title', normalizeString(trackInfo.title));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'remixers', normalizeStringArray(trackInfo.remixers));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'released', normalizeDate(trackInfo.released));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'year', normalizePositiveInteger(trackInfo.year));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'genre', normalizeString(trackInfo.genre));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'bpm', normalizePositiveNumber(trackInfo.bpm));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'key', normalizeString(trackInfo.key));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'isrc', normalizeString(trackInfo.isrc));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'ufid', normalizeString(trackInfo.ufid));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'waveform', normalizeUrl(trackInfo.waveform));
 
   setOrDeleteNormalizedField(normalizedTrackInfo, 'album', normalizeAlbumInfo(trackInfo.album));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'publisher', normalizePublisherInfo(trackInfo.publisher));
