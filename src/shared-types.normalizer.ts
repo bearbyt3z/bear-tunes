@@ -231,15 +231,15 @@ function normalizePublisherInfo(publisher: unknown): unknown {
     return publisher;
   }
 
-  const name = publisher.name;
+  const normalizedName = normalizeString(publisher.name);
 
-  if (typeof name !== 'string') {
+  if (!normalizedName) {
     return publisher;
   }
 
   const normalizedPublisher: Record<string, unknown> = {
     ...publisher,
-    name,
+    name: normalizedName,
   };
 
   setOrDeleteNormalizedField(normalizedPublisher, 'url', normalizeUrl(publisher.url));
