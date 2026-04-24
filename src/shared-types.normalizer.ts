@@ -166,6 +166,30 @@ function normalizeKey(value: unknown): string | undefined {
 }
 
 /**
+ * Normalizes a raw artist array value.
+ *
+ * Accepts either a comma-separated string or an array of strings, converts the
+ * input into an array form, applies generic string-array normalization, and
+ * removes duplicate artist names while preserving the original order.
+ *
+ * @param value - Raw artist array value to normalize.
+ * @returns Array of normalized unique artist names, or `undefined` when the input is invalid.
+ */
+function normalizeArtistArray(value: unknown): string[] | undefined {
+  const rawArtistArray = (typeof value === 'string') ? value.split(',') : value;
+
+  const normalizedArtistArray = normalizeStringArray(rawArtistArray);
+
+  if (!normalizedArtistArray) {
+    return undefined;
+  }
+
+  const uniqueArtistArray = [...new Set(normalizedArtistArray)];
+
+  return uniqueArtistArray.length > 0 ? uniqueArtistArray : undefined;
+}
+
+/**
  * Normalizes the `TrackInfo.album` object.
  *
  * Parses `trackNumber` and `trackTotal` into positive integers, and `url` and
@@ -184,7 +208,7 @@ function normalizeAlbumInfo(album: unknown): unknown {
 
   const normalizedAlbum: Record<string, unknown> = { ...album };
 
-  setOrDeleteNormalizedField(normalizedAlbum, 'artists', normalizeStringArray(album.artists));
+  setOrDeleteNormalizedField(normalizedAlbum, 'artists', normalizeArtistArray(album.artists));
   setOrDeleteNormalizedField(normalizedAlbum, 'title', normalizeString(album.title));
   setOrDeleteNormalizedField(normalizedAlbum, 'catalogNumber', normalizeString(album.catalogNumber));
 
@@ -274,9 +298,9 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
   const normalizedTrackInfo: Record<string, unknown> = { ...trackInfo };
 
   setOrDeleteNormalizedField(normalizedTrackInfo, 'url', normalizeUrl(trackInfo.url));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'artists', normalizeStringArray(trackInfo.artists));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'artists', normalizeArtistArray(trackInfo.artists));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'title', normalizeString(trackInfo.title));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'remixers', normalizeStringArray(trackInfo.remixers));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'remixers', normalizeArtistArray(trackInfo.remixers));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'released', normalizeDate(trackInfo.released));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'year', normalizePositiveInteger(trackInfo.year));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'genre', normalizeString(trackInfo.genre));
