@@ -1,4 +1,5 @@
 import {
+  buildArtistArray,
   buildKeyTag,
   isObjectRecord,
   tryParsePositiveInteger,
@@ -175,14 +176,16 @@ function normalizeKey(value: unknown): string | undefined {
  * @param value - Raw artist array value to normalize.
  * @returns Array of normalized unique artist names, or `undefined` when the input is invalid.
  */
-function normalizeArtistArray(value: unknown): string[] | undefined {
+function normalizeArtistArray(value: unknown, title?: string): string[] | undefined {
   const rawArtistArray = (typeof value === 'string') ? value.split(',') : value;
 
-  const normalizedArtistArray = normalizeStringArray(rawArtistArray);
+  const normalizedStringArray = normalizeStringArray(rawArtistArray);
 
-  if (!normalizedArtistArray) {
+  if (!normalizedStringArray) {
     return undefined;
   }
+
+  const normalizedArtistArray = buildArtistArray(normalizedStringArray, title);
 
   const uniqueArtistArray = [...new Set(normalizedArtistArray)];
 
@@ -297,9 +300,11 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
 
   const normalizedTrackInfo: Record<string, unknown> = { ...trackInfo };
 
+  const normalizedTitle = normalizeString(trackInfo.title);
+
   setOrDeleteNormalizedField(normalizedTrackInfo, 'url', normalizeUrl(trackInfo.url));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'artists', normalizeArtistArray(trackInfo.artists));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'title', normalizeString(trackInfo.title));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'artists', normalizeArtistArray(trackInfo.artists, normalizedTitle));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'title', normalizedTitle);
   setOrDeleteNormalizedField(normalizedTrackInfo, 'remixers', normalizeArtistArray(trackInfo.remixers));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'released', normalizeDate(trackInfo.released));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'year', normalizePositiveInteger(trackInfo.year));
