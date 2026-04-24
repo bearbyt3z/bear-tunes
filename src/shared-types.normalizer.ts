@@ -148,11 +148,11 @@ function normalizeDate(value: unknown): Date | undefined {
  * returned object.
  *
  * @param album - Raw `album` value to normalize.
- * @returns The normalized `album` object, or the original input when it cannot be normalized.
+ * @returns The normalized `album` object, or `undefined` when the input is invalid or cannot be normalized.
  */
 function normalizeAlbumInfo(album: unknown): unknown {
   if (!isObjectRecord(album)) {
-    return album;
+    return undefined;
   }
 
   const normalizedAlbum: Record<string, unknown> = { ...album };
