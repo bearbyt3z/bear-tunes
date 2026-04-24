@@ -179,7 +179,7 @@ function normalizeAlbumInfo(album: unknown): unknown {
  * returned object.
  *
  * @param publisher - Raw `publisher` value to normalize.
- * @returns The normalized `publisher` object, or the original input when it cannot be normalized.
+ * @returns The normalized `publisher` object, or `undefined` when the input is invalid or cannot be normalized.
  */
 function normalizePublisherInfo(publisher: unknown): unknown {
   if (!isObjectRecord(publisher)) {
@@ -210,7 +210,7 @@ function normalizePublisherInfo(publisher: unknown): unknown {
  * positive number.
  *
  * @param details - Raw `details` value to normalize.
- * @returns The normalized `details` object, or the original input when it cannot be normalized.
+ * @returns The normalized `details` object, or `undefined` when the input is invalid or cannot be normalized.
  */
 function normalizeTrackDetails(details: unknown): unknown {
   if (!isObjectRecord(details)) {
