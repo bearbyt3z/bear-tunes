@@ -15,7 +15,7 @@
   }\,
   "album": {
     "title": "%album%"\,
-    "artist": "%album-artist%"\,
+    "artists": "%album-artist%"\,
     "trackNumber": "%track%"\,
     "trackTotal": "%track-total%"
   }\,
