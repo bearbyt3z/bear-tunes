@@ -183,13 +183,13 @@ function normalizeAlbumInfo(album: unknown): unknown {
  */
 function normalizePublisherInfo(publisher: unknown): unknown {
   if (!isObjectRecord(publisher)) {
-    return publisher;
+    return undefined;
   }
 
   const normalizedName = normalizeString(publisher.name);
 
   if (!normalizedName) {
-    return publisher;
+    return undefined;
   }
 
   const normalizedPublisher: Record<string, unknown> = {
@@ -214,12 +214,12 @@ function normalizePublisherInfo(publisher: unknown): unknown {
  */
 function normalizeTrackDetails(details: unknown): unknown {
   if (!isObjectRecord(details)) {
-    return details;
+    return undefined;
   }
 
   const duration = normalizePositiveNumber(details.duration);
   if (duration === undefined) {
-    return details;
+    return undefined;
   }
 
   return {
