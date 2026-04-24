@@ -1,4 +1,5 @@
 import {
+  buildKeyTag,
   isObjectRecord,
   tryParsePositiveInteger,
   tryParsePositiveNumber,
@@ -139,6 +140,32 @@ function normalizeDate(value: unknown): Date | undefined {
 }
 
 /**
+ * Normalizes a raw musical key value.
+ *
+ * Trims the input string and converts it into the canonical key tag
+ * representation used by `TrackInfo.key`.
+ *
+ * Returns `undefined` when the input is invalid or when the key cannot be
+ * converted into a canonical key tag.
+ *
+ * @param value - Raw key value to normalize.
+ * @returns Canonical key tag string, or `undefined` when the input is invalid.
+ */
+function normalizeKey(value: unknown): string | undefined {
+  const normalizedString = normalizeString(value);
+
+  if (!normalizedString) {
+    return undefined;
+  }
+
+  try {
+    return buildKeyTag(normalizedString);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Normalizes the `TrackInfo.album` object.
  *
  * Parses `trackNumber` and `trackTotal` into positive integers, and `url` and
@@ -254,7 +281,7 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
   setOrDeleteNormalizedField(normalizedTrackInfo, 'year', normalizePositiveInteger(trackInfo.year));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'genre', normalizeString(trackInfo.genre));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'bpm', normalizePositiveNumber(trackInfo.bpm));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'key', normalizeString(trackInfo.key));
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'key', normalizeKey(trackInfo.key));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'isrc', normalizeString(trackInfo.isrc));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'ufid', normalizeString(trackInfo.ufid));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'waveform', normalizeUrl(trackInfo.waveform));
