@@ -1,6 +1,7 @@
 import {
   buildArtistArray,
   buildKeyTag,
+  buildTitle,
   isObjectRecord,
   tryParsePositiveInteger,
   tryParsePositiveNumber,
@@ -167,6 +168,28 @@ function normalizeKey(value: unknown): string | undefined {
 }
 
 /**
+ * Normalizes a raw track title value.
+ *
+ * Trims the input string, applies the shared title-normalization rules from
+ * `buildTitle()`, and returns `undefined` when the input is invalid or when the
+ * normalized title is empty.
+ *
+ * @param value - Raw title value to normalize.
+ * @returns Canonical normalized title, or `undefined` when the input is invalid.
+ */
+function normalizeTitle(value: unknown): string | undefined {
+  const normalizedString = normalizeString(value);
+
+  if (!normalizedString) {
+    return undefined;
+  }
+
+  const normalizedTitle = buildTitle(normalizedString);
+
+  return normalizedTitle || undefined;
+}
+
+/**
  * Normalizes a raw artist array value.
  *
  * Accepts either a comma-separated string or an array of strings, converts the
@@ -302,7 +325,7 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
 
   const normalizedTrackInfo: Record<string, unknown> = { ...trackInfo };
 
-  const normalizedTitle = normalizeString(trackInfo.title);
+  const normalizedTitle = normalizeTitle(trackInfo.title);
 
   setOrDeleteNormalizedField(normalizedTrackInfo, 'url', normalizeUrl(trackInfo.url));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'artists', normalizeArtistArray(trackInfo.artists, normalizedTitle));
