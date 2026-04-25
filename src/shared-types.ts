@@ -12,6 +12,10 @@
  *   (for example `feat.` / `ft.` in the title).
  * - `remixers` and `album.artists` are normalized artist arrays too, but they do not remove
  *   artists based on the track title.
+ * - `genre` and `subgenre` are stored separately in the canonical model.
+ * - When genre metadata is read from a combined string such as `Genre | Subgenre`,
+ *   the part before `|` becomes `genre` and the part after `|` becomes `subgenre`.
+ * - When no `|` separator is present, the whole normalized value is treated as `genre`.
  * - URL fields such as `url`, `waveform`, `album.url`, `album.artwork`, `publisher.url`,
  *   and `publisher.logotype` use `URL` instances in the canonical representation.
  * - `released` represents a release date value; when serialized outside runtime objects,
@@ -33,6 +37,7 @@ export interface TrackInfo {
   released?: Date,
   year?: number,
   genre?: string,
+  subgenre?: string,
   bpm?: number,
   key?: string,
   isrc?: string,

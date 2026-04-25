@@ -218,6 +218,44 @@ function normalizeArtistArray(value: unknown, title?: string): string[] | undefi
 }
 
 /**
+ * Normalizes raw genre and subgenre values into canonical `genre` and `subgenre` fields.
+ *
+ * The canonical model requires a valid main `genre` before `subgenre` can be kept.
+ * When `genre` contains the `|` separator used by genre tag builders, that split
+ * takes precedence over the standalone `subgenre` input.
+ *
+ * @param genreValue - Raw genre value to normalize.
+ * @param subgenreValue - Raw subgenre value to normalize.
+ * @returns Object containing normalized `genre` and optional `subgenre`.
+ */
+function normalizeGenreInfo(
+  genreValue: unknown,
+  subgenreValue: unknown,
+): { genre?: string, subgenre?: string } {
+  const normalizedGenreValue = normalizeString(genreValue);
+
+  if (!normalizedGenreValue) {
+    return {};
+  }
+
+  if (normalizedGenreValue.includes('|')) {
+    const [rawGenre, ...rawSubgenreParts] = normalizedGenreValue.split('|');
+
+    const genre = normalizeString(rawGenre);
+    const subgenre = normalizeString(rawSubgenreParts.join('|'));
+
+    return genre ? { genre, subgenre } : {};
+  }
+
+  const normalizedSubgenreValue = normalizeString(subgenreValue);
+
+  return {
+    genre: normalizedGenreValue,
+    subgenre: normalizedSubgenreValue,
+  };
+}
+
+/**
  * Normalizes the `TrackInfo.album` object.
  *
  * Parses `trackNumber` and `trackTotal` into positive integers, and `url` and
@@ -333,7 +371,12 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
   setOrDeleteNormalizedField(normalizedTrackInfo, 'remixers', normalizeArtistArray(trackInfo.remixers));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'released', normalizeDate(trackInfo.released));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'year', normalizePositiveInteger(trackInfo.year));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'genre', normalizeString(trackInfo.genre));
+
+  const normalizedGenreInfo = normalizeGenreInfo(trackInfo.genre, trackInfo.subgenre);
+
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'genre', normalizedGenreInfo.genre);
+  setOrDeleteNormalizedField(normalizedTrackInfo, 'subgenre', normalizedGenreInfo.subgenre);
+
   setOrDeleteNormalizedField(normalizedTrackInfo, 'bpm', normalizePositiveNumber(trackInfo.bpm));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'key', normalizeKey(trackInfo.key));
   setOrDeleteNormalizedField(normalizedTrackInfo, 'isrc', normalizeString(trackInfo.isrc));

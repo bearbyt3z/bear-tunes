@@ -420,7 +420,8 @@ export class BearTunesTagger {
 
     const bpm = tryParsePositiveInteger(trackData.bpm);
     const key = buildKeyTag(trackData.key?.name);
-    const genre = buildGenreTag(trackData.genre?.name, trackData.sub_genre?.name);
+    const genre = trackData.genre?.name?.trim();
+    const subgenre = trackData.sub_genre?.name?.trim();
 
     const duration = roundToDecimalPlaces(trackData.length_ms / 1000.0, 2);
 
@@ -443,6 +444,7 @@ export class BearTunesTagger {
       released,
       year,
       genre,
+      subgenre,
       bpm,
       key,
       isrc,
@@ -670,8 +672,9 @@ export class BearTunesTagger {
       eyeD3Options.push('--add-image', `${imagePaths.publisherLogotype}:PUBLISHER_LOGO:Publisher Logotype`); // publisher logo
     }
 
-    if (trackData.genre) {
-      eyeD3Options.push('--genre', trackData.genre);
+    const genreTag = buildGenreTag(trackData.genre, trackData.subgenre);
+    if (genreTag) {
+      eyeD3Options.push('--genre', genreTag);
     }
     if (trackData.publisher?.name) {
       eyeD3Options.push('--publisher', trackData.publisher.name);
@@ -851,8 +854,9 @@ export class BearTunesTagger {
       BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'CATALOG #', trackData.album.catalogNumber);
     }
 
-    if (trackData.genre) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'GENRE', trackData.genre);
+    const genreTag = buildGenreTag(trackData.genre, trackData.subgenre);
+    if (genreTag) {
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'GENRE', genreTag);
     }
 
     if (trackData.publisher?.name) {

@@ -11,6 +11,7 @@ export const trackInfoSchema = z.looseObject({
   released: z.instanceof(Date).optional(),
   year: z.number().int().positive().optional(),
   genre: z.string().optional(),
+  subgenre: z.string().optional(),
   bpm: z.number().positive().optional(),
   key: z.string().optional(),
   isrc: z.string().optional(),
