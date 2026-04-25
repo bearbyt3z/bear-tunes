@@ -171,10 +171,14 @@ function normalizeKey(value: unknown): string | undefined {
  *
  * Accepts either a comma-separated string or an array of strings, converts the
  * input into an array form, applies generic string-array normalization, and
- * removes duplicate artist names while preserving the original order.
+ * then delegates artist-specific normalization to `buildArtistArray()`.
+ *
+ * When `title` is provided, artists already mentioned in the featured-artist
+ * part of the title may be excluded from the returned array.
  *
  * @param value - Raw artist array value to normalize.
- * @returns Array of normalized unique artist names, or `undefined` when the input is invalid.
+ * @param title - Optional normalized track title used to filter featured artists.
+ * @returns Array of normalized artist names, or `undefined` when the input is invalid.
  */
 function normalizeArtistArray(value: unknown, title?: string): string[] | undefined {
   const rawArtistArray = (typeof value === 'string') ? value.split(',') : value;
@@ -187,9 +191,7 @@ function normalizeArtistArray(value: unknown, title?: string): string[] | undefi
 
   const normalizedArtistArray = buildArtistArray(normalizedStringArray, title);
 
-  const uniqueArtistArray = [...new Set(normalizedArtistArray)];
-
-  return uniqueArtistArray.length > 0 ? uniqueArtistArray : undefined;
+  return normalizedArtistArray.length > 0 ? normalizedArtistArray : undefined;
 }
 
 /**
