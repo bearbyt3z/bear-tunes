@@ -39,6 +39,9 @@ export {
   slugify,
 } from './utils/format.js';
 export {
+  setOrDeleteObjectField,
+} from './utils/object.js';
+export {
   tryParsePositiveInteger,
   tryParsePositiveNumber,
   tryParseUrl,

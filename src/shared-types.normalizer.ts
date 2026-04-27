@@ -12,31 +12,8 @@ import {
   buildKeyTag,
   buildTitle,
   isObjectRecord,
+  setOrDeleteObjectField,
 } from '#tools';
-
-/**
- * Sets a normalized field value on an object or removes the field when the
- * normalized value is `undefined`.
- *
- * This helper is intended for object copies used during normalization, where
- * invalid raw values should be dropped instead of preserved.
- *
- * @param obj - Object copy being normalized.
- * @param key - Field name to update.
- * @param value - Normalized field value.
- */
-function setOrDeleteNormalizedField(
-  obj: Record<string, unknown>,
-  key: string,
-  value: unknown,
-): void {
-  if (value === undefined) {
-    delete obj[key];
-    return;
-  }
-
-  obj[key] = value;
-}
 
 /**
  * Normalizes a raw musical key value.
@@ -171,15 +148,15 @@ function normalizeAlbumInfo(album: unknown): unknown {
 
   const normalizedAlbum: Record<string, unknown> = { ...album };
 
-  setOrDeleteNormalizedField(normalizedAlbum, 'artists', normalizeArtistArray(album.artists));
-  setOrDeleteNormalizedField(normalizedAlbum, 'title', normalizeString(album.title));
-  setOrDeleteNormalizedField(normalizedAlbum, 'catalogNumber', normalizeString(album.catalogNumber));
+  setOrDeleteObjectField(normalizedAlbum, 'artists', normalizeArtistArray(album.artists));
+  setOrDeleteObjectField(normalizedAlbum, 'title', normalizeString(album.title));
+  setOrDeleteObjectField(normalizedAlbum, 'catalogNumber', normalizeString(album.catalogNumber));
 
-  setOrDeleteNormalizedField(normalizedAlbum, 'trackNumber', normalizePositiveInteger(album.trackNumber));
-  setOrDeleteNormalizedField(normalizedAlbum, 'trackTotal', normalizePositiveInteger(album.trackTotal));
+  setOrDeleteObjectField(normalizedAlbum, 'trackNumber', normalizePositiveInteger(album.trackNumber));
+  setOrDeleteObjectField(normalizedAlbum, 'trackTotal', normalizePositiveInteger(album.trackTotal));
 
-  setOrDeleteNormalizedField(normalizedAlbum, 'url', normalizeUrl(album.url));
-  setOrDeleteNormalizedField(normalizedAlbum, 'artwork', normalizeUrl(album.artwork));
+  setOrDeleteObjectField(normalizedAlbum, 'url', normalizeUrl(album.url));
+  setOrDeleteObjectField(normalizedAlbum, 'artwork', normalizeUrl(album.artwork));
 
   return normalizedAlbum;
 }
@@ -211,8 +188,8 @@ function normalizePublisherInfo(publisher: unknown): unknown {
     name: normalizedName,
   };
 
-  setOrDeleteNormalizedField(normalizedPublisher, 'url', normalizeUrl(publisher.url));
-  setOrDeleteNormalizedField(normalizedPublisher, 'logotype', normalizeUrl(publisher.logotype));
+  setOrDeleteObjectField(normalizedPublisher, 'url', normalizeUrl(publisher.url));
+  setOrDeleteObjectField(normalizedPublisher, 'logotype', normalizeUrl(publisher.logotype));
 
   return normalizedPublisher;
 }
@@ -262,27 +239,27 @@ export function normalizeTrackInfo(trackInfo: unknown): unknown {
 
   const normalizedTitle = normalizeTitle(trackInfo.title);
 
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'url', normalizeUrl(trackInfo.url));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'artists', normalizeArtistArray(trackInfo.artists, normalizedTitle));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'title', normalizedTitle);
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'remixers', normalizeArtistArray(trackInfo.remixers));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'released', normalizeDate(trackInfo.released));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'year', normalizePositiveInteger(trackInfo.year));
+  setOrDeleteObjectField(normalizedTrackInfo, 'url', normalizeUrl(trackInfo.url));
+  setOrDeleteObjectField(normalizedTrackInfo, 'artists', normalizeArtistArray(trackInfo.artists, normalizedTitle));
+  setOrDeleteObjectField(normalizedTrackInfo, 'title', normalizedTitle);
+  setOrDeleteObjectField(normalizedTrackInfo, 'remixers', normalizeArtistArray(trackInfo.remixers));
+  setOrDeleteObjectField(normalizedTrackInfo, 'released', normalizeDate(trackInfo.released));
+  setOrDeleteObjectField(normalizedTrackInfo, 'year', normalizePositiveInteger(trackInfo.year));
 
   const normalizedGenreInfo = normalizeGenreInfo(trackInfo.genre, trackInfo.subgenre);
 
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'genre', normalizedGenreInfo.genre);
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'subgenre', normalizedGenreInfo.subgenre);
+  setOrDeleteObjectField(normalizedTrackInfo, 'genre', normalizedGenreInfo.genre);
+  setOrDeleteObjectField(normalizedTrackInfo, 'subgenre', normalizedGenreInfo.subgenre);
 
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'bpm', normalizePositiveNumber(trackInfo.bpm));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'key', normalizeKey(trackInfo.key));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'isrc', normalizeString(trackInfo.isrc));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'ufid', normalizeString(trackInfo.ufid));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'waveform', normalizeUrl(trackInfo.waveform));
+  setOrDeleteObjectField(normalizedTrackInfo, 'bpm', normalizePositiveNumber(trackInfo.bpm));
+  setOrDeleteObjectField(normalizedTrackInfo, 'key', normalizeKey(trackInfo.key));
+  setOrDeleteObjectField(normalizedTrackInfo, 'isrc', normalizeString(trackInfo.isrc));
+  setOrDeleteObjectField(normalizedTrackInfo, 'ufid', normalizeString(trackInfo.ufid));
+  setOrDeleteObjectField(normalizedTrackInfo, 'waveform', normalizeUrl(trackInfo.waveform));
 
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'album', normalizeAlbumInfo(trackInfo.album));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'publisher', normalizePublisherInfo(trackInfo.publisher));
-  setOrDeleteNormalizedField(normalizedTrackInfo, 'details', normalizeTrackDetails(trackInfo.details));
+  setOrDeleteObjectField(normalizedTrackInfo, 'album', normalizeAlbumInfo(trackInfo.album));
+  setOrDeleteObjectField(normalizedTrackInfo, 'publisher', normalizePublisherInfo(trackInfo.publisher));
+  setOrDeleteObjectField(normalizedTrackInfo, 'details', normalizeTrackDetails(trackInfo.details));
 
   return normalizedTrackInfo;
 }
