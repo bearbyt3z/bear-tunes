@@ -24,5 +24,9 @@ export {
 } from './string-array.js';
 
 export {
+  normalizeTrackTitle,
+} from './track-title.js';
+
+export {
   normalizeUrl,
 } from './url.js';

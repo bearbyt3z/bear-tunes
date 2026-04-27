@@ -14,8 +14,8 @@ export {
   buildArtistArray,
   buildGenreTag,
   buildKeyTag,
-  buildTitle,
   extractTrackNameKeywords,
+  sanitizeMetadataTagValue,
 } from './audio/metadata.js';
 export {
   prompt,

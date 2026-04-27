@@ -4,12 +4,14 @@ import * as path from 'node:path';
 
 import logger from '#logger';
 import {
+  normalizeTrackTitle,
+} from '#normalizer';
+import {
   arrayIntersection,
   arrayToLowerCase,
   buildArtistArray,
   buildGenreTag,
   buildKeyTag,
-  buildTitle,
   capitalize,
   downloadImage,
   escapeUnescapedColons,
@@ -26,6 +28,7 @@ import {
   replacePathForbiddenCharsInArray,
   replaceTagForbiddenChars,
   roundToDecimalPlaces,
+  sanitizeMetadataTagValue,
   secondsToTimeFormat,
   slugify,
   tryGetUrlFromFile,
@@ -326,7 +329,7 @@ export class BearTunesTagger {
     };
 
     for (const trackEntry of trackArray) {
-      const trackTitle = buildTitle(trackEntry.track_name, trackEntry.mix_name);
+      const trackTitle = normalizeTrackTitle(trackEntry.track_name, trackEntry.mix_name);
 
       const trackArtists = buildArtistArray(trackEntry.artists
         .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Artist)
@@ -401,7 +404,7 @@ export class BearTunesTagger {
   async extractTrackData(trackUrl: URL, forceRadioEdit: boolean): Promise<TrackInfo> {
     const trackData = await BearTunesTagger.extractNextJSData(trackUrl) as BeatportTrackInfo;
 
-    let title = buildTitle(trackData.name, trackData.mix_name);
+    let title = normalizeTrackTitle(trackData.name, trackData.mix_name);
 
     if (forceRadioEdit) {
       const match = title.match(/Original Mix|Extended Mix/i);
@@ -603,7 +606,7 @@ export class BearTunesTagger {
     }
     if (trackData.title) {
       // eyeD3Options.push('--title', trackData.title.replace(/^-/, '- '));
-      eyeD3Options.push('--text-frame', `TIT2:${escapeUnescapedColons(trackData.title)}`); // --title option with a parameter starting with a hyphen (-) will cause eyeD3 to report the usage error
+      eyeD3Options.push('--text-frame', `TIT2:${escapeUnescapedColons(sanitizeMetadataTagValue(trackData.title))}`); // --title option with a parameter starting with a hyphen (-) will cause eyeD3 to report the usage error
     }
     if (trackData.remixers && trackData.remixers.length > 0) {
       eyeD3Options.push('--text-frame', `TPE4:${escapeUnescapedColons(trackData.remixers.join(', '))}`); // TPE4 => REMIXEDBY
@@ -800,7 +803,7 @@ export class BearTunesTagger {
     }
 
     if (trackData.title) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'TITLE', trackData.title);
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'TITLE', sanitizeMetadataTagValue(trackData.title));
     }
 
     if (trackData.remixers && trackData.remixers.length > 0) {
