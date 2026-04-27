@@ -4,12 +4,12 @@ import {
   normalizePositiveNumber,
   normalizeString,
   normalizeStringArray,
+  normalizeTrackArtists,
   normalizeTrackTitle,
   normalizeUrl,
 } from '#normalizer';
 
 import {
-  buildArtistArray,
   buildKeyTag,
   isObjectRecord,
   setOrDeleteObjectField,
@@ -86,7 +86,7 @@ function normalizeArtistArray(value: unknown, title?: string): string[] | undefi
     return undefined;
   }
 
-  const normalizedArtistArray = buildArtistArray(normalizedStringArray, title);
+  const normalizedArtistArray = normalizeTrackArtists(normalizedStringArray, title);
 
   return normalizedArtistArray.length > 0 ? normalizedArtistArray : undefined;
 }

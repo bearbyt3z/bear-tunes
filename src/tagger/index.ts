@@ -5,11 +5,11 @@ import * as path from 'node:path';
 import logger from '#logger';
 import {
   normalizeTrackTitle,
+  normalizeTrackArtists,
 } from '#normalizer';
 import {
   arrayIntersection,
   arrayToLowerCase,
-  buildArtistArray,
   buildGenreTag,
   buildKeyTag,
   capitalize,
@@ -331,12 +331,12 @@ export class BearTunesTagger {
     for (const trackEntry of trackArray) {
       const trackTitle = normalizeTrackTitle(trackEntry.track_name, trackEntry.mix_name);
 
-      const trackArtists = buildArtistArray(trackEntry.artists
+      const trackArtists = normalizeTrackArtists(trackEntry.artists
         .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Artist)
         .map((x: BeatportSearchResultArtistInfo) => x.artist_name),
       );
 
-      const trackRemixers = buildArtistArray(trackEntry.artists
+      const trackRemixers = normalizeTrackArtists(trackEntry.artists
         .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Remixer)
         .map((x: BeatportSearchResultArtistInfo) => x.artist_name),
       );
@@ -415,8 +415,8 @@ export class BearTunesTagger {
       }
     }
 
-    const artists = buildArtistArray(trackData.artists.map((x: BeatportArtistInfo) => x.name));
-    const remixers = buildArtistArray(trackData.remixers.map((x: BeatportArtistInfo) => x.name));
+    const artists = normalizeTrackArtists(trackData.artists.map((x: BeatportArtistInfo) => x.name));
+    const remixers = normalizeTrackArtists(trackData.remixers.map((x: BeatportArtistInfo) => x.name));
 
     const released = new Date(trackData.new_release_date); // or publish_date???
     const year = tryParsePositiveInteger(released.getFullYear());
@@ -464,7 +464,7 @@ export class BearTunesTagger {
   static async extractAlbumData(albumUrl: URL, trackNumber: number): Promise<AlbumInfo> {
     const albumData = await BearTunesTagger.extractNextJSData(albumUrl) as BeatportAlbumInfo;
 
-    const artists = buildArtistArray(albumData.artists.map((x: BeatportArtistInfo) => x.name));
+    const artists = normalizeTrackArtists(albumData.artists.map((x: BeatportArtistInfo) => x.name));
     const title = replaceTagForbiddenChars(albumData.name);
     const catalogNumber = albumData.catalog_number;
     const trackTotal = tryParsePositiveInteger(albumData.track_count);
@@ -601,7 +601,7 @@ export class BearTunesTagger {
     ];
 
     if (trackData.artists && trackData.artists.length > 0) {
-      eyeD3Options.push('--artist', trackData.artists.join(', '));
+      eyeD3Options.push('--artist', sanitizeMetadataTagValue(trackData.artists.join(', ')));
       // '--artist', trackData.artists.replace('ø', 'o'),
     }
     if (trackData.title) {
@@ -609,14 +609,14 @@ export class BearTunesTagger {
       eyeD3Options.push('--text-frame', `TIT2:${escapeUnescapedColons(sanitizeMetadataTagValue(trackData.title))}`); // --title option with a parameter starting with a hyphen (-) will cause eyeD3 to report the usage error
     }
     if (trackData.remixers && trackData.remixers.length > 0) {
-      eyeD3Options.push('--text-frame', `TPE4:${escapeUnescapedColons(trackData.remixers.join(', '))}`); // TPE4 => REMIXEDBY
+      eyeD3Options.push('--text-frame', `TPE4:${escapeUnescapedColons(sanitizeMetadataTagValue(trackData.remixers.join(', ')))}`); // TPE4 => REMIXEDBY
     }
     if (trackData.album?.title) {
       // eyeD3Options.push('--album', trackData.album.title.replace(/^-/, '- '));
       eyeD3Options.push('--text-frame', `TALB:${escapeUnescapedColons(trackData.album.title)}`); // the same as with --title
     }
     if (trackData.album?.artists && trackData.album.artists.length > 0) {
-      eyeD3Options.push('--album-artist', trackData.album.artists.join(', '));
+      eyeD3Options.push('--album-artist', sanitizeMetadataTagValue(trackData.album.artists.join(', ')));
     }
     if (trackData.album?.trackNumber) {
       let albumNumbers = trackData.album.trackNumber.toString();
@@ -799,7 +799,7 @@ export class BearTunesTagger {
     ];
 
     if (trackData.artists && trackData.artists.length > 0) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ARTIST', trackData.artists.join(', '));
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ARTIST', sanitizeMetadataTagValue(trackData.artists.join(', ')));
     }
 
     if (trackData.title) {
@@ -807,7 +807,7 @@ export class BearTunesTagger {
     }
 
     if (trackData.remixers && trackData.remixers.length > 0) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'REMIXED BY', trackData.remixers.join(', '));
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'REMIXED BY', sanitizeMetadataTagValue(trackData.remixers.join(', ')));
     }
 
     if (trackData.album?.title) {
@@ -815,7 +815,7 @@ export class BearTunesTagger {
     }
 
     if (trackData.album?.artists && trackData.album.artists.length > 0) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ALBUMARTIST', trackData.album.artists.join(', '));
+      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ALBUMARTIST', sanitizeMetadataTagValue(trackData.album.artists.join(', ')));
     }
 
     if (trackData.album?.trackNumber) {

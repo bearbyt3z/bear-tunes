@@ -24,6 +24,10 @@ export {
 } from './string-array.js';
 
 export {
+  normalizeTrackArtists,
+} from './track-artists.js';
+
+export {
   normalizeTrackTitle,
 } from './track-title.js';
 

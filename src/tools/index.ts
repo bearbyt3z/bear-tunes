@@ -11,7 +11,6 @@ export {
   tryGetMimeTypeFromFile,
 } from './audio/artwork.js';
 export {
-  buildArtistArray,
   buildGenreTag,
   buildKeyTag,
   extractTrackNameKeywords,
