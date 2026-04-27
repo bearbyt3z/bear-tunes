@@ -1,6 +1,6 @@
 {
   "name": "bear-tunes",
-  "version": "0.25.6",
+  "version": "0.25.7",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./dist/main.js",
   "type": "module",
@@ -10,6 +10,7 @@
     "#renamer": "./dist/renamer/index.js",
     "#tagger": "./dist/tagger/index.js",
     "#logger": "./dist/logger/index.js",
+    "#normalizer": "./dist/normalizer/index.js",
     "#shared-types": "./dist/shared-types.js",
     "#shared-types-schema": "./dist/shared-types.schema.js",
     "#shared-types-normalizer": "./dist/shared-types.normalizer.js"
