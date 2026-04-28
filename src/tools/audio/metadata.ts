@@ -1,7 +1,23 @@
 import {
-  replaceTagForbiddenChars,
-} from '../utils/string.js';
-import { isReadonlyStringArray } from '../utils/type-guards.js';
+  isReadonlyStringArray,
+} from '../utils/type-guards.js';
+
+/**
+ * Normalizes text values used in audio metadata fields.
+ *
+ * This helper standardizes selected typographic characters so metadata written
+ * from different sources stays more consistent across tags.
+ *
+ * @param value - Metadata text value to normalize.
+ * @returns Metadata text with selected characters normalized.
+ */
+export function normalizeMetadataText(value: string): string {
+  return value
+    // normalize grave and right single quotation mark to ASCII apostrophe
+    .replaceAll(/[`’]/g, '\'')
+    // normalize en dash and em dash to ASCII hyphen-minus
+    .replaceAll(/[–—]/g, '-');
+}
 
 /**
  * Transforms a text value into a metadata-safe form for audio tags.
@@ -13,7 +29,7 @@ import { isReadonlyStringArray } from '../utils/type-guards.js';
  * @returns Text value transformed into a metadata-safe form.
  */
 export function sanitizeMetadataTagValue(value: string): string {
-  return replaceTagForbiddenChars(value);
+  return normalizeMetadataText(value);
 }
 
 /**
@@ -96,7 +112,7 @@ export function buildKeyTag(keyString?: string): string | undefined {
 export function extractTrackNameKeywords(trackName: string | readonly string[]): string[] {
   const joinedTrackName = isReadonlyStringArray(trackName) ? trackName.join(' ') : trackName;
 
-  const normalizedTrackName = replaceTagForbiddenChars(
+  const normalizedTrackName = normalizeMetadataText(
     joinedTrackName
       // remove a track number prefix at the beginning or after a separated title segment
       .replace(/(^|(\s+-\s+))\d+\s*[-.]\s+/, ' ')

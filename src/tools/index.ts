@@ -14,6 +14,7 @@ export {
   buildGenreTag,
   buildKeyTag,
   extractTrackNameKeywords,
+  normalizeMetadataText,
   sanitizeMetadataTagValue,
 } from './audio/metadata.js';
 export {
@@ -58,7 +59,6 @@ export {
   escapeUnescapedColons,
   replacePathForbiddenChars,
   replacePathForbiddenCharsInArray,
-  replaceTagForbiddenChars,
 } from './utils/string.js';
 export {
   isEmptyPlainObject,

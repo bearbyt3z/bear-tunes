@@ -23,10 +23,10 @@ import {
   isObjectRecord,
   isSupportedArtworkFile,
   isUnknownArray,
+  normalizeMetadataText,
   prompt,
   removeFilenameExtension,
   replacePathForbiddenCharsInArray,
-  replaceTagForbiddenChars,
   roundToDecimalPlaces,
   sanitizeMetadataTagValue,
   secondsToTimeFormat,
@@ -465,7 +465,7 @@ export class BearTunesTagger {
     const albumData = await BearTunesTagger.extractNextJSData(albumUrl) as BeatportAlbumInfo;
 
     const artists = normalizeTrackArtists(albumData.artists.map((x: BeatportArtistInfo) => x.name));
-    const title = replaceTagForbiddenChars(albumData.name);
+    const title = normalizeMetadataText(albumData.name);
     const catalogNumber = albumData.catalog_number;
     const trackTotal = tryParsePositiveInteger(albumData.track_count);
     const artwork = tryParseUrl(albumData.image?.uri);

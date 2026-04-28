@@ -87,17 +87,3 @@ export function replacePathForbiddenChars(value: string): string {
 export function replacePathForbiddenCharsInArray(stringArray: readonly string[]): string[] {
   return stringArray.map((str) => replacePathForbiddenChars(str));
 }
-
-/**
- * Replaces problematic characters in audio tags with standardized equivalents.
- *
- * Intended as an expandable helper for cleaning metadata from various sources.
- *
- * @param str - String containing potentially problematic tag characters.
- * @returns A new string with problematic characters normalized.
- */
-export function replaceTagForbiddenChars(str: string): string {
-  return str
-    .replaceAll(/[`’]/g, '\'') // replace weird apostrophes with the standard one: '
-    .replaceAll(/[–—]/g, '-'); // replace en dash & em dash with the hyphen: -
-}
