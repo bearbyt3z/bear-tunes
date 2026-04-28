@@ -16,16 +16,13 @@ import {
 } from '#tools';
 
 /**
- * Normalizes a raw musical key value.
- *
- * Trims the input string and converts it into the canonical key tag
- * representation used by `TrackInfo.key`.
+ * Normalizes a raw track key value into the canonical representation used by `TrackInfo.key`.
  *
  * Returns `undefined` when the input is invalid or when the key cannot be
- * converted into a canonical key tag.
+ * converted into a valid canonical track key.
  *
  * @param value - Raw key value to normalize.
- * @returns Canonical key tag string, or `undefined` when the input is invalid.
+ * @returns Canonical normalized track key, or `undefined` when the input is invalid.
  */
 function normalizeKey(value: unknown): string | undefined {
   const normalizedString = normalizeString(value);
@@ -34,11 +31,7 @@ function normalizeKey(value: unknown): string | undefined {
     return undefined;
   }
 
-  try {
-    return normalizeTrackKey(normalizedString);
-  } catch {
-    return undefined;
-  }
+  return normalizeTrackKey(normalizedString);
 }
 
 /**
