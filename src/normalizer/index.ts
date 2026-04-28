@@ -17,6 +17,7 @@ export {
 
 export {
   normalizeString,
+  normalizeTextCharacters,
 } from './string.js';
 
 export {

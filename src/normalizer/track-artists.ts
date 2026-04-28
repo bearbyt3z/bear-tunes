@@ -1,4 +1,8 @@
 import {
+  normalizeTextCharacters,
+} from './string.js';
+
+import {
   escapeRegExpChars,
 } from '#tools';
 
@@ -40,18 +44,19 @@ function isCombinedArtistEntry(artist: string, artistArray: readonly string[]): 
 }
 
 /**
- * Builds a normalized artist list for tag writing.
+ * Builds a canonical normalized artist list from raw artist names.
  *
  * @param artistArray - Source artist names read from metadata or an external service.
  * Empty, blank, and duplicated values are removed from the returned list.
  *
- * @param title - Optional track title used to detect artists mentioned after the
- * `feat` or `ft` marker. When an artist appears in that part of the title, the
- * artist is excluded from the returned list to avoid duplicating the same artist
- * in both the main artist tag and the featured-artist part of the title.
+ * @param title - Optional normalized track title used to detect artists mentioned
+ * after the `feat` or `ft` marker. When an artist appears in that part of the
+ * title, the artist is excluded from the returned list to avoid duplicating the
+ * same artist in both the main `artists` field and the featured-artist part of
+ * the title.
  *
- * @returns A deduplicated array of normalized artist names with tag-forbidden
- * characters replaced. Returns an empty array when no artist information is provided.
+ * @returns A deduplicated array of canonical normalized artist names. Returns an
+ * empty array when no artist information is provided.
  *
  * @remarks
  * This function intentionally uses a heuristic instead of trying to fully parse
@@ -70,8 +75,9 @@ function isCombinedArtistEntry(artist: string, artistArray: readonly string[]): 
  * intended to handle malformed API data without trying to parse every possible
  * artist-list format.
  *
- * Artist names are trimmed before processing. Blank names are ignored, and the
- * final output is deduplicated while preserving the first surviving occurrence.
+ * Artist names are trimmed before processing, selected text characters are
+ * normalized, and the final output is deduplicated while preserving the first
+ * surviving occurrence.
  */
 export function normalizeTrackArtists(artistArray: readonly string[] | null, title?: string): string[] {
   if (!artistArray) return [];
@@ -92,7 +98,7 @@ export function normalizeTrackArtists(artistArray: readonly string[] | null, tit
     const isFeaturedInTitle = !!normalizedTitle && featuredArtistPattern.test(normalizedTitle);
 
     if (!isFeaturedInTitle) {
-      result.push(normalizedArtist);
+      result.push(normalizeTextCharacters(normalizedArtist));
     }
   }
 
