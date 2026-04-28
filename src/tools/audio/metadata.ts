@@ -1,37 +1,3 @@
-import {
-  isReadonlyStringArray,
-} from '../utils/type-guards.js';
-
-/**
- * Normalizes text values used in audio metadata fields.
- *
- * This helper standardizes selected typographic characters so metadata written
- * from different sources stays more consistent across tags.
- *
- * @param value - Metadata text value to normalize.
- * @returns Metadata text with selected characters normalized.
- */
-export function normalizeMetadataText(value: string): string {
-  return value
-    // normalize grave and right single quotation mark to ASCII apostrophe
-    .replaceAll(/[`’]/g, '\'')
-    // normalize en dash and em dash to ASCII hyphen-minus
-    .replaceAll(/[–—]/g, '-');
-}
-
-/**
- * Transforms a text value into a metadata-safe form for audio tags.
- *
- * This helper prepares text values before writing them to MP3 or FLAC metadata
- * fields.
- *
- * @param value - Text value to transform for audio metadata tags.
- * @returns Text value transformed into a metadata-safe form.
- */
-export function sanitizeMetadataTagValue(value: string): string {
-  return normalizeMetadataText(value);
-}
-
 /**
  * Builds a genre tag in the `Genre | Sub-Genre` format.
  *
@@ -92,12 +58,10 @@ export function buildKeyTag(keyString?: string): string | undefined {
 /**
  * Extracts normalized keywords from a track name.
  *
- * The function accepts either a single track name string or an array of track
- * name fragments, joins the input into one string when needed, normalizes common
- * separators and punctuation, sanitizes problematic tag characters, and returns
- * a de-duplicated array of keywords.
+ * The function normalizes common separators and punctuation in the provided
+ * track name string and returns a de-duplicated array of keywords.
  *
- * @param trackName - Track name as a single string or an array of string fragments.
+ * @param trackName - Track name as a single string.
  * @returns Array of normalized keywords, or an empty array when no keywords can
  * be extracted from the input.
  *
@@ -106,25 +70,21 @@ export function buildKeyTag(keyString?: string): string | undefined {
  * // => ['Artist', 'Title', 'Original', 'Mix']
  *
  * @example
- * extractTrackNameKeywords(['Artist', 'Title (Extended Remix)'])
+ * extractTrackNameKeywords('Artist Title (Extended Remix)')
  * // => ['Artist', 'Title', 'Extended', 'Remix']
  */
-export function extractTrackNameKeywords(trackName: string | readonly string[]): string[] {
-  const joinedTrackName = isReadonlyStringArray(trackName) ? trackName.join(' ') : trackName;
-
-  const normalizedTrackName = normalizeMetadataText(
-    joinedTrackName
-      // remove a track number prefix at the beginning or after a separated title segment
-      .replace(/(^|(\s+-\s+))\d+\s*[-.]\s+/, ' ')
-      // replace brackets and commas with a single space
-      .replaceAll(/[()[\],]/g, ' ')
-      // replace dash-like separators and ampersands surrounded by spaces with a single space
-      .replaceAll(/\s+[-–&]\s+/g, ' ')
-      // collapse repeated whitespace into a single space
-      .replaceAll(/\s{2,}/g, ' ')
-      // remove leading and trailing whitespace
-      .trim(),
-  );
+export function extractTrackNameKeywords(trackName: string): string[] {
+  const normalizedTrackName = trackName
+    // remove a track number prefix at the beginning or after a separated title segment
+    .replace(/(^|(\s+-\s+))\d+\s*[-.]\s+/, ' ')
+    // replace brackets and commas with a single space
+    .replaceAll(/[()[\],]/g, ' ')
+    // replace dash-like separators and ampersands surrounded by spaces with a single space
+    .replaceAll(/\s+[-–&]\s+/g, ' ')
+    // collapse repeated whitespace into a single space
+    .replaceAll(/\s{2,}/g, ' ')
+    // remove leading and trailing whitespace
+    .trim();
 
   if (!normalizedTrackName) {
     return [];

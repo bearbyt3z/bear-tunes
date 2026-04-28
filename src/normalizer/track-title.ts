@@ -1,4 +1,8 @@
 import {
+  normalizeTextCharacters,
+} from './string.js';
+
+import {
   capitalize,
 } from '#tools';
 
@@ -182,7 +186,8 @@ function runTitleNormalizationPipeline(title: string): string {
  * Builds a canonical normalized track title from a track name and optional mix name.
  *
  * The function trims inputs, normalizes featuring notation in the base title,
- * appends the mix name when provided, and runs the shared title normalization pipeline.
+ * appends the mix name when provided, runs the shared title normalization pipeline,
+ * and normalizes selected text characters.
  *
  * @param trackName - Base track name.
  * @param trackMixName - Optional mix/version name appended in parentheses.
@@ -207,5 +212,5 @@ export function normalizeTrackTitle(trackName?: string, trackMixName?: string): 
 
   title = runTitleNormalizationPipeline(title);
 
-  return title;
+  return normalizeTextCharacters(title);
 }
