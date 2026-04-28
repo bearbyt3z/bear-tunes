@@ -16,14 +16,16 @@
  * @see {@link https://docs.mp3tag.de/mapping/ | Mp3tag field mappings}
  */
 export function normalizeTrackKey(keyString?: string): string | undefined {
-  if (!keyString) return undefined;
+  const normalizedKeyString = keyString?.trim();
 
-  const keyTag = keyString.trim()
+  if (!normalizedKeyString) return undefined;
+
+  const keyTag = normalizedKeyString
     .replaceAll(/♭\s*/g, 'b')
     .replaceAll(/♯\s*/g, '#')
     .replace(/maj(or)?/i, '')
     .replace(/min(or)?/i, 'm')
-    .replaceAll(/\s+/g, ''); // key signatures do not contain whitespace, e.g. Cbm, G#m, B#, B
+    .replaceAll(/\s+/g, '');
 
   return keyTag.length <= 3 ? keyTag : undefined;
 }
