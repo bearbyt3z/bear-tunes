@@ -29,6 +29,10 @@ export {
 } from './track-artists.js';
 
 export {
+  normalizeTrackKey,
+} from './track-key.js';
+
+export {
   normalizeTrackTitle,
 } from './track-title.js';
 

@@ -5,14 +5,14 @@ import * as path from 'node:path';
 import logger from '#logger';
 import {
   normalizeTextCharacters,
-  normalizeTrackTitle,
   normalizeTrackArtists,
+  normalizeTrackKey,
+  normalizeTrackTitle,
 } from '#normalizer';
 import {
   arrayIntersection,
   arrayToLowerCase,
   buildGenreTag,
-  buildKeyTag,
   capitalize,
   downloadImage,
   escapeUnescapedColons,
@@ -421,7 +421,7 @@ export class BearTunesTagger {
     const year = tryParsePositiveInteger(released.getFullYear());
 
     const bpm = tryParsePositiveInteger(trackData.bpm);
-    const key = buildKeyTag(trackData.key?.name);
+    const key = normalizeTrackKey(trackData.key?.name);
     const genre = trackData.genre?.name?.trim();
     const subgenre = trackData.sub_genre?.name?.trim();
 

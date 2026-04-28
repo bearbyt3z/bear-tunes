@@ -5,12 +5,12 @@ import {
   normalizeString,
   normalizeStringArray,
   normalizeTrackArtists,
+  normalizeTrackKey,
   normalizeTrackTitle,
   normalizeUrl,
 } from '#normalizer';
 
 import {
-  buildKeyTag,
   isObjectRecord,
   setOrDeleteObjectField,
 } from '#tools';
@@ -35,7 +35,7 @@ function normalizeKey(value: unknown): string | undefined {
   }
 
   try {
-    return buildKeyTag(normalizedString);
+    return normalizeTrackKey(normalizedString);
   } catch {
     return undefined;
   }

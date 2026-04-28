@@ -12,7 +12,6 @@ export {
 } from './audio/artwork.js';
 export {
   buildGenreTag,
-  buildKeyTag,
   extractTrackNameKeywords,
 } from './audio/metadata.js';
 export {
