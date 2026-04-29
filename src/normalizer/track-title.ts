@@ -183,14 +183,14 @@ function runTitleNormalizationPipeline(title: string): string {
 }
 
 /**
- * Builds a canonical normalized track title from a track name and optional mix name.
+ * Normalizes a raw track title from a track name and optional mix name.
  *
  * The function trims inputs, normalizes featuring notation in the base title,
- * appends the mix name when provided, runs the shared title normalization pipeline,
- * and normalizes selected text characters.
+ * appends the mix name when provided, runs the shared title normalization
+ * pipeline, and normalizes typographic text characters.
  *
- * @param trackName - Base track name.
- * @param trackMixName - Optional mix/version name appended in parentheses.
+ * @param trackName - Raw base track name.
+ * @param trackMixName - Optional raw mix/version name appended in parentheses.
  * @returns Canonical normalized track title, or an empty string when the base track name is missing.
  *
  * @example
