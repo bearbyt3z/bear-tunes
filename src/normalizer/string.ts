@@ -17,18 +17,19 @@ export function normalizeString(value: unknown): string | undefined {
 }
 
 /**
- * Normalizes selected typographic characters in a text value.
+ * Normalizes typographic text characters into a canonical ASCII form.
  *
- * This helper replaces supported quote-like and dash-like characters with their
- * canonical ASCII equivalents so text from different sources stays consistent.
+ * This helper replaces supported typographic variants with plain ASCII
+ * equivalents so text from different sources stays consistent during
+ * normalization and comparison.
  *
  * @param value - Text value to normalize.
- * @returns Text with supported typographic characters normalized.
+ * @returns Text with typographic characters normalized to canonical ASCII equivalents.
  */
 export function normalizeTextCharacters(value: string): string {
   return value
-    // normalize grave and right single quotation mark to ASCII apostrophe
-    .replaceAll(/[`’]/g, '\'')
+    // normalize grave accent and single quotation marks to ASCII apostrophe
+    .replaceAll(/[`‘’]/g, '\'')
     // normalize en dash and em dash to ASCII hyphen-minus
     .replaceAll(/[–—]/g, '-');
 }
