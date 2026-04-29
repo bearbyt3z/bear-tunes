@@ -44,16 +44,15 @@ function isCombinedArtistEntry(artist: string, artistArray: readonly string[]): 
 }
 
 /**
- * Builds a canonical normalized artist list from raw artist names.
+ * Normalizes a raw track artist list.
  *
  * @param artistArray - Source artist names read from metadata or an external service.
  * Empty, blank, and duplicated values are removed from the returned list.
  *
- * @param title - Optional normalized track title used to detect artists mentioned
- * after the `feat` or `ft` marker. When an artist appears in that part of the
- * title, the artist is excluded from the returned list to avoid duplicating the
- * same artist in both the main `artists` field and the featured-artist part of
- * the title.
+ * @param title - Optional track title used to detect artists mentioned after the
+ * `feat` or `ft` marker. When an artist appears in that part of the title, the
+ * artist is excluded from the returned list to avoid duplicating the same artist
+ * in both the main `artists` field and the featured-artist part of the title.
  *
  * @returns A deduplicated array of canonical normalized artist names. Returns an
  * empty array when no artist information is provided.
@@ -75,19 +74,23 @@ function isCombinedArtistEntry(artist: string, artistArray: readonly string[]): 
  * intended to handle malformed API data without trying to parse every possible
  * artist-list format.
  *
- * Artist names are trimmed before processing, selected text characters are
- * normalized, and the final output is deduplicated while preserving the first
- * surviving occurrence.
+ * Artist names and the optional title are trimmed and normalized before
+ * featured-artist matching, and the final output is deduplicated while
+ * preserving the first surviving occurrence.
  */
 export function normalizeTrackArtists(artistArray: readonly string[] | null, title?: string): string[] {
   if (!artistArray) return [];
 
   const result: string[] = [];
-  const normalizedTitle = title?.trim();
+
+  const trimmedTitle = title?.trim();
+  const normalizedTitle = trimmedTitle ? normalizeTextCharacters(trimmedTitle) : undefined;
 
   for (const artist of artistArray) {
-    const normalizedArtist = artist?.trim();
-    if (!normalizedArtist) continue;
+    const trimmedArtist = artist?.trim();
+    if (!trimmedArtist) continue;
+
+    const normalizedArtist = normalizeTextCharacters(trimmedArtist);
 
     // Search for feat/ft before the artist name.
     const featuredArtistPattern = new RegExp(
@@ -98,7 +101,7 @@ export function normalizeTrackArtists(artistArray: readonly string[] | null, tit
     const isFeaturedInTitle = !!normalizedTitle && featuredArtistPattern.test(normalizedTitle);
 
     if (!isFeaturedInTitle) {
-      result.push(normalizeTextCharacters(normalizedArtist));
+      result.push(normalizedArtist);
     }
   }
 
