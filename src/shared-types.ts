@@ -23,7 +23,7 @@
  * - `year` and `released` may coexist and are not auto-corrected against each other.
  * - Numeric counters such as `album.trackNumber` and `album.trackTotal` are positive integers.
  * - `bpm` is a positive number.
- * - `key` uses the canonical key tag representation produced by `buildKeyTag()`.
+ * - `key` uses the canonical normalized track key representation.
  * - `publisher` is present only when it contains at least a valid normalized `name`.
  * - `details` is present only when it contains a valid positive `duration`.
  *
