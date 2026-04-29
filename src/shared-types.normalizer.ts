@@ -61,13 +61,13 @@ function normalizeTitle(value: unknown): string | undefined {
  *
  * Accepts either a comma-separated string or an array of strings, converts the
  * input into an array form, applies generic string-array normalization, and
- * then delegates artist-specific normalization to `buildArtistArray()`.
+ * then applies track-artist normalization rules.
  *
  * When `title` is provided, artists already mentioned in the featured-artist
  * part of the title may be excluded from the returned array.
  *
  * @param value - Raw artist array value to normalize.
- * @param title - Optional normalized track title used to filter featured artists.
+ * @param title - Optional track title used to filter featured artists.
  * @returns Array of normalized artist names, or `undefined` when the input is invalid.
  */
 function normalizeArtistArray(value: unknown, title?: string): string[] | undefined {
