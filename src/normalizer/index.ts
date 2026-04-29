@@ -30,6 +30,7 @@ export {
 
 export {
   normalizeTrackKey,
+  trackKeyPattern,
 } from './track-key.js';
 
 export {

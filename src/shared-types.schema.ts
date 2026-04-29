@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import {
+  trackKeyPattern,
+} from '#normalizer';
+
 /**
  * Runtime validation schema for normalized `TrackInfo` input.
  */
@@ -13,7 +17,7 @@ export const trackInfoSchema = z.looseObject({
   genre: z.string().optional(),
   subgenre: z.string().optional(),
   bpm: z.number().positive().optional(),
-  key: z.string().optional(),
+  key: z.string().regex(trackKeyPattern, 'Invalid canonical track key format').optional(),
   isrc: z.string().optional(),
   ufid: z.string().optional(),
   waveform: z.instanceof(URL).optional(),

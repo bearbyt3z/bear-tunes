@@ -1,4 +1,12 @@
 /**
+ * Canonical track key format used by `TrackInfo.key`.
+ *
+ * Accepts a note letter from `A` to `G`, an optional flat/sharp accidental,
+ * and an optional `m` suffix for minor keys.
+ */
+export const trackKeyPattern = /^[A-G](?:#|b)?m?$/;
+
+/**
  * Normalizes a raw track key value into the canonical representation used by `TrackInfo.key`.
  *
  * The returned value uses a compact key notation without whitespace, for example
@@ -27,5 +35,5 @@ export function normalizeTrackKey(keyString?: string): string | undefined {
     .replace(/min(or)?/i, 'm')
     .replaceAll(/\s+/g, '');
 
-  return keyTag.length <= 3 ? keyTag : undefined;
+  return trackKeyPattern.test(keyTag) ? keyTag : undefined;
 }
