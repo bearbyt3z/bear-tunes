@@ -44,13 +44,13 @@ function isCombinedArtistEntry(artist: string, artistArray: readonly string[]): 
 }
 
 /**
- * Normalizes a raw track artist list.
+ * Normalizes values into a canonical track artist list.
  *
- * @param artistArray - Source artist names read from metadata or an external service.
- * Empty, blank, and duplicated values are removed from the returned list.
+ * @param artistArray - Artist name values to normalize. Empty, blank, and
+ * duplicated values are removed from the returned list.
  *
- * @param title - Optional track title used to detect artists mentioned after the
- * `feat` or `ft` marker. When an artist appears in that part of the title, the
+ * @param title - Optional track title value used to detect artists mentioned after
+ * the `feat` or `ft` marker. When an artist appears in that part of the title, the
  * artist is excluded from the returned list to avoid duplicating the same artist
  * in both the main `artists` field and the featured-artist part of the title.
  *
@@ -77,6 +77,9 @@ function isCombinedArtistEntry(artist: string, artistArray: readonly string[]): 
  * Artist names and the optional title are trimmed and normalized before
  * featured-artist matching, and the final output is deduplicated while
  * preserving the first surviving occurrence.
+ *
+ * Existing canonical artist names still pass through the same normalization and
+ * deduplication rules.
  */
 export function normalizeTrackArtists(artistArray: readonly string[] | null, title?: string): string[] {
   if (!artistArray) return [];

@@ -7,16 +7,17 @@
 export const trackKeyPattern = /^[A-G](?:#|b)?m?$/;
 
 /**
- * Normalizes a raw track key value into the canonical representation used by `TrackInfo.key`.
+ * Normalizes a value into the canonical track key representation used by `TrackInfo.key`.
  *
  * The returned value uses a compact key notation without whitespace, for example
  * `C`, `G#m`, `Bb`, or `Cbm`. Flat and sharp symbols are normalized to `b`
  * and `#`, and major/minor suffixes are converted to the canonical form.
  *
- * Returns `undefined` when no key value is provided or when the input cannot be
- * converted into a valid canonical track key.
+ * Existing canonical key values are returned unchanged after validation. Returns
+ * `undefined` when no key value is provided or when the input cannot be converted
+ * into a valid canonical track key.
  *
- * @param keyString - Raw track key value to normalize, for example `C Major`.
+ * @param keyString - Value to normalize, for example `C Major`, `G#m`.
  * @returns Canonical normalized track key, or `undefined` when the input is
  * missing or invalid.
  *

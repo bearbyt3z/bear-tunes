@@ -4,14 +4,14 @@ import {
 } from '#tools';
 
 /**
- * Normalizes a raw positive numeric value.
+ * Normalizes a value into a canonical positive number.
  *
- * Parses a string or number into a positive number and returns `undefined`
+ * Parses a string or number into a positive number. Returns `undefined`
  * when the input is not a string, not a number, or cannot be parsed as a
  * positive finite number.
  *
- * @param value - Raw value to normalize.
- * @returns Parsed positive number, or `undefined` when the input is invalid.
+ * @param value - Value to normalize.
+ * @param value - Raw or already normalized value to normalize.
  */
 export function normalizePositiveNumber(value: unknown): number | undefined {
   if (typeof value !== 'string' && typeof value !== 'number') {
@@ -22,13 +22,13 @@ export function normalizePositiveNumber(value: unknown): number | undefined {
 }
 
 /**
- * Normalizes a raw positive integer value.
+ * Normalizes a value into a canonical positive integer.
  *
- * Parses a string or number into a positive integer and returns `undefined`
+ * Parses a string or number into a positive integer. Returns `undefined`
  * when the input is not a string, not a number, or cannot be parsed as a
  * positive finite integer.
  *
- * @param value - Raw value to normalize.
+ * @param value - Value to normalize.
  * @returns Parsed positive integer, or `undefined` when the input is invalid.
  */
 export function normalizePositiveInteger(value: unknown): number | undefined {

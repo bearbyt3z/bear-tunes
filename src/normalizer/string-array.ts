@@ -3,12 +3,13 @@ import {
 } from './string.js';
 
 /**
- * Normalizes a raw string array value.
+ * Normalizes a value into a canonical string array.
  *
- * Trims each string element and filters out empty strings. Returns `undefined`
- * when the input is not an array or the normalized array is empty.
+ * Accepts an array value, normalizes each element as a string, and removes empty
+ * entries. Returns `undefined` when the input is not an array or when the
+ * normalized array is empty.
  *
- * @param value - Raw value to normalize.
+ * @param value - Value to normalize.
  * @returns Array of trimmed strings, or `undefined` when the input is invalid.
  */
 export function normalizeStringArray(value: unknown): string[] | undefined {
