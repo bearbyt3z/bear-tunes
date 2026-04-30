@@ -165,7 +165,7 @@ export function normalizeAlbumInfo(album: unknown): unknown {
  * @param publisher - Raw `publisher` value to normalize.
  * @returns The normalized `publisher` object, or `undefined` when the input is invalid or cannot be normalized.
  */
-function normalizePublisherInfo(publisher: unknown): unknown {
+export function normalizePublisherInfo(publisher: unknown): unknown {
   if (!isObjectRecord(publisher)) {
     return undefined;
   }

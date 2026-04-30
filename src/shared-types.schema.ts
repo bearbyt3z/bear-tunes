@@ -18,6 +18,15 @@ export const albumInfoSchema = z.looseObject({
 });
 
 /**
+ * Runtime validation schema for normalized `PublisherInfo` input.
+ */
+export const publisherInfoSchema = z.looseObject({
+  name: z.string(),
+  url: z.instanceof(URL).optional(),
+  logotype: z.instanceof(URL).optional(),
+});
+
+/**
  * Runtime validation schema for normalized `TrackInfo` input.
  */
 export const trackInfoSchema = z.looseObject({
@@ -37,11 +46,7 @@ export const trackInfoSchema = z.looseObject({
 
   album: albumInfoSchema.optional(),
 
-  publisher: z.looseObject({
-    name: z.string(),
-    url: z.instanceof(URL).optional(),
-    logotype: z.instanceof(URL).optional(),
-  }).optional(),
+  publisher: publisherInfoSchema.optional(),
 
   details: z.looseObject({
     duration: z.number().positive(),

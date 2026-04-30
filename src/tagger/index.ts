@@ -30,7 +30,6 @@ import {
   secondsToTimeFormat,
   slugify,
   tryGetUrlFromFile,
-  tryParseUrl,
 } from '#tools';
 
 import {
@@ -40,11 +39,13 @@ import {
 
 import {
   normalizeAlbumInfo,
+  normalizePublisherInfo,
   normalizeTrackInfo,
 } from '#shared-types-normalizer';
 
 import {
   albumInfoSchema,
+  publisherInfoSchema,
   trackInfoSchema,
 } from '#shared-types-schema';
 
@@ -506,17 +507,30 @@ export class BearTunesTagger {
     return parsedAlbumInfo.data;
   }
 
-  static async extractPublisherData(publisherUrl: URL): Promise<PublisherInfo> {
+  static async extractPublisherData(publisherUrl: URL): Promise<PublisherInfo | undefined> {
     const publisherData = await BearTunesTagger.extractNextJSData(publisherUrl) as BeatportPublisherInfo;
 
     const name = publisherData.name;
-    const logotype = tryParseUrl(publisherData.image?.uri);
+    const logotype = publisherData.image?.uri;
 
-    return {
+    const normalizedPublisherInfo = normalizePublisherInfo({
       name,
       url: publisherUrl,
       logotype,
-    };
+    });
+
+    const parsedPublisherInfo = publisherInfoSchema.safeParse(normalizedPublisherInfo);
+
+    if (!parsedPublisherInfo.success) {
+      logger.warn('Cannot validate normalized PublisherInfo extracted from Beatport API', {
+        publisherUrl: publisherUrl.toString(),
+        error: parsedPublisherInfo.error,
+      });
+
+      return undefined;
+    }
+
+    return parsedPublisherInfo.data;
   }
 
   /**
