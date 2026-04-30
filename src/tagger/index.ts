@@ -438,7 +438,7 @@ export class BearTunesTagger {
     const albumUrl = trackData.release ? new URL(`${this.options.domainURL}/release/${trackData.release.slug}/${trackData.release.id}`) : undefined;
     const album = albumUrl ? await BearTunesTagger.extractAlbumData(albumUrl, trackData.number) : undefined;
 
-    return {
+    const normalizedTrackInfo = normalizeTrackInfo({
       url: trackUrl,
       artists,
       title,
@@ -457,7 +457,16 @@ export class BearTunesTagger {
       details: {
         duration,
       },
-    };
+    });
+
+    const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
+
+    if (!parsedTrackInfo.success) {
+      logger.warn('Cannot validate ID3 tag output from display plugin', { error: parsedTrackInfo.error });
+      return {};
+    }
+
+    return parsedTrackInfo.data;
   }
 
   static async extractAlbumData(albumUrl: URL, trackNumber: number): Promise<AlbumInfo> {
