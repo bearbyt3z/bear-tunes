@@ -462,7 +462,11 @@ export class BearTunesTagger {
     const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
 
     if (!parsedTrackInfo.success) {
-      logger.warn('Cannot validate ID3 tag output from display plugin', { error: parsedTrackInfo.error });
+      logger.warn('Cannot validate normalized TrackInfo extracted from Beatport API', {
+        trackUrl: trackUrl.toString(),
+        error: parsedTrackInfo.error,
+      });
+
       return {};
     }
 
