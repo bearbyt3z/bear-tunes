@@ -6,7 +6,6 @@ import logger from '#logger';
 import {
   normalizeTextCharacters,
   normalizeTrackArtists,
-  normalizeTrackKey,
   normalizeTrackTitle,
 } from '#normalizer';
 import {
@@ -414,20 +413,20 @@ export class BearTunesTagger {
       }
     }
 
-    const artists = normalizeTrackArtists(trackData.artists.map((x: BeatportArtistInfo) => x.name));
-    const remixers = normalizeTrackArtists(trackData.remixers.map((x: BeatportArtistInfo) => x.name));
+    const artists = trackData.artists.map((x: BeatportArtistInfo) => x.name);
+    const remixers = trackData.remixers.map((x: BeatportArtistInfo) => x.name);
 
     const released = new Date(trackData.new_release_date); // or publish_date???
-    const year = tryParsePositiveInteger(released.getFullYear());
+    const year = released.getFullYear();
 
-    const bpm = tryParsePositiveInteger(trackData.bpm);
-    const key = normalizeTrackKey(trackData.key?.name);
-    const genre = trackData.genre?.name?.trim();
-    const subgenre = trackData.sub_genre?.name?.trim();
+    const bpm = trackData.bpm;
+    const key = trackData.key?.name;
+    const genre = trackData.genre?.name;
+    const subgenre = trackData.sub_genre?.name;
 
     const duration = roundToDecimalPlaces(trackData.length_ms / 1000.0, 2);
 
-    const waveform = tryParseUrl(trackData.image?.uri);
+    const waveform = trackData.image?.uri;
 
     const isrc = trackData.isrc;
     const trackUfid = `track-${trackData.id}`;
