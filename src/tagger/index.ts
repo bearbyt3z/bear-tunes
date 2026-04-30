@@ -30,7 +30,6 @@ import {
   secondsToTimeFormat,
   slugify,
   tryGetUrlFromFile,
-  tryParsePositiveInteger,
   tryParseUrl,
 } from '#tools';
 
@@ -40,10 +39,12 @@ import {
 } from './types.js';
 
 import {
+  normalizeAlbumInfo,
   normalizeTrackInfo,
 } from '#shared-types-normalizer';
 
 import {
+  albumInfoSchema,
   trackInfoSchema,
 } from '#shared-types-schema';
 
@@ -471,13 +472,13 @@ export class BearTunesTagger {
   static async extractAlbumData(albumUrl: URL, trackNumber: number): Promise<AlbumInfo> {
     const albumData = await BearTunesTagger.extractNextJSData(albumUrl) as BeatportAlbumInfo;
 
-    const artists = normalizeTrackArtists(albumData.artists.map((x: BeatportArtistInfo) => x.name));
+    const artists = albumData.artists.map((x: BeatportArtistInfo) => x.name);
     const title = normalizeTextCharacters(albumData.name);
     const catalogNumber = albumData.catalog_number;
-    const trackTotal = tryParsePositiveInteger(albumData.track_count);
-    const artwork = tryParseUrl(albumData.image?.uri);
+    const trackTotal = albumData.track_count;
+    const artwork = albumData.image?.uri;
 
-    return {
+    const normalizedAlbumInfo = normalizeAlbumInfo({
       artists,
       title,
       catalogNumber,
@@ -485,7 +486,20 @@ export class BearTunesTagger {
       trackTotal,
       url: albumUrl,
       artwork,
-    };
+    });
+
+    const parsedAlbumInfo = albumInfoSchema.safeParse(normalizedAlbumInfo);
+
+    if (!parsedAlbumInfo.success) {
+      logger.warn('Cannot validate normalized AlbumInfo extracted from Beatport API', {
+        albumUrl: albumUrl.toString(),
+        error: parsedAlbumInfo.error,
+      });
+
+      return {};
+    }
+
+    return parsedAlbumInfo.data;
   }
 
   static async extractPublisherData(publisherUrl: URL): Promise<PublisherInfo> {

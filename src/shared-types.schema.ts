@@ -5,6 +5,19 @@ import {
 } from '#normalizer';
 
 /**
+ * Runtime validation schema for normalized `AlbumInfo` input.
+ */
+export const albumInfoSchema = z.looseObject({
+  artists: z.array(z.string()).optional(),
+  title: z.string().optional(),
+  catalogNumber: z.string().optional(),
+  trackNumber: z.number().int().positive().optional(),
+  trackTotal: z.number().int().positive().optional(),
+  url: z.instanceof(URL).optional(),
+  artwork: z.instanceof(URL).optional(),
+});
+
+/**
  * Runtime validation schema for normalized `TrackInfo` input.
  */
 export const trackInfoSchema = z.looseObject({
@@ -22,15 +35,7 @@ export const trackInfoSchema = z.looseObject({
   ufid: z.string().optional(),
   waveform: z.instanceof(URL).optional(),
 
-  album: z.looseObject({
-    artists: z.array(z.string()).optional(),
-    title: z.string().optional(),
-    catalogNumber: z.string().optional(),
-    trackNumber: z.number().int().positive().optional(),
-    trackTotal: z.number().int().positive().optional(),
-    url: z.instanceof(URL).optional(),
-    artwork: z.instanceof(URL).optional(),
-  }).optional(),
+  album: albumInfoSchema.optional(),
 
   publisher: z.looseObject({
     name: z.string(),

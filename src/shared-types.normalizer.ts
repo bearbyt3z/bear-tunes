@@ -134,7 +134,7 @@ function normalizeGenreInfo(
  * @param album - Raw `album` value to normalize.
  * @returns The normalized `album` object, or `undefined` when the input is invalid or cannot be normalized.
  */
-function normalizeAlbumInfo(album: unknown): unknown {
+export function normalizeAlbumInfo(album: unknown): unknown {
   if (!isObjectRecord(album)) {
     return undefined;
   }
