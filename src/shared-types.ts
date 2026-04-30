@@ -24,6 +24,7 @@
  * - Numeric counters such as `album.trackNumber` and `album.trackTotal` are positive integers.
  * - `bpm` is a positive number.
  * - `key` uses the canonical normalized track key representation.
+ * - `album` is present only when it contains at least a valid normalized `title`.
  * - `publisher` is present only when it contains at least a valid normalized `name`.
  * - `details` is present only when it contains a valid positive `duration`.
  *
@@ -54,16 +55,18 @@ export interface TrackInfo {
  * This type is source-independent and represents album data after normalization.
  *
  * Canonical rules:
+ * - `title` is a required, non-empty normalized string.
  * - Plain string fields are trimmed; empty strings are treated as missing values.
  * - `artists` is a normalized artist array: non-empty, deduplicated, and cleaned.
  * - `trackNumber` and `trackTotal` are positive integers when present.
  * - `trackNumber` may be validated against `trackTotal`, but conflicting values are
  *   not auto-corrected during normalization.
  * - `url` and `artwork` are normalized `URL` values.
+ * - The whole object is omitted from canonical `TrackInfo` when `title` cannot be normalized.
  */
 export interface AlbumInfo {
+  title: string,
   artists?: string[],
-  title?: string,
   catalogNumber?: string,
   trackNumber?: number,
   trackTotal?: number,

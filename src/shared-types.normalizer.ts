@@ -125,6 +125,9 @@ function normalizeGenreInfo(
 /**
  * Normalizes the `TrackInfo.album` object.
  *
+ * Requires a valid normalized `title`; when `title` cannot be normalized,
+ * the whole album object is omitted.
+ *
  * Parses `trackNumber` and `trackTotal` into positive integers, and `url` and
  * `artwork` into `URL` instances.
  *
@@ -132,17 +135,26 @@ function normalizeGenreInfo(
  * returned object.
  *
  * @param album - Raw `album` value to normalize.
- * @returns The normalized `album` object, or `undefined` when the input is invalid or cannot be normalized.
+ * @returns The normalized `album` object, or `undefined` when the input is
+ * invalid or when `title` cannot be normalized.
  */
 export function normalizeAlbumInfo(album: unknown): unknown {
   if (!isObjectRecord(album)) {
     return undefined;
   }
 
-  const normalizedAlbum: Record<string, unknown> = { ...album };
+  const normalizedTitle = normalizeString(album.title);
+
+  if (!normalizedTitle) {
+    return undefined;
+  }
+
+  const normalizedAlbum: Record<string, unknown> = {
+    ...album,
+    title: normalizedTitle,
+  };
 
   setOrDeleteObjectField(normalizedAlbum, 'artists', normalizeArtistArray(album.artists));
-  setOrDeleteObjectField(normalizedAlbum, 'title', normalizeString(album.title));
   setOrDeleteObjectField(normalizedAlbum, 'catalogNumber', normalizeString(album.catalogNumber));
 
   setOrDeleteObjectField(normalizedAlbum, 'trackNumber', normalizePositiveInteger(album.trackNumber));
@@ -157,13 +169,17 @@ export function normalizeAlbumInfo(album: unknown): unknown {
 /**
  * Normalizes the `TrackInfo.publisher` object.
  *
+ * Requires a valid normalized `name`; when `name` cannot be normalized,
+ * the whole publisher object is omitted.
+ *
  * Parses `url` and `logotype` fields from string values into `URL` instances.
  *
  * Invalid raw values for normalized optional fields are removed from the
  * returned object.
  *
  * @param publisher - Raw `publisher` value to normalize.
- * @returns The normalized `publisher` object, or `undefined` when the input is invalid or cannot be normalized.
+ * @returns The normalized `publisher` object, or `undefined` when the input is
+ * invalid or when `name` cannot be normalized.
  */
 export function normalizePublisherInfo(publisher: unknown): unknown {
   if (!isObjectRecord(publisher)) {
@@ -190,11 +206,15 @@ export function normalizePublisherInfo(publisher: unknown): unknown {
 /**
  * Normalizes the `TrackInfo.details` object.
  *
+ * Requires a valid positive normalized `duration`; when `duration` cannot be
+ * normalized, the whole details object is omitted.
+ *
  * Converts the `duration` field from a positive numeric string or number into a
  * positive number.
  *
  * @param details - Raw `details` value to normalize.
- * @returns The normalized `details` object, or `undefined` when the input is invalid or cannot be normalized.
+ * @returns The normalized `details` object, or `undefined` when the input is
+ * invalid or when `duration` cannot be normalized.
  */
 export function normalizeTrackDetails(details: unknown): unknown {
   if (!isObjectRecord(details)) {

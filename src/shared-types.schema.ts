@@ -9,7 +9,7 @@ import {
  */
 export const albumInfoSchema = z.looseObject({
   artists: z.array(z.string()).optional(),
-  title: z.string().optional(),
+  title: z.string(),
   catalogNumber: z.string().optional(),
   trackNumber: z.number().int().positive().optional(),
   trackTotal: z.number().int().positive().optional(),

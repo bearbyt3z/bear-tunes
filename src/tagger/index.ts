@@ -474,7 +474,7 @@ export class BearTunesTagger {
     return parsedTrackInfo.data;
   }
 
-  static async extractAlbumData(albumUrl: URL, trackNumber: number): Promise<AlbumInfo> {
+  static async extractAlbumData(albumUrl: URL, trackNumber: number): Promise<AlbumInfo | undefined> {
     const albumData = await BearTunesTagger.extractNextJSData(albumUrl) as BeatportAlbumInfo;
 
     const artists = albumData.artists.map((x: BeatportArtistInfo) => x.name);
@@ -501,7 +501,7 @@ export class BearTunesTagger {
         error: parsedAlbumInfo.error,
       });
 
-      return {};
+      return undefined;
     }
 
     return parsedAlbumInfo.data;
