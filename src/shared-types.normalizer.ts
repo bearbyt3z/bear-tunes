@@ -196,7 +196,7 @@ export function normalizePublisherInfo(publisher: unknown): unknown {
  * @param details - Raw `details` value to normalize.
  * @returns The normalized `details` object, or `undefined` when the input is invalid or cannot be normalized.
  */
-function normalizeTrackDetails(details: unknown): unknown {
+export function normalizeTrackDetails(details: unknown): unknown {
   if (!isObjectRecord(details)) {
     return undefined;
   }

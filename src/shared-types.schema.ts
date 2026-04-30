@@ -27,6 +27,13 @@ export const publisherInfoSchema = z.looseObject({
 });
 
 /**
+ * Runtime validation schema for normalized `TrackDetails` input.
+ */
+export const trackDetailsSchema = z.looseObject({
+  duration: z.number().positive(),
+});
+
+/**
  * Runtime validation schema for normalized `TrackInfo` input.
  */
 export const trackInfoSchema = z.looseObject({
@@ -48,7 +55,5 @@ export const trackInfoSchema = z.looseObject({
 
   publisher: publisherInfoSchema.optional(),
 
-  details: z.looseObject({
-    duration: z.number().positive(),
-  }).optional(),
+  details: trackDetailsSchema.optional(),
 });
