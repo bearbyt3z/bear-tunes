@@ -9,9 +9,11 @@ import {
   normalizeTrackTitle,
   normalizeUrl,
 } from '#normalizer';
+import type { AlbumInfo } from '#shared-types';
 
 import {
   isObjectRecord,
+  removeUndefinedObjectFields,
   setOrDeleteObjectField,
 } from '#tools';
 
@@ -138,32 +140,25 @@ function normalizeGenreInfo(
  * @returns The normalized `album` object, or `undefined` when the input is
  * invalid or when `title` cannot be normalized.
  */
-export function normalizeAlbumInfo(album: unknown): unknown {
+export function normalizeAlbumInfo(album: unknown): AlbumInfo | undefined {
   if (!isObjectRecord(album)) {
     return undefined;
   }
 
-  const normalizedTitle = normalizeString(album.title);
-
-  if (!normalizedTitle) {
+  const title = normalizeString(album.title);
+  if (!title) {
     return undefined;
   }
 
-  const normalizedAlbum: Record<string, unknown> = {
-    ...album,
-    title: normalizedTitle,
-  };
-
-  setOrDeleteObjectField(normalizedAlbum, 'artists', normalizeArtistArray(album.artists));
-  setOrDeleteObjectField(normalizedAlbum, 'catalogNumber', normalizeString(album.catalogNumber));
-
-  setOrDeleteObjectField(normalizedAlbum, 'trackNumber', normalizePositiveInteger(album.trackNumber));
-  setOrDeleteObjectField(normalizedAlbum, 'trackTotal', normalizePositiveInteger(album.trackTotal));
-
-  setOrDeleteObjectField(normalizedAlbum, 'url', normalizeUrl(album.url));
-  setOrDeleteObjectField(normalizedAlbum, 'artwork', normalizeUrl(album.artwork));
-
-  return normalizedAlbum;
+  return removeUndefinedObjectFields<AlbumInfo>({
+    title,
+    artists: normalizeArtistArray(album.artists),
+    catalogNumber: normalizeString(album.catalogNumber),
+    trackNumber: normalizePositiveInteger(album.trackNumber),
+    trackTotal: normalizePositiveInteger(album.trackTotal),
+    url: normalizeUrl(album.url),
+    artwork: normalizeUrl(album.artwork),
+  });
 }
 
 /**

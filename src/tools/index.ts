@@ -43,6 +43,7 @@ export {
 } from './utils/format.js';
 
 export {
+  removeUndefinedObjectFields,
   setOrDeleteObjectField,
 } from './utils/object.js';
 
