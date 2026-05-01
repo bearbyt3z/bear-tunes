@@ -9,13 +9,17 @@ import {
   normalizeTrackTitle,
   normalizeUrl,
 } from '#normalizer';
-import type { AlbumInfo } from '#shared-types';
 
 import {
   isObjectRecord,
   removeUndefinedObjectFields,
   setOrDeleteObjectField,
 } from '#tools';
+
+import type {
+  AlbumInfo,
+  PublisherInfo,
+} from '#shared-types';
 
 /**
  * Normalizes a raw track key value into the canonical representation used by `TrackInfo.key`.
@@ -176,26 +180,21 @@ export function normalizeAlbumInfo(album: unknown): AlbumInfo | undefined {
  * @returns The normalized `publisher` object, or `undefined` when the input is
  * invalid or when `name` cannot be normalized.
  */
-export function normalizePublisherInfo(publisher: unknown): unknown {
+export function normalizePublisherInfo(publisher: unknown): PublisherInfo | undefined {
   if (!isObjectRecord(publisher)) {
     return undefined;
   }
 
-  const normalizedName = normalizeString(publisher.name);
-
-  if (!normalizedName) {
+  const name = normalizeString(publisher.name);
+  if (!name) {
     return undefined;
   }
 
-  const normalizedPublisher: Record<string, unknown> = {
-    ...publisher,
-    name: normalizedName,
-  };
-
-  setOrDeleteObjectField(normalizedPublisher, 'url', normalizeUrl(publisher.url));
-  setOrDeleteObjectField(normalizedPublisher, 'logotype', normalizeUrl(publisher.logotype));
-
-  return normalizedPublisher;
+  return removeUndefinedObjectFields<PublisherInfo>({
+    name,
+    url: normalizeUrl(publisher.url),
+    logotype: normalizeUrl(publisher.logotype),
+  });
 }
 
 /**
