@@ -19,6 +19,7 @@ import {
 import type {
   AlbumInfo,
   PublisherInfo,
+  TrackDetails,
 } from '#shared-types';
 
 /**
@@ -210,7 +211,7 @@ export function normalizePublisherInfo(publisher: unknown): PublisherInfo | unde
  * @returns The normalized `details` object, or `undefined` when the input is
  * invalid or when `duration` cannot be normalized.
  */
-export function normalizeTrackDetails(details: unknown): unknown {
+export function normalizeTrackDetails(details: unknown): TrackDetails | undefined {
   if (!isObjectRecord(details)) {
     return undefined;
   }
@@ -221,7 +222,6 @@ export function normalizeTrackDetails(details: unknown): unknown {
   }
 
   return {
-    ...details,
     duration,
   };
 }
