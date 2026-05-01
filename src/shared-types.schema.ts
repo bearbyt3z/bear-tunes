@@ -7,7 +7,7 @@ import {
 /**
  * Runtime validation schema for normalized `AlbumInfo` input.
  */
-export const albumInfoSchema = z.looseObject({
+export const albumInfoSchema = z.strictObject({
   artists: z.array(z.string()).optional(),
   title: z.string(),
   catalogNumber: z.string().optional(),
@@ -20,7 +20,7 @@ export const albumInfoSchema = z.looseObject({
 /**
  * Runtime validation schema for normalized `PublisherInfo` input.
  */
-export const publisherInfoSchema = z.looseObject({
+export const publisherInfoSchema = z.strictObject({
   name: z.string(),
   url: z.instanceof(URL).optional(),
   logotype: z.instanceof(URL).optional(),
@@ -29,14 +29,14 @@ export const publisherInfoSchema = z.looseObject({
 /**
  * Runtime validation schema for normalized `TrackDetails` input.
  */
-export const trackDetailsSchema = z.looseObject({
+export const trackDetailsSchema = z.strictObject({
   duration: z.number().positive(),
 });
 
 /**
  * Runtime validation schema for normalized `TrackInfo` input.
  */
-export const trackInfoSchema = z.looseObject({
+export const trackInfoSchema = z.object({
   url: z.instanceof(URL).optional(),
   artists: z.array(z.string()).optional(),
   title: z.string().optional(),
