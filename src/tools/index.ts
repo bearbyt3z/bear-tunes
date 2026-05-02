@@ -44,7 +44,6 @@ export {
 
 export {
   removeUndefinedObjectFields,
-  setOrDeleteObjectField,
 } from './utils/object.js';
 
 export {
