@@ -13,13 +13,13 @@ import {
 import {
   isObjectRecord,
   removeUndefinedObjectFields,
-  setOrDeleteObjectField,
 } from '#tools';
 
 import type {
   AlbumInfo,
   PublisherInfo,
   TrackDetails,
+  TrackInfo,
 } from '#shared-types';
 
 /**
@@ -235,38 +235,33 @@ export function normalizeTrackDetails(details: unknown): TrackDetails | undefine
  * Invalid or unnormalized fields are removed from the returned object.
  *
  * @param trackInfo - Raw track info value to normalize.
- * @returns A normalized track info value, or the original input when it cannot be normalized.
+ * @returns A normalized `TrackInfo` object, or `undefined` when the input is invalid.
  */
-export function normalizeTrackInfo(trackInfo: unknown): unknown {
+export function normalizeTrackInfo(trackInfo: unknown): TrackInfo | undefined {
   if (!isObjectRecord(trackInfo)) {
-    return trackInfo;
+    return undefined;
   }
 
-  const normalizedTrackInfo: Record<string, unknown> = { ...trackInfo };
+  const title = normalizeTitle(trackInfo.title);
+  const genreInfo = normalizeGenreInfo(trackInfo.genre, trackInfo.subgenre);
 
-  const normalizedTitle = normalizeTitle(trackInfo.title);
+  return removeUndefinedObjectFields({
+    url: normalizeUrl(trackInfo.url),
+    artists: normalizeArtistArray(trackInfo.artists, title),
+    title,
+    remixers: normalizeArtistArray(trackInfo.remixers),
+    released: normalizeDate(trackInfo.released),
+    year: normalizePositiveInteger(trackInfo.year),
+    genre: genreInfo.genre,
+    subgenre: genreInfo.subgenre,
+    bpm: normalizePositiveNumber(trackInfo.bpm),
+    key: normalizeKey(trackInfo.key),
+    isrc: normalizeString(trackInfo.isrc),
+    ufid: normalizeString(trackInfo.ufid),
+    waveform: normalizeUrl(trackInfo.waveform),
 
-  setOrDeleteObjectField(normalizedTrackInfo, 'url', normalizeUrl(trackInfo.url));
-  setOrDeleteObjectField(normalizedTrackInfo, 'artists', normalizeArtistArray(trackInfo.artists, normalizedTitle));
-  setOrDeleteObjectField(normalizedTrackInfo, 'title', normalizedTitle);
-  setOrDeleteObjectField(normalizedTrackInfo, 'remixers', normalizeArtistArray(trackInfo.remixers));
-  setOrDeleteObjectField(normalizedTrackInfo, 'released', normalizeDate(trackInfo.released));
-  setOrDeleteObjectField(normalizedTrackInfo, 'year', normalizePositiveInteger(trackInfo.year));
-
-  const normalizedGenreInfo = normalizeGenreInfo(trackInfo.genre, trackInfo.subgenre);
-
-  setOrDeleteObjectField(normalizedTrackInfo, 'genre', normalizedGenreInfo.genre);
-  setOrDeleteObjectField(normalizedTrackInfo, 'subgenre', normalizedGenreInfo.subgenre);
-
-  setOrDeleteObjectField(normalizedTrackInfo, 'bpm', normalizePositiveNumber(trackInfo.bpm));
-  setOrDeleteObjectField(normalizedTrackInfo, 'key', normalizeKey(trackInfo.key));
-  setOrDeleteObjectField(normalizedTrackInfo, 'isrc', normalizeString(trackInfo.isrc));
-  setOrDeleteObjectField(normalizedTrackInfo, 'ufid', normalizeString(trackInfo.ufid));
-  setOrDeleteObjectField(normalizedTrackInfo, 'waveform', normalizeUrl(trackInfo.waveform));
-
-  setOrDeleteObjectField(normalizedTrackInfo, 'album', normalizeAlbumInfo(trackInfo.album));
-  setOrDeleteObjectField(normalizedTrackInfo, 'publisher', normalizePublisherInfo(trackInfo.publisher));
-  setOrDeleteObjectField(normalizedTrackInfo, 'details', normalizeTrackDetails(trackInfo.details));
-
-  return normalizedTrackInfo;
+    album: normalizeAlbumInfo(trackInfo.album),
+    publisher: normalizePublisherInfo(trackInfo.publisher),
+    details: normalizeTrackDetails(trackInfo.details),
+  });
 }

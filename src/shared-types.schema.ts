@@ -36,7 +36,7 @@ export const trackDetailsSchema = z.strictObject({
 /**
  * Runtime validation schema for normalized `TrackInfo` input.
  */
-export const trackInfoSchema = z.object({
+export const trackInfoSchema = z.strictObject({
   url: z.instanceof(URL).optional(),
   artists: z.array(z.string()).optional(),
   title: z.string().optional(),
@@ -52,8 +52,6 @@ export const trackInfoSchema = z.object({
   waveform: z.instanceof(URL).optional(),
 
   album: albumInfoSchema.optional(),
-
   publisher: publisherInfoSchema.optional(),
-
   details: trackDetailsSchema.optional(),
 });
