@@ -352,8 +352,32 @@ export class BearTunesTagger {
       || hasSameScoreButCloserDuration;
   }
 
+  private static createMatchingTrack(
+    trackInfo: TrackInfo,
+    score: number,
+    scoreKeywords: string[],
+  ): MatchingTrack {
+    return {
+      url: trackInfo.url,
+      artists: trackInfo.artists,
+      title: trackInfo.title,
+      remixers: trackInfo.remixers,
+      released: trackInfo.released,
+      genre: trackInfo.genre,
+      subgenre: trackInfo.subgenre,
+      bpm: trackInfo.bpm,
+      isrc: trackInfo.isrc,
+      details: trackInfo.details
+        ? { duration: trackInfo.details.duration }
+        : undefined,
+      score,
+      scoreKeywords,
+      get fullName(): string { return `${this.artists?.join(', ')} - ${this.title}`; },
+    };
+  }
+
   async findBestMatchingTrack(trackInfo: TrackInfo, inputKeywords: string[]): Promise<MatchingTrack> {
-    const winner: MatchingTrack = {
+    let winner: MatchingTrack = {
       score: -1,
       scoreKeywords: [],
       details: {
@@ -425,18 +449,11 @@ export class BearTunesTagger {
         score,
       )) {
         // the initialization of the winner variable (at the beginning) ensures that details prop is defined
-        winner.details!.duration = candidateTrack.details.duration;
-        winner.score = score;
-        winner.scoreKeywords = keywordsIntersection;
-        winner.released = candidateTrack.released;
-        winner.title = candidateTrack.title;
-        winner.artists = candidateTrack.artists;
-        winner.remixers = candidateTrack.remixers;
-        winner.url = candidateTrack.url;
-        winner.bpm = candidateTrack.bpm;
-        winner.genre = candidateTrack.genre;
-        winner.subgenre = candidateTrack.subgenre;
-        winner.isrc = candidateTrack.isrc;
+        winner = BearTunesTagger.createMatchingTrack(
+          candidateTrack,
+          score,
+          keywordsIntersection,
+        );
 
         // if (score === inputKeywords.length) break;  // winner has been found (but maybe not the earliest release!)
       }
