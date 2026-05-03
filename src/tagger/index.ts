@@ -2,10 +2,13 @@ import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import {
+  normalizeBeatportSearchResultTrackInfo,
+} from './types.normalizer.js';
+
 import logger from '#logger';
 import {
   normalizeTextCharacters,
-  normalizeTrackArtists,
   normalizeTrackTitle,
 } from '#normalizer';
 import {
@@ -28,7 +31,6 @@ import {
   replacePathForbiddenCharsInArray,
   roundToDecimalPlaces,
   secondsToTimeFormat,
-  slugify,
   tryGetUrlFromFile,
 } from '#tools';
 
@@ -317,16 +319,11 @@ export class BearTunesTagger {
 
   async findBestMatchingTrack(trackInfo: TrackInfo, inputKeywords: string[]): Promise<MatchingTrack> {
     const winner: MatchingTrack = {
+      score: -1,
+      scoreKeywords: [],
       details: {
         duration: 0,
       },
-      score: -1,
-      scoreKeywords: [],
-      // released: new Date('2999-12-12'), // some far away date...
-      // title: '',
-      // artists: '',
-      // remixers: '',
-      // url: undefined,
       get fullName() { return `${this.artists?.join(', ')} - ${this.title}`; },
     };
 
@@ -337,34 +334,46 @@ export class BearTunesTagger {
     const parsedTrackArray = beatportSearchResultTrackInfoArraySchema.safeParse(rawTrackArray);
 
     if (!parsedTrackArray.success) {
-      logger.warn('Cannot validate BeatportSearchResultTrackInfo from Beatport API', { error: parsedTrackArray.error });
+      logger.warn('Cannot validate raw Beatport search results payload', {
+        error: parsedTrackArray.error,
+      });
       return winner;
     }
 
-    const trackArray = parsedTrackArray.data;
-
-    for (const trackEntry of trackArray) {
-      const trackTitle = normalizeTrackTitle(trackEntry.track_name, trackEntry.mix_name);
-
-      const trackArtists = normalizeTrackArtists(trackEntry.artists
-        .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Artist)
-        .map((x: BeatportSearchResultArtistInfo) => x.artist_name),
+    for (const trackEntry of parsedTrackArray.data) {
+      const normalizedTrackInfo = normalizeBeatportSearchResultTrackInfo(
+        trackEntry,
+        this.options.domainURL,
       );
 
-      const trackRemixers = normalizeTrackArtists(trackEntry.artists
-        .filter((x: BeatportSearchResultArtistInfo) => x.artist_type_name === BeatportSearchResultArtistType.Remixer)
-        .map((x: BeatportSearchResultArtistInfo) => x.artist_name),
+      if (!normalizedTrackInfo) {
+        logger.warn('Cannot normalize Beatport search result track', {
+          trackId: trackEntry.track_id,
+          trackName: trackEntry.track_name,
+        });
+        continue;
+      }
+
+      const parsedNormalizedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
+
+      if (!parsedNormalizedTrackInfo.success) {
+        logger.warn('Cannot validate normalized TrackInfo from Beatport search result', {
+          trackId: trackEntry.track_id,
+          trackName: trackEntry.track_name,
+          error: parsedNormalizedTrackInfo.error,
+        });
+        continue;
+      }
+
+      const candidateTrack = parsedNormalizedTrackInfo.data;
+
+      if (!candidateTrack.title || !candidateTrack.artists?.length || !candidateTrack.details) {
+        continue;
+      }
+
+      const trackKeywords = extractTrackNameKeywords(
+        normalizeTextCharacters(`${candidateTrack.artists.join(' ')} ${candidateTrack.title}`),
       );
-
-      const trackReleased = new Date(trackEntry.release_date);
-
-      const trackKeywords = extractTrackNameKeywords(normalizeTextCharacters(`${trackArtists.join(' ')} ${trackTitle}`));
-      // const trackKeywords = Array.from(new Set([
-      //   ...trackTitle.split(/\s+/),
-      //   ...trackRemixed.split(/\s+/),
-      //   ...trackArtists.split(/[\s,]+/),
-      //   ...trackRemixers.split(/[\s,]+/),
-      // ]));
 
       const keywordsIntersection = arrayIntersection(
         arrayToLowerCase(inputKeywords),
@@ -372,17 +381,19 @@ export class BearTunesTagger {
       );
 
       const score = keywordsIntersection.length;
-      const trackLength = roundToDecimalPlaces(trackEntry.length / 1000.0, 2);
 
       const hasBetterScore = score > winner.score;
 
       const hasSameScoreButEarlierRelease = (
         score === winner.score
-        && (!winner.released || trackReleased < winner.released)
+        && (!winner.released || (
+          candidateTrack.released !== undefined
+          && candidateTrack.released < winner.released
+        ))
       );
 
-      const currentDurationDistance = trackInfo.details
-        ? Math.abs(trackLength - trackInfo.details.duration)
+        const currentDurationDistance = trackInfo.details
+        ? Math.abs(candidateTrack.details.duration - trackInfo.details.duration)
         : undefined;
 
       const winnerDurationDistance = trackInfo.details
@@ -391,7 +402,7 @@ export class BearTunesTagger {
 
       const hasSameScoreButCloserDuration = (
         score === winner.score
-        && trackLength > 0
+        && candidateTrack.details.duration > 0
         && currentDurationDistance !== undefined
         && winnerDurationDistance !== undefined
         && currentDurationDistance < winnerDurationDistance
@@ -400,14 +411,19 @@ export class BearTunesTagger {
       if (hasBetterScore
         || hasSameScoreButEarlierRelease
         || hasSameScoreButCloserDuration) {
-        winner.details!.duration = trackLength; // the initialization of the winner variable (at the beginning) ensures that details prop is defined
+        // the initialization of the winner variable (at the beginning) ensures that details prop is defined
+        winner.details!.duration = candidateTrack.details.duration;
         winner.score = score;
         winner.scoreKeywords = keywordsIntersection;
-        winner.released = trackReleased;
-        winner.title = trackTitle;
-        winner.artists = trackArtists;
-        winner.remixers = trackRemixers;
-        winner.url = new URL(`${this.options.domainURL}/track/${slugify(trackEntry.track_name)}/${trackEntry.track_id}`);
+        winner.released = candidateTrack.released;
+        winner.title = candidateTrack.title;
+        winner.artists = candidateTrack.artists;
+        winner.remixers = candidateTrack.remixers;
+        winner.url = candidateTrack.url;
+        winner.bpm = candidateTrack.bpm;
+        winner.genre = candidateTrack.genre;
+        winner.subgenre = candidateTrack.subgenre;
+        winner.isrc = candidateTrack.isrc;
 
         // if (score === inputKeywords.length) break;  // winner has been found (but maybe not the earliest release!)
       }

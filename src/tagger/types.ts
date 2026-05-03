@@ -49,7 +49,7 @@ export interface BeatportSearchResultLabelInfo {
 export interface BeatportSearchResultReleaseInfo {
   release_id: number,
   release_name: string,
-  release_image_url: string | undefined,
+  release_image_url?: string,
 }
 
 export interface BeatportSearchResultGenreInfo {
