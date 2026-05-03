@@ -151,6 +151,11 @@ export class BearTunesTagger {
         return {};
       }
 
+      if (!bestMatchingTrack) {
+        logger.warn(`Could not find any matching Beatport track for "${trackFilename}"`);
+        return {};
+      }
+
       trackUrl = bestMatchingTrack.url ?? undefined;
 
       if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
@@ -319,11 +324,15 @@ export class BearTunesTagger {
 
   private static isBetterMatchingTrack(
     inputTrackInfo: TrackInfo,
-    winner: MatchingTrack,
+    winner: MatchingTrack | undefined,
     candidateReleased: Date | undefined,
     candidateDuration: number,
     score: number,
   ): boolean {
+    if (!winner) {
+      return true;
+    }
+
     const hasBetterScore = score > winner.score;
 
     const hasSameScoreButEarlierRelease = (
@@ -336,8 +345,8 @@ export class BearTunesTagger {
       ? Math.abs(candidateDuration - inputTrackInfo.details.duration)
       : undefined;
 
-    const winnerDurationDistance = inputTrackInfo.details
-      ? Math.abs(winner.details!.duration - inputTrackInfo.details.duration)
+    const winnerDurationDistance = inputTrackInfo.details && winner.details
+      ? Math.abs(winner.details.duration - inputTrackInfo.details.duration)
       : undefined;
 
     const hasSameScoreButCloserDuration = (
@@ -376,15 +385,11 @@ export class BearTunesTagger {
     };
   }
 
-  async findBestMatchingTrack(trackInfo: TrackInfo, inputKeywords: string[]): Promise<MatchingTrack> {
-    let winner: MatchingTrack = {
-      score: -1,
-      scoreKeywords: [],
-      details: {
-        duration: 0,
-      },
-      get fullName() { return `${this.artists?.join(', ')} - ${this.title}`; },
-    };
+  async findBestMatchingTrack(
+    trackInfo: TrackInfo,
+    inputKeywords: string[],
+  ): Promise<MatchingTrack | undefined> {
+    let winner: MatchingTrack | undefined;
 
     const rawTrackArray = await BearTunesTagger.extractNextJSData(
       new URL(this.options.searchURL + encodeURIComponent(inputKeywords.join('+'))),
@@ -396,7 +401,8 @@ export class BearTunesTagger {
       logger.warn('Cannot validate raw Beatport search results payload', {
         error: parsedTrackArray.error,
       });
-      return winner;
+
+      return undefined;
     }
 
     for (const trackEntry of parsedTrackArray.data) {
@@ -441,21 +447,18 @@ export class BearTunesTagger {
 
       const score = keywordsIntersection.length;
 
-      if (BearTunesTagger.isBetterMatchingTrack(
+      if (!winner || BearTunesTagger.isBetterMatchingTrack(
         trackInfo,
         winner,
         candidateTrack.released,
         candidateTrack.details.duration,
         score,
       )) {
-        // the initialization of the winner variable (at the beginning) ensures that details prop is defined
         winner = BearTunesTagger.createMatchingTrack(
           candidateTrack,
           score,
           keywordsIntersection,
         );
-
-        // if (score === inputKeywords.length) break;  // winner has been found (but maybe not the earliest release!)
       }
     }
 
