@@ -49,6 +49,10 @@ import {
   trackInfoSchema,
 } from '#shared-types-schema';
 
+import {
+  beatportSearchResultTrackInfoArraySchema,
+} from './types.schema.js';
+
 import type {
   BearTunesTaggerOptions,
   BeatportAlbumInfo,
@@ -312,8 +316,6 @@ export class BearTunesTagger {
   }
 
   async findBestMatchingTrack(trackInfo: TrackInfo, inputKeywords: string[]): Promise<MatchingTrack> {
-    const trackArray = await BearTunesTagger.extractNextJSData(new URL(this.options.searchURL + encodeURIComponent(inputKeywords.join('+')))) as BeatportSearchResultTrackInfo[];
-
     const winner: MatchingTrack = {
       details: {
         duration: 0,
@@ -327,6 +329,19 @@ export class BearTunesTagger {
       // url: undefined,
       get fullName() { return `${this.artists?.join(', ')} - ${this.title}`; },
     };
+
+    const rawTrackArray = await BearTunesTagger.extractNextJSData(
+      new URL(this.options.searchURL + encodeURIComponent(inputKeywords.join('+'))),
+    );
+
+    const parsedTrackArray = beatportSearchResultTrackInfoArraySchema.safeParse(rawTrackArray);
+
+    if (!parsedTrackArray.success) {
+      logger.warn('Cannot validate BeatportSearchResultTrackInfo from Beatport API', { error: parsedTrackArray.error });
+      return winner;
+    }
+
+    const trackArray = parsedTrackArray.data;
 
     for (const trackEntry of trackArray) {
       const trackTitle = normalizeTrackTitle(trackEntry.track_name, trackEntry.mix_name);
