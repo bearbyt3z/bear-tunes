@@ -49,11 +49,11 @@ export interface BeatportSearchResultLabelInfo {
 export interface BeatportSearchResultReleaseInfo {
   release_id: number,
   release_name: string,
-  release_image_url: string,
+  release_image_url: string | undefined,
 }
 
 export interface BeatportSearchResultGenreInfo {
-  genre_id: string, // it's a number but as a string
+  genre_id: number,
   genre_name: string,
 }
 
