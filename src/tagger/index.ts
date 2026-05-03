@@ -317,6 +317,41 @@ export class BearTunesTagger {
     return stateData;
   }
 
+  private static isBetterMatchingTrack(
+    inputTrackInfo: TrackInfo,
+    winner: MatchingTrack,
+    candidateReleased: Date | undefined,
+    candidateDuration: number,
+    score: number,
+  ): boolean {
+    const hasBetterScore = score > winner.score;
+
+    const hasSameScoreButEarlierRelease = (
+      score === winner.score
+      && candidateReleased !== undefined
+      && (!winner.released || candidateReleased < winner.released)
+    );
+
+    const currentDurationDistance = inputTrackInfo.details
+      ? Math.abs(candidateDuration - inputTrackInfo.details.duration)
+      : undefined;
+
+    const winnerDurationDistance = inputTrackInfo.details
+      ? Math.abs(winner.details!.duration - inputTrackInfo.details.duration)
+      : undefined;
+
+    const hasSameScoreButCloserDuration = (
+      score === winner.score
+      && currentDurationDistance !== undefined
+      && winnerDurationDistance !== undefined
+      && currentDurationDistance < winnerDurationDistance
+    );
+
+    return hasBetterScore
+      || hasSameScoreButEarlierRelease
+      || hasSameScoreButCloserDuration;
+  }
+
   async findBestMatchingTrack(trackInfo: TrackInfo, inputKeywords: string[]): Promise<MatchingTrack> {
     const winner: MatchingTrack = {
       score: -1,
@@ -382,35 +417,13 @@ export class BearTunesTagger {
 
       const score = keywordsIntersection.length;
 
-      const hasBetterScore = score > winner.score;
-
-      const hasSameScoreButEarlierRelease = (
-        score === winner.score
-        && (!winner.released || (
-          candidateTrack.released !== undefined
-          && candidateTrack.released < winner.released
-        ))
-      );
-
-        const currentDurationDistance = trackInfo.details
-        ? Math.abs(candidateTrack.details.duration - trackInfo.details.duration)
-        : undefined;
-
-      const winnerDurationDistance = trackInfo.details
-        ? Math.abs(winner.details!.duration - trackInfo.details.duration)
-        : undefined;
-
-      const hasSameScoreButCloserDuration = (
-        score === winner.score
-        && candidateTrack.details.duration > 0
-        && currentDurationDistance !== undefined
-        && winnerDurationDistance !== undefined
-        && currentDurationDistance < winnerDurationDistance
-      );
-
-      if (hasBetterScore
-        || hasSameScoreButEarlierRelease
-        || hasSameScoreButCloserDuration) {
+      if (BearTunesTagger.isBetterMatchingTrack(
+        trackInfo,
+        winner,
+        candidateTrack.released,
+        candidateTrack.details.duration,
+        score,
+      )) {
         // the initialization of the winner variable (at the beginning) ensures that details prop is defined
         winner.details!.duration = candidateTrack.details.duration;
         winner.score = score;
