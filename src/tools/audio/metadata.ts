@@ -23,6 +23,34 @@ export function buildGenreTag(genreName?: string, subgenreName?: string): string
 }
 
 /**
+ * Builds a human-readable track full name in the `Artist 1, Artist 2 - Title` format.
+ *
+ * The function only combines the provided values and does not normalize
+ * or sanitize the input.
+ *
+ * If both `artists` and `title` are missing, the function returns `undefined`.
+ * If only one of them is available, the function returns only that part.
+ *
+ * @param trackInfo - Object containing track artists and title.
+ * @param trackInfo.artists - Optional list of track artists.
+ * @param trackInfo.title - Optional track title.
+ * @returns Formatted track full name, or `undefined` when no displayable data is available.
+ */
+export function buildTrackFullName(
+  trackInfo: { artists?: string[]; title?: string },
+): string | undefined {
+  const artistsLabel = trackInfo.artists && trackInfo.artists.length > 0
+    ? trackInfo.artists.join(', ')
+    : undefined;
+
+  if (artistsLabel && trackInfo.title) {
+    return `${artistsLabel} - ${trackInfo.title}`;
+  }
+
+  return artistsLabel ?? trackInfo.title;
+}
+
+/**
  * Extracts normalized keywords from a track name.
  *
  * The function normalizes common separators and punctuation in the provided

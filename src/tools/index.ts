@@ -13,6 +13,7 @@ export {
 
 export {
   buildGenreTag,
+  buildTrackFullName,
   extractTrackNameKeywords,
 } from './audio/metadata.js';
 

@@ -15,6 +15,7 @@ import {
   arrayIntersection,
   arrayToLowerCase,
   buildGenreTag,
+  buildTrackFullName,
   capitalize,
   downloadImage,
   escapeUnescapedColons,
@@ -160,7 +161,7 @@ export class BearTunesTagger {
 
       if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
         let warnMessage = `Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n`;
-        warnMessage += `${bestMatchingTrack.fullName}\n`;
+        warnMessage += `${buildTrackFullName(bestMatchingTrack)}\n`;
         warnMessage += `Score keywords: ${bestMatchingTrack.scoreKeywords.join(', ')}\n`;
         warnMessage += `Name  keywords: ${trackFilenameKeywords.join(', ')}`;
         if (trackUrl) {
@@ -175,7 +176,7 @@ export class BearTunesTagger {
         }
       }
 
-      logger.info(`Matched  [${bestMatchingTrack.score}]: ${bestMatchingTrack.fullName}`);
+      logger.info(`Matched  [${bestMatchingTrack.score}]: ${buildTrackFullName(bestMatchingTrack)}`);
       logger.info(`Matched  URL: ${bestMatchingTrack.url ?? 'Undefined'}`);
 
       if (
@@ -381,7 +382,6 @@ export class BearTunesTagger {
         : undefined,
       score,
       scoreKeywords,
-      get fullName(): string { return `${this.artists?.join(', ')} - ${this.title}`; },
     };
   }
 

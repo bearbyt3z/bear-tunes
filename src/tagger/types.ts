@@ -11,7 +11,6 @@ export interface BearTunesTaggerOptions {
 export interface MatchingTrack extends TrackInfo {
   score: number,
   scoreKeywords: string[],
-  fullName: string,
   url?: URL,
 }
 
