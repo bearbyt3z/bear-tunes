@@ -23,6 +23,7 @@ import {
   extractTrackNameKeywords,
   fetchWebPage,
   formatLocalDateToIsoDateString,
+  formatZodErrorIssues,
   getFirstLine,
   isObjectRecord,
   isSupportedArtworkFile,
@@ -245,13 +246,14 @@ export class BearTunesTagger {
       const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
 
       if (!parsedTrackInfo.success) {
-        logger.warn('Cannot validate ID3 tag output from display plugin', { error: parsedTrackInfo.error });
+        logger.warn('Cannot validate ID3 tag output from display plugin', {
+          trackPath,
+          issues: formatZodErrorIssues(parsedTrackInfo.error),
+        });
         return {};
       }
 
       return parsedTrackInfo.data;
-
-      // return id3TagJson as TrackInfo;
     } catch (error) {
       logger.warn('Cannot parse ID3 tag output from display plugin', { error });
       return {};
@@ -399,7 +401,8 @@ export class BearTunesTagger {
 
     if (!parsedTrackArray.success) {
       logger.warn('Cannot validate raw Beatport search results payload', {
-        error: parsedTrackArray.error,
+        searchKeywords: inputKeywords,
+        issues: formatZodErrorIssues(parsedTrackArray.error),
       });
 
       return undefined;
@@ -425,8 +428,9 @@ export class BearTunesTagger {
         logger.warn('Cannot validate normalized TrackInfo from Beatport search result', {
           trackId: trackEntry.track_id,
           trackName: trackEntry.track_name,
-          error: parsedNormalizedTrackInfo.error,
+          issues: formatZodErrorIssues(parsedNormalizedTrackInfo.error),
         });
+
         continue;
       }
 
@@ -529,7 +533,7 @@ export class BearTunesTagger {
     if (!parsedTrackInfo.success) {
       logger.warn('Cannot validate normalized TrackInfo extracted from Beatport API', {
         trackUrl: trackUrl.toString(),
-        error: parsedTrackInfo.error,
+        issues: formatZodErrorIssues(parsedTrackInfo.error),
       });
 
       return {};
@@ -562,7 +566,7 @@ export class BearTunesTagger {
     if (!parsedAlbumInfo.success) {
       logger.warn('Cannot validate normalized AlbumInfo extracted from Beatport API', {
         albumUrl: albumUrl.toString(),
-        error: parsedAlbumInfo.error,
+        issues: formatZodErrorIssues(parsedAlbumInfo.error),
       });
 
       return undefined;
@@ -588,7 +592,7 @@ export class BearTunesTagger {
     if (!parsedPublisherInfo.success) {
       logger.warn('Cannot validate normalized PublisherInfo extracted from Beatport API', {
         publisherUrl: publisherUrl.toString(),
-        error: parsedPublisherInfo.error,
+        issues: formatZodErrorIssues(parsedPublisherInfo.error),
       });
 
       return undefined;

@@ -36,6 +36,10 @@ export {
 } from './utils/array.js';
 
 export {
+  formatZodErrorIssues,
+} from './utils/error.js';
+
+export {
   formatLocalDateToIsoDateString,
   getFirstLine,
   roundToDecimalPlaces,
