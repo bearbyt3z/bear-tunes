@@ -61,7 +61,7 @@ export interface BeatportSearchResultTrackInfo {
   artists: BeatportSearchResultArtistInfo[],
   bpm: number,
   catalog_number: string,
-  isrc: string,
+  isrc?: string,
   key_id: number,
   key_name: string,
   label: BeatportSearchResultLabelInfo,

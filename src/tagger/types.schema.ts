@@ -51,7 +51,7 @@ export const beatportSearchResultTrackInfoSchema = z.object({
   artists: z.array(beatportSearchResultArtistInfoSchema),
   bpm: z.number(),
   catalog_number: z.string(),
-  isrc: z.string(),
+  isrc: z.string().optional(),
   key_id: z.number(),
   key_name: z.string(),
   label: beatportSearchResultLabelInfoSchema,
