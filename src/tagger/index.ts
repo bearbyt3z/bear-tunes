@@ -55,6 +55,7 @@ import {
 
 import {
   beatportSearchResultTrackInfoArraySchema,
+  beatportTrackInfoSchema,
 } from './types.schema.js';
 
 import type {
@@ -470,7 +471,20 @@ export class BearTunesTagger {
   }
 
   async extractTrackData(trackUrl: URL, forceRadioEdit: boolean): Promise<TrackInfo> {
-    const trackData = await BearTunesTagger.extractNextJSData(trackUrl) as BeatportTrackInfo;
+    const rawTrackData = await BearTunesTagger.extractNextJSData(trackUrl);
+
+    const parsedTrackData = beatportTrackInfoSchema.safeParse(rawTrackData);
+
+    if (!parsedTrackData.success) {
+      logger.warn('Cannot validate raw Beatport track payload', {
+        trackUrl: trackUrl.toString(),
+        issues: formatZodErrorIssues(parsedTrackData.error),
+      });
+
+      return {};
+    }
+
+    const trackData = parsedTrackData.data;
 
     let title = normalizeTrackTitle(trackData.name, trackData.mix_name);
 

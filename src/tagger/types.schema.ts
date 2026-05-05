@@ -72,3 +72,88 @@ export const beatportSearchResultTrackInfoSchema = z.object({
 export const beatportSearchResultTrackInfoArraySchema = z.array(
   beatportSearchResultTrackInfoSchema,
 );
+
+/**
+ * Runtime validation schema for raw `BeatportArtistInfo` input.
+ */
+export const beatportArtistInfoSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+
+/**
+ * Runtime validation schema for raw `BeatportGenreInfo` input.
+ */
+export const beatportGenreInfoSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+
+/**
+ * Runtime validation schema for raw `BeatportSubGenreInfo` input.
+ */
+export const beatportSubGenreInfoSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+
+/**
+ * Runtime validation schema for raw `BeatportImageInfo` input.
+ */
+export const beatportImageInfoSchema = z.object({
+  id: z.number(),
+  uri: z.string(),
+});
+
+/**
+ * Runtime validation schema for raw `BeatportLabelInfo` input.
+ */
+export const beatportLabelInfoSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  image: beatportImageInfoSchema,
+  slug: z.string(),
+});
+
+/**
+ * Runtime validation schema for raw `BeatportKeyInfo` input.
+ */
+export const beatportKeyInfoSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+
+/**
+ * Runtime validation schema for raw `BeatportReleaseInfo` input.
+ */
+export const beatportReleaseInfoSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  image: beatportImageInfoSchema,
+  label: beatportLabelInfoSchema,
+  slug: z.string(),
+});
+
+/**
+ * Runtime validation schema for raw `BeatportTrackInfo` input.
+ */
+export const beatportTrackInfoSchema = z.object({
+  artists: z.array(beatportArtistInfoSchema),
+  bpm: z.number(),
+  catalog_number: z.string(),
+  genre: beatportGenreInfoSchema,
+  id: z.number(),
+  image: beatportImageInfoSchema,
+  isrc: z.string(),
+  key: beatportKeyInfoSchema,
+  length: z.string(),
+  length_ms: z.number(),
+  mix_name: z.string(),
+  name: z.string(),
+  new_release_date: z.string(),
+  number: z.number(),
+  release: beatportReleaseInfoSchema,
+  remixers: z.array(beatportArtistInfoSchema),
+  slug: z.string(),
+  sub_genre: beatportSubGenreInfoSchema,
+});
