@@ -62,8 +62,8 @@ export interface BeatportSearchResultTrackInfo {
   bpm: number,
   catalog_number: string,
   isrc?: string,
-  key_id: number,
-  key_name: string,
+  key_id?: number,
+  key_name?: string,
   label: BeatportSearchResultLabelInfo,
   length: number, // in miliseconds
   mix_name: string, // e.g.: Extended Mix / Original Mix / ... Remix
