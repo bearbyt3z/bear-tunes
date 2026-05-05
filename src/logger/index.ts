@@ -43,6 +43,67 @@ function stringifyLogValue(value: LoggerValue): string {
 }
 
 /**
+ * Type guard for non-null object values used during defensive log normalization.
+ *
+ * @param value - Unknown value to inspect.
+ * @returns `true` when the value is an object and not `null`.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Checks whether a value can be preserved inside structured logger metadata.
+ *
+ * @param value - Unknown value to inspect.
+ * @returns `true` when the value matches {@link LoggerValue}.
+ */
+function isLoggerValue(value: unknown): value is LoggerValue {
+  return (
+    value instanceof Error
+    || value === null
+    || value === undefined
+    || typeof value === 'string'
+    || typeof value === 'number'
+    || typeof value === 'boolean'
+    || typeof value === 'bigint'
+    || typeof value === 'symbol'
+    || typeof value === 'object'
+  );
+}
+
+/**
+ * Collects non-reserved logger fields into a typed metadata object without
+ * using type assertions.
+ *
+ * Undefined values and reserved internal logger fields are skipped.
+ *
+ * @param info - Winston log payload.
+ * @param excludedKeys - Keys reserved for internal logger processing.
+ * @returns Structured metadata object or `undefined` when empty.
+ */
+function buildMetadata(
+  info: LoggerInfo,
+  excludedKeys: ReadonlySet<string>,
+): Record<string, LoggerValue> | undefined {
+  const metadata: Record<string, LoggerValue> = {};
+
+  for (const [key, value] of Object.entries(info)) {
+    if (excludedKeys.has(key) || value === undefined) {
+      continue;
+    }
+
+    if (isLoggerValue(value)) {
+      metadata[key] = value;
+    }
+  }
+
+  return Object.keys(metadata).length > 0
+    ? metadata
+    : undefined;
+}
+
+/**
  * Formats a validation issue path into a dot-separated string.
  *
  * Supported inputs:
@@ -87,17 +148,16 @@ function formatIssues(value: unknown): string[] {
   }
 
   return value.map((issue, index) => {
-    if (typeof issue !== 'object' || issue === null) {
+    if (!isRecord(issue)) {
       return `${index + 1}. [Invalid issue payload]`;
     }
 
-    const issueRecord = issue as Record<string, unknown>;
-    const path = formatIssuePath(issueRecord.path);
-    const code = typeof issueRecord.code === 'string'
-      ? issueRecord.code
+    const path = formatIssuePath(issue.path);
+    const code = typeof issue.code === 'string'
+      ? issue.code
       : 'unknown';
-    const message = typeof issueRecord.message === 'string'
-      ? issueRecord.message
+    const message = typeof issue.message === 'string'
+      ? issue.message
       : 'Unknown validation error';
 
     return path
@@ -107,8 +167,8 @@ function formatIssues(value: unknown): string[] {
 }
 
 /**
- * Winston format that extracts `error.message` and `error.stack` into
- * dedicated fields so later formatters can render them consistently.
+ * Winston format that moves non-reserved top-level log fields into a dedicated
+ * `metadata` object used by the multiline renderer.
  */
 const normalizeError = winston.format((info: LoggerInfo) => {
   const error = info.error;
@@ -143,13 +203,7 @@ const collectMetadata = winston.format((info: LoggerInfo) => {
     'splat',
   ]);
 
-  const metadataEntries = Object.entries(info).filter(([key, value]) => (
-    !excludedKeys.has(key) && value !== undefined
-  ));
-
-  info.metadata = metadataEntries.length > 0
-    ? Object.fromEntries(metadataEntries) as Record<string, LoggerValue>
-    : undefined;
+  info.metadata = buildMetadata(info, excludedKeys);
 
   return info;
 });

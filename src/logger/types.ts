@@ -26,7 +26,7 @@ export type LoggerValue =
  * @property error - Raw error value passed by the caller.
  * @property errorMessage - Human-readable error representation derived from `error`.
  * @property errorStack - Stack trace extracted from `Error` instances.
- * @property metadata - Additional structured properties collected from the log info.
+ * @property metadata - Additional non-reserved log properties collected for structured rendering.
  * @property timestamp - Formatted timestamp added by Winston's timestamp formatter.
  */
 export type LoggerInfo = TransformableInfo & {
