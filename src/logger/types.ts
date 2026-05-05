@@ -1,13 +1,14 @@
 import type { TransformableInfo } from 'logform';
 
 /**
- * Represents any value that can appear as a log error context.
+ * Represents any value that can be attached to a log entry as structured
+ * context or error data.
  *
- * Covers all JavaScript primitives, plain objects, `Error` instances,
- * `null`, and `undefined` to allow safe and explicit handling of each
- * case without falling back to base object stringification.
+ * The union intentionally includes plain objects, primitives, `Error`,
+ * `null`, and `undefined` so the logger can normalize and render values
+ * explicitly without relying on implicit object stringification.
  */
-export type LoggerErrorValue =
+export type LoggerValue =
   | Error
   | object
   | string
@@ -19,18 +20,19 @@ export type LoggerErrorValue =
   | undefined;
 
 /**
- * Extends Winston's {@link TransformableInfo} with additional fields
- * used to carry structured error and timestamp data through the
- * format pipeline.
+ * Winston log payload extended with fields used internally by the custom
+ * formatting pipeline.
  *
- * - `error` — raw error value of any supported type.
- * - `errorMessage` — string representation of the error, derived from `error`.
- * - `errorStack` — stack trace string, present only for `Error` instances.
- * - `timestamp` — formatted date-time string added by the timestamp formatter.
+ * @property error - Raw error value passed by the caller.
+ * @property errorMessage - Human-readable error representation derived from `error`.
+ * @property errorStack - Stack trace extracted from `Error` instances.
+ * @property metadata - Additional structured properties collected from the log info.
+ * @property timestamp - Formatted timestamp added by Winston's timestamp formatter.
  */
 export type LoggerInfo = TransformableInfo & {
-  error?: LoggerErrorValue;
+  error?: LoggerValue;
   errorMessage?: string;
   errorStack?: string;
+  metadata?: Record<string, LoggerValue>;
   timestamp?: string;
 };
