@@ -155,5 +155,5 @@ export const beatportTrackInfoSchema = z.object({
   release: beatportReleaseInfoSchema,
   remixers: z.array(beatportArtistInfoSchema),
   slug: z.string(),
-  sub_genre: beatportSubGenreInfoSchema,
+  sub_genre: beatportSubGenreInfoSchema.nullable(),
 });
