@@ -1,5 +1,17 @@
 import type { ZodError } from 'zod';
 
+function formatZodIssueInput(input: unknown): string | undefined {
+  if (input === undefined) {
+    return undefined;
+  }
+
+  try {
+    return JSON.stringify(input);
+  } catch {
+    return '[Unserializable input]';
+  }
+}
+
 /**
  * Converts a Zod validation error into a compact, log-friendly list of issues.
  *
@@ -17,11 +29,13 @@ export function formatZodErrorIssues(error: ZodError): {
   path: string;
   code: string;
   message: string;
+  input?: string;
 }[] {
   return error.issues.map((issue) => ({
     path: issue.path.join('.'),
     code: issue.code,
     message: issue.message,
+    input: formatZodIssueInput(issue.input),
   }));
 }
 

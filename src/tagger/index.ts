@@ -244,7 +244,9 @@ export class BearTunesTagger {
       );
 
       const normalizedTrackInfo = normalizeTrackInfo(id3TagJson);
-      const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
+      const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo, {
+        reportInput: true,
+      });
 
       if (!parsedTrackInfo.success) {
         logger.warn('Cannot validate ID3 tag output from display plugin', {
@@ -398,7 +400,9 @@ export class BearTunesTagger {
       new URL(this.options.searchURL + encodeURIComponent(inputKeywords.join('+'))),
     );
 
-    const parsedTrackArray = beatportSearchResultTrackInfoArraySchema.safeParse(rawTrackArray);
+    const parsedTrackArray = beatportSearchResultTrackInfoArraySchema.safeParse(rawTrackArray, {
+      reportInput: true,
+    });
 
     if (!parsedTrackArray.success) {
       logger.warn('Cannot validate raw Beatport search results payload', {
@@ -423,7 +427,9 @@ export class BearTunesTagger {
         continue;
       }
 
-      const parsedNormalizedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
+      const parsedNormalizedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo, {
+        reportInput: true,
+      });
 
       if (!parsedNormalizedTrackInfo.success) {
         logger.warn('Cannot validate normalized TrackInfo from Beatport search result', {
@@ -473,7 +479,9 @@ export class BearTunesTagger {
   async extractTrackData(trackUrl: URL, forceRadioEdit: boolean): Promise<TrackInfo> {
     const rawTrackData = await BearTunesTagger.extractNextJSData(trackUrl);
 
-    const parsedTrackData = beatportTrackInfoSchema.safeParse(rawTrackData);
+    const parsedTrackData = beatportTrackInfoSchema.safeParse(rawTrackData, {
+      reportInput: true,
+    });
 
     if (!parsedTrackData.success) {
       logger.warn('Cannot validate raw Beatport track payload', {
@@ -542,7 +550,9 @@ export class BearTunesTagger {
       },
     });
 
-    const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
+    const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo, {
+      reportInput: true,
+    });
 
     if (!parsedTrackInfo.success) {
       logger.warn('Cannot validate normalized TrackInfo extracted from Beatport API', {
@@ -575,7 +585,9 @@ export class BearTunesTagger {
       artwork,
     });
 
-    const parsedAlbumInfo = albumInfoSchema.safeParse(normalizedAlbumInfo);
+    const parsedAlbumInfo = albumInfoSchema.safeParse(normalizedAlbumInfo, {
+      reportInput: true,
+    });
 
     if (!parsedAlbumInfo.success) {
       logger.warn('Cannot validate normalized AlbumInfo extracted from Beatport API', {
@@ -601,7 +613,9 @@ export class BearTunesTagger {
       logotype,
     });
 
-    const parsedPublisherInfo = publisherInfoSchema.safeParse(normalizedPublisherInfo);
+    const parsedPublisherInfo = publisherInfoSchema.safeParse(normalizedPublisherInfo, {
+      reportInput: true,
+    });
 
     if (!parsedPublisherInfo.success) {
       logger.warn('Cannot validate normalized PublisherInfo extracted from Beatport API', {

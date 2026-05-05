@@ -159,10 +159,17 @@ function formatIssues(value: unknown): string[] {
     const message = typeof issue.message === 'string'
       ? issue.message
       : 'Unknown validation error';
+    const input = typeof issue.input === 'string'
+      ? issue.input
+      : undefined;
 
-    return path
+    const baseLine = path
       ? `${index + 1}. ${path} (${code}): ${message}`
       : `${index + 1}. ${code}: ${message}`;
+
+    return input !== undefined
+      ? `${baseLine} (input: ${input})`
+      : baseLine;
   });
 }
 
