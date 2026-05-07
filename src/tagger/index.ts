@@ -54,6 +54,7 @@ import {
 } from '#shared-types-schema';
 
 import {
+  beatportAlbumInfoSchema,
   beatportSearchResultTrackInfoArraySchema,
   beatportTrackInfoSchema,
 } from './types.schema.js';
@@ -567,7 +568,20 @@ export class BearTunesTagger {
   }
 
   static async extractAlbumData(albumUrl: URL, trackNumber: number): Promise<AlbumInfo | undefined> {
-    const albumData = await BearTunesTagger.extractNextJSData(albumUrl) as BeatportAlbumInfo;
+    const rawAlbumData = await BearTunesTagger.extractNextJSData(albumUrl);
+
+    const parsedAlbumData = beatportAlbumInfoSchema.safeParse(rawAlbumData);
+
+    if (!parsedAlbumData.success) {
+      logger.warn('Cannot validate raw Beatport album payload', {
+        albumUrl: albumUrl.toString(),
+        issues: formatZodErrorIssues(parsedAlbumData.error),
+      });
+
+      return undefined;
+    }
+
+    const albumData = parsedAlbumData.data;
 
     const artists = albumData.artists.map((x: BeatportArtistInfo) => x.name);
     const title = normalizeTextCharacters(albumData.name);

@@ -157,3 +157,24 @@ export const beatportTrackInfoSchema = z.object({
   slug: z.string(),
   sub_genre: beatportSubGenreInfoSchema.nullable(),
 });
+
+/**
+ * Runtime validation schema for raw `BeatportAlbumInfo` input.
+ */
+export const beatportAlbumInfoSchema = z.object({
+  artists: z.array(beatportArtistInfoSchema),
+  bpm_range: z.object({
+    min: z.number(),
+    max: z.number(),
+  }),
+  catalog_number: z.string(),
+  id: z.number(),
+  image: beatportImageInfoSchema,
+  label: beatportLabelInfoSchema,
+  name: z.string(),
+  new_release_date: z.string(),
+  remixers: z.array(beatportArtistInfoSchema),
+  slug: z.string(),
+  tracks: z.array(z.string()),
+  track_count: z.number(),
+});
