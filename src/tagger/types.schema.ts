@@ -178,3 +178,13 @@ export const beatportAlbumInfoSchema = z.object({
   tracks: z.array(z.string()),
   track_count: z.number(),
 });
+
+/**
+ * Runtime validation schema for raw `BeatportPublisherInfo` input.
+ */
+export const beatportPublisherInfoSchema = z.object({
+  id: z.number(),
+  image: beatportImageInfoSchema,
+  name: z.string(),
+  slug: z.string(),
+});

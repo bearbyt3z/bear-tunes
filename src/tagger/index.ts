@@ -55,6 +55,7 @@ import {
 
 import {
   beatportAlbumInfoSchema,
+  beatportPublisherInfoSchema,
   beatportSearchResultTrackInfoArraySchema,
   beatportTrackInfoSchema,
 } from './types.schema.js';
@@ -616,7 +617,20 @@ export class BearTunesTagger {
   }
 
   static async extractPublisherData(publisherUrl: URL): Promise<PublisherInfo | undefined> {
-    const publisherData = await BearTunesTagger.extractNextJSData(publisherUrl) as BeatportPublisherInfo;
+    const rawPublisherData = await BearTunesTagger.extractNextJSData(publisherUrl);
+
+    const parsedPublisherData = beatportPublisherInfoSchema.safeParse(rawPublisherData);
+
+    if (!parsedPublisherData.success) {
+      logger.warn('Cannot validate raw Beatport publisher payload', {
+        publisherUrl: publisherUrl.toString(),
+        issues: formatZodErrorIssues(parsedPublisherData.error),
+      });
+
+      return undefined;
+    }
+
+    const publisherData = parsedPublisherData.data;
 
     const name = publisherData.name;
     const logotype = publisherData.image?.uri;
