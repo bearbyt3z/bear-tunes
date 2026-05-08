@@ -4,6 +4,7 @@ import {
   normalizePositiveNumber,
   normalizeString,
   normalizeStringArray,
+  normalizeTextCharacters,
   normalizeTrackArtists,
   normalizeTrackKey,
   normalizeTrackTitle,
@@ -150,7 +151,8 @@ export function normalizeAlbumInfo(album: unknown): AlbumInfo | undefined {
     return undefined;
   }
 
-  const title = normalizeString(album.title);
+  const rawTitle = normalizeString(album.title);
+  const title = rawTitle ? normalizeTextCharacters(rawTitle) : undefined;
   if (!title) {
     return undefined;
   }

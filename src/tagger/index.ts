@@ -586,7 +586,7 @@ export class BearTunesTagger {
 
     const normalizedAlbumInfo = normalizeAlbumInfo({
       artists: albumData.artists.map((x: BeatportArtistInfo) => x.name),
-      title: normalizeTextCharacters(albumData.name),
+      title: albumData.name,
       catalogNumber: albumData.catalog_number,
       trackNumber,
       trackTotal: albumData.track_count,
