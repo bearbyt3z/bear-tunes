@@ -584,20 +584,14 @@ export class BearTunesTagger {
 
     const albumData = parsedAlbumData.data;
 
-    const artists = albumData.artists.map((x: BeatportArtistInfo) => x.name);
-    const title = normalizeTextCharacters(albumData.name);
-    const catalogNumber = albumData.catalog_number;
-    const trackTotal = albumData.track_count;
-    const artwork = albumData.image?.uri;
-
     const normalizedAlbumInfo = normalizeAlbumInfo({
-      artists,
-      title,
-      catalogNumber,
+      artists: albumData.artists.map((x: BeatportArtistInfo) => x.name),
+      title: normalizeTextCharacters(albumData.name),
+      catalogNumber: albumData.catalog_number,
       trackNumber,
-      trackTotal,
+      trackTotal: albumData.track_count,
       url: albumUrl,
-      artwork,
+      artwork: albumData.image?.uri,
     });
 
     const parsedAlbumInfo = albumInfoSchema.safeParse(normalizedAlbumInfo, {
