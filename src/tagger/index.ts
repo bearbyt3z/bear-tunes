@@ -632,13 +632,10 @@ export class BearTunesTagger {
 
     const publisherData = parsedPublisherData.data;
 
-    const name = publisherData.name;
-    const logotype = publisherData.image?.uri;
-
     const normalizedPublisherInfo = normalizePublisherInfo({
-      name,
+      name: publisherData.name,
       url: publisherUrl,
-      logotype,
+      logotype: publisherData.image?.uri,
     });
 
     const parsedPublisherInfo = publisherInfoSchema.safeParse(normalizedPublisherInfo, {
