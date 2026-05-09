@@ -20,7 +20,10 @@
  *   and `publisher.logotype` use `URL` instances in the canonical representation.
  * - `released` represents a release date value; when serialized outside runtime objects,
  *   it should be formatted as a date-only value.
- * - `year` and `released` may coexist and are not auto-corrected against each other.
+ * - `year` represents a release year value used by some metadata formats.
+ * - When `year` is missing and `released` is present, `year` is derived from `released`
+ *   during normalization.
+ * - When both `released` and `year` are provided, they may coexist without automatic correction.
  * - Numeric counters such as `album.trackNumber` and `album.trackTotal` are positive integers.
  * - `bpm` is a positive number.
  * - `key` uses the canonical normalized track key representation.

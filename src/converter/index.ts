@@ -246,15 +246,12 @@ export class BearTunesConverter {
     }
 
     const metaflacOutput = metaflacResult.stdout.toString();
-    const dateTag = BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'date');
-    const yearMatch = dateTag?.match(/\d{4}/);
 
     const rawTrackInfo = {
       artists: BearTunesConverter.extractMultiTagFromMetaflacOutput(metaflacOutput, 'artist'),
       title: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'title'),
       genre: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'genre'),
-      year: yearMatch?.[0],
-      released: dateTag,
+      released: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'date'),
       album: {
         artists: BearTunesConverter.extractMultiTagFromMetaflacOutput(metaflacOutput, 'albumartist'),
         title: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'album'),

@@ -247,13 +247,17 @@ export function normalizeTrackInfo(trackInfo: unknown): TrackInfo | undefined {
   const title = normalizeTitle(trackInfo.title);
   const genreInfo = normalizeGenreInfo(trackInfo.genre, trackInfo.subgenre);
 
+  const released = normalizeDate(trackInfo.released);
+  const inputYear = normalizePositiveInteger(trackInfo.year);
+  const year = inputYear ?? released?.getFullYear();
+
   return removeUndefinedObjectFields({
     url: normalizeUrl(trackInfo.url),
     artists: normalizeArtistArray(trackInfo.artists, title),
     title,
     remixers: normalizeArtistArray(trackInfo.remixers),
-    released: normalizeDate(trackInfo.released),
-    year: normalizePositiveInteger(trackInfo.year),
+    released,
+    year,
     genre: genreInfo.genre,
     subgenre: genreInfo.subgenre,
     bpm: normalizePositiveNumber(trackInfo.bpm),

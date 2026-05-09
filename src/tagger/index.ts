@@ -507,8 +507,6 @@ export class BearTunesTagger {
       }
     }
 
-    const released = new Date(trackData.new_release_date); // or publish_date?
-
     const publisherUrl = trackData.release?.label ? new URL(`${this.options.domainURL}/label/${trackData.release.label.slug}/${trackData.release.label.id}`) : undefined;
     const publisher = publisherUrl ? await BearTunesTagger.extractPublisherData(publisherUrl) : undefined;
 
@@ -520,8 +518,7 @@ export class BearTunesTagger {
       artists: trackData.artists.map((x: BeatportArtistInfo) => x.name),
       title,
       remixers: trackData.remixers.map((x: BeatportArtistInfo) => x.name),
-      released,
-      year: released.getFullYear(),
+      released: trackData.new_release_date, // or publish_date?
       genre: trackData.genre?.name,
       subgenre: trackData.sub_genre?.name,
       bpm: trackData.bpm,
