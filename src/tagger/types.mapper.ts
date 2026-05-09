@@ -20,16 +20,17 @@ import type {
 } from '#shared-types';
 
 /**
- * Normalizes a raw Beatport search-result track entry into canonical `TrackInfo`.
+ * Maps a Beatport search-result track entry to canonical `TrackInfo`.
  *
- * This function performs only mapping + normalization. It does not log and does
- * not validate the normalized output schema.
+ * This function performs source-specific field mapping and delegates final
+ * canonical value normalization to `normalizeTrackInfo()`. It does not log and
+ * does not validate the resulting output schema.
  *
- * @param trackEntry - Raw Beatport search result track object.
+ * @param trackEntry - Beatport search result track object.
  * @param domainURL - Beatport domain URL used to build the canonical track URL.
- * @returns Normalized `TrackInfo`, or `undefined` when normalization fails.
+ * @returns Canonical `TrackInfo`, or `undefined` when the mapped value cannot be normalized.
  */
-export function normalizeBeatportSearchResultTrackInfo(
+export function mapBeatportSearchResultTrackToTrackInfo(
   trackEntry: BeatportSearchResultTrackInfo,
   domainURL: string,
 ): TrackInfo | undefined {

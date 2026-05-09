@@ -3,8 +3,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import {
-  normalizeBeatportSearchResultTrackInfo,
-} from './types.normalizer.js';
+  mapBeatportSearchResultTrackToTrackInfo,
+} from './types.mapper.js';
 
 import logger from '#logger';
 import {
@@ -416,34 +416,35 @@ export class BearTunesTagger {
     }
 
     for (const trackEntry of parsedTrackArray.data) {
-      const normalizedTrackInfo = normalizeBeatportSearchResultTrackInfo(
+      const mappedTrackInfo = mapBeatportSearchResultTrackToTrackInfo(
         trackEntry,
         this.options.domainURL,
       );
 
-      if (!normalizedTrackInfo) {
-        logger.warn('Cannot normalize Beatport search result track', {
+      if (!mappedTrackInfo) {
+        logger.warn('Cannot map Beatport search result track to TrackInfo', {
           trackId: trackEntry.track_id,
           trackName: trackEntry.track_name,
         });
+
         continue;
       }
 
-      const parsedNormalizedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo, {
+      const parsedMappedTrackInfo = trackInfoSchema.safeParse(mappedTrackInfo, {
         reportInput: true,
       });
 
-      if (!parsedNormalizedTrackInfo.success) {
-        logger.warn('Cannot validate normalized TrackInfo from Beatport search result', {
+      if (!parsedMappedTrackInfo.success) {
+        logger.warn('Cannot validate mapped TrackInfo from Beatport search result', {
           trackId: trackEntry.track_id,
           trackName: trackEntry.track_name,
-          issues: formatZodErrorIssues(parsedNormalizedTrackInfo.error),
+          issues: formatZodErrorIssues(parsedMappedTrackInfo.error),
         });
 
         continue;
       }
 
-      const candidateTrack = parsedNormalizedTrackInfo.data;
+      const candidateTrack = parsedMappedTrackInfo.data;
 
       if (!candidateTrack.title || !candidateTrack.artists?.length || !candidateTrack.details) {
         continue;
