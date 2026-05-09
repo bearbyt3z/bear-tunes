@@ -64,7 +64,9 @@ import type {
   BearTunesTaggerOptions,
   BeatportAlbumInfo,
   BeatportArtistInfo,
+  BeatportLabelInfo,
   BeatportPublisherInfo,
+  BeatportReleaseInfo,
   BeatportSearchResultArtistInfo,
   BeatportSearchResultGenreInfo,
   BeatportSearchResultTrackInfo,
@@ -508,12 +510,6 @@ export class BearTunesTagger {
       }
     }
 
-    const publisherUrl = trackData.release?.label ? new URL(`${this.options.domainURL}/label/${trackData.release.label.slug}/${trackData.release.label.id}`) : undefined;
-    const publisher = publisherUrl ? await BearTunesTagger.extractPublisherData(publisherUrl) : undefined;
-
-    const albumUrl = trackData.release ? new URL(`${this.options.domainURL}/release/${trackData.release.slug}/${trackData.release.id}`) : undefined;
-    const album = albumUrl ? await BearTunesTagger.extractAlbumData(albumUrl, trackData.number) : undefined;
-
     const normalizedTrackInfo = normalizeTrackInfo({
       url: trackUrl,
       artists: trackData.artists.map((x: BeatportArtistInfo) => x.name),
@@ -527,8 +523,8 @@ export class BearTunesTagger {
       isrc: trackData.isrc,
       ufid: `track-${trackData.id}`,
       waveform: trackData.image?.uri,
-      publisher,
-      album,
+      publisher: await this.extractPublisherData(trackData.release.label),
+      album: await this.extractAlbumData(trackData.release, trackData.number),
       details: {
         duration: roundToDecimalPlaces(trackData.length_ms / 1000.0, 2),
       },
@@ -550,7 +546,13 @@ export class BearTunesTagger {
     return parsedTrackInfo.data;
   }
 
-  static async extractAlbumData(albumUrl: URL, trackNumber: number): Promise<AlbumInfo | undefined> {
+  async extractAlbumData(releaseInfo: BeatportReleaseInfo, trackNumber: number): Promise<AlbumInfo | undefined> {
+    const albumUrl = releaseInfo ? new URL(`${this.options.domainURL}/release/${releaseInfo.slug}/${releaseInfo.id}`) : undefined;
+
+    if (!albumUrl) {
+      return undefined;
+    }
+
     const rawAlbumData = await BearTunesTagger.extractNextJSData(albumUrl);
 
     const parsedAlbumData = beatportAlbumInfoSchema.safeParse(rawAlbumData);
@@ -592,7 +594,13 @@ export class BearTunesTagger {
     return parsedAlbumInfo.data;
   }
 
-  static async extractPublisherData(publisherUrl: URL): Promise<PublisherInfo | undefined> {
+  async extractPublisherData(labelInfo: BeatportLabelInfo): Promise<PublisherInfo | undefined> {
+    const publisherUrl = labelInfo ? new URL(`${this.options.domainURL}/label/${labelInfo.slug}/${labelInfo.id}`) : undefined;
+
+    if (!publisherUrl) {
+      return undefined;
+    }
+
     const rawPublisherData = await BearTunesTagger.extractNextJSData(publisherUrl);
 
     const parsedPublisherData = beatportPublisherInfoSchema.safeParse(rawPublisherData);
