@@ -99,7 +99,11 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
 
         if (!isEmptyPlainObject(trackInfo)) {
           const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
-          await downloadAndSaveArtwork(filePathRenamed, trackInfo);
+          await downloadAndSaveArtwork(
+            filePathRenamed,
+            trackInfo.album?.artwork,
+            trackInfo.album?.url,
+          );
         }
       }
     } else if (path.extname(file) === '.flac') {
@@ -123,7 +127,11 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
           const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
 
           try {
-            const artworkPath = await downloadAndSaveArtwork(filePathRenamed, trackInfo);
+            const artworkPath = await downloadAndSaveArtwork(
+              filePathRenamed,
+              trackInfo.album?.artwork,
+              trackInfo.album?.url,
+            );
 
             if (artworkPath) {
               logger.info(`Artwork written to: "${artworkPath}"`);

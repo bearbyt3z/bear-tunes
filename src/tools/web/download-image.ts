@@ -5,7 +5,6 @@ import { getClientProfile, buildImageDownloadHeaders } from './request-identity.
 import { replaceFilenameExtension } from '#tools';
 
 import type { DownloadImageOptions } from './download.types.js';
-import type { TrackInfo } from '#shared-types';
 
 /**
  * Returns the expected MIME type for an image file based on its extension.
@@ -95,22 +94,22 @@ export async function downloadImage(
 }
 
 /**
- * Downloads album artwork for the given track and saves it next to the track file.
+ * Downloads album artwork and saves it next to the track file.
  *
  * The saved artwork file reuses the track path and replaces its extension with
- * the extension derived from the artwork URL. If the artwork URL does not expose
- * a recognizable extension, a fallback `.unrecognized` extension is used.
+ * the extension derived from the artwork URL. If the artwork URL does not
+ * expose a recognizable extension, a fallback `.unrecognized` extension is used.
  *
  * @param trackPath - Path to the track file.
- * @param trackInfo - Track metadata containing album artwork information.
- * @returns Path to the saved artwork file, or undefined if no artwork URL was available.
+ * @param artworkUrl - URL of the artwork image to download.
+ * @param refererUrl - Optional referer URL sent with the artwork request.
+ * @returns Path to the saved artwork file, or `undefined` when no artwork URL was provided.
  */
 export async function downloadAndSaveArtwork(
   trackPath: string,
-  trackInfo: TrackInfo,
+  artworkUrl: URL | undefined,
+  refererUrl: URL | undefined,
 ): Promise<string | undefined> {
-  const artworkUrl = trackInfo.album?.artwork;
-
   if (!artworkUrl) {
     return;
   }
@@ -122,7 +121,7 @@ export async function downloadAndSaveArtwork(
 
   await downloadImage(artworkUrl, {
     outputFilePath: artworkPath,
-    referer: trackInfo.album?.url,
+    referer: refererUrl,
   });
 
   return artworkPath;
