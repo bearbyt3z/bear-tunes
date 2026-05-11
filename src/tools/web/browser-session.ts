@@ -7,36 +7,96 @@ import { looksLikeChallengeHtml } from './challenge-detection.js';
 import { buildPlaywrightContextOptions, getClientProfile } from './request-identity.js';
 import { ignoreError } from '../utils/error.js';
 
-import type { Page, BrowserContextOptions } from 'playwright';
+import type {
+  BrowserContext,
+  BrowserContextOptions,
+  Page,
+} from 'playwright';
 
 import type { BrowserFetchOptions, PageChallengeState } from './browser-session.types.js';
 
-/** Returns the persistent Playwright profile directory, creating it if needed. */
+/** Returns the persistent Playwright profile directory, creating it when needed. */
 function getUserDataDir(cacheDir?: string): string {
   const dir = cacheDir ?? path.join(process.cwd(), '.cache', 'playwright-profile');
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
 
-/** Reads the current page state needed to detect challenge responses safely. */
+/**
+ * Installs a Playwright init script that masks common WebDriver markers
+ * before any page scripts run in the given browser context.
+ *
+ * The injected script overrides `navigator.webdriver` on both
+ * `Navigator.prototype` and the current `navigator` instance so pages are
+ * less likely to detect the automated browser environment.
+ *
+ * @param context - Playwright browser context to patch before navigation.
+ */
+async function installStealthInitScript(context: BrowserContext): Promise<void> {
+  await context.addInitScript(() => {
+    try {
+      Object.defineProperty(Navigator.prototype, 'webdriver', {
+        get: () => undefined,
+        configurable: true,
+      });
+    } catch (error: unknown) {
+      void error;
+    }
+
+    try {
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+        configurable: true,
+      });
+    } catch (error: unknown) {
+      void error;
+    }
+  });
+}
+
+/**
+ * Reads the current page state without throwing on common page access failures.
+ *
+ * The returned snapshot includes the current URL, title, HTML, and lightweight
+ * challenge indicators that can be evaluated by higher-level helpers.
+ *
+ * @param page - Playwright page to inspect.
+ * @returns The current page state snapshot.
+ */
 async function safeGetPageState(page: Page): Promise<PageChallengeState> {
+  const url = page.url();
   const title = await page.title().catch(() => '');
   const html = await page.content().catch(() => '');
   const hasRecaptchaFrame =
     (await page.$('iframe[title*="reCAPTCHA"]').catch(() => null)) !== null;
-
-  const challenge =
-    hasRecaptchaFrame || looksLikeChallengeHtml(`${title}\n${html}`);
+  const looksLikeChallenge = looksLikeChallengeHtml(`${title}\n${html}`);
 
   return {
+    url,
     title,
     html,
     hasRecaptchaFrame,
-    challenge,
+    looksLikeChallenge,
   };
 }
 
-/** Waits for the page to finish its main navigation and post-load updates. */
+/**
+ * Returns whether the current page state already represents the resolved
+ * target page HTML expected by the caller.
+ *
+ * @param state - Page state snapshot to evaluate.
+ * @returns `true` when the target page is considered resolved.
+ */
+function isResolvedPageState(state: PageChallengeState): boolean {
+  return state.html.includes('__NEXT_DATA__');
+}
+
+/**
+ * Waits for the page to finish its main navigation and a short post-load
+ * settling period before the next state inspection.
+ *
+ * @param page - Playwright page to wait on.
+ */
 async function waitUntilPageSettles(page: Page): Promise<void> {
   await page.waitForLoadState('domcontentloaded').catch(ignoreError);
   await page.waitForLoadState('load').catch(ignoreError);
@@ -44,36 +104,49 @@ async function waitUntilPageSettles(page: Page): Promise<void> {
   await page.waitForTimeout(1000);
 }
 
-/** Polls the page until challenge markers disappear or the timeout is reached. */
-async function waitUntilChallengeIsGone(
+/**
+ * Polls the page until the resolved target page is available or the timeout
+ * is reached.
+ *
+ * The function returns the first resolved page state. If the timeout expires
+ * first, it returns the most recent page state so the caller can decide
+ * whether to treat it as a failure.
+ *
+ * @param page - Playwright page to observe.
+ * @param timeoutMs - Maximum time to wait for the resolved target page.
+ * @returns The resolved page state or the last observed page state on timeout.
+ */
+async function waitUntilResolvedPage(
   page: Page,
   timeoutMs: number,
-): Promise<void> {
+): Promise<PageChallengeState> {
   const startedAt = Date.now();
 
   while (true) {
-    try {
-      await waitUntilPageSettles(page);
-      const state = await safeGetPageState(page);
+    await waitUntilPageSettles(page);
+    const state = await safeGetPageState(page);
 
-      if (!state.challenge) {
-        await waitUntilPageSettles(page);
-        return;
-      }
-    } catch {
-      // A navigation may have occurred and destroyed the previous execution context.
+    if (isResolvedPageState(state)) {
+      return state;
     }
 
     if (Date.now() - startedAt > timeoutMs) {
-      throw new Error('Challenge was not solved within manual timeout.');
+      return state;
     }
 
     await page.waitForTimeout(1000);
   }
 }
 
-/** Loads a page through a persistent browser context configured with the given
- * options and returns its current state. */
+/**
+ * Loads a page through a persistent browser context configured with the given
+ * options and returns the current page state after initial settling.
+ *
+ * @param url - Target page URL.
+ * @param contextOptions - Playwright browser context options.
+ * @param options - Persistent browser loading options.
+ * @returns The current page state read from the persistent context.
+ */
 async function readPageViaPersistentContext(
   url: URL,
   contextOptions: BrowserContextOptions,
@@ -85,6 +158,8 @@ async function readPageViaPersistentContext(
     ...contextOptions,
     headless: options.headless ?? true,
   });
+
+  await installStealthInitScript(context);
 
   try {
     const page = context.pages()[0] ?? await context.newPage();
@@ -105,15 +180,17 @@ async function readPageViaPersistentContext(
 /**
  * Resolves a page through a persistent browser context and returns its final HTML.
  *
- * The function first tries to load the page in headless mode using the existing
- * persistent browser state. If the page still looks like a challenge response,
- * it retries in headful mode so the verification can be completed manually, then
- * loads the page once more in headless mode using the same persistent state.
+ * The function first attempts to load the target page in headless mode using
+ * the existing persistent browser state. If the resolved target page is not
+ * available, it retries in headful mode so any manual verification can be
+ * completed in the same persistent profile, then waits for the resolved target
+ * page and returns its HTML.
  *
- * @param url - The target page URL.
+ * @param url - Target page URL.
  * @param options - Persistent browser loading options.
- * @returns The final resolved HTML content.
- * @throws {Error} When the challenge is still present after manual verification.
+ * @returns The resolved target page HTML.
+ * @throws {Error} When the resolved target page could not be obtained within
+ * the manual verification timeout.
  */
 export async function fetchPageWithPersistentProfile(
   url: URL,
@@ -127,7 +204,7 @@ export async function fetchPageWithPersistentProfile(
     headless: true,
   });
 
-  if (!firstTry.challenge) {
+  if (isResolvedPageState(firstTry)) {
     return firstTry.html;
   }
 
@@ -139,6 +216,8 @@ export async function fetchPageWithPersistentProfile(
     headless: false,
   });
 
+  await installStealthInitScript(context);
+
   try {
     const page = context.pages()[0] ?? await context.newPage();
 
@@ -147,19 +226,14 @@ export async function fetchPageWithPersistentProfile(
       timeout: 30_000,
     });
 
-    await waitUntilChallengeIsGone(page, manualTimeoutMs);
+    const finalState = await waitUntilResolvedPage(page, manualTimeoutMs);
+
+    if (!isResolvedPageState(finalState)) {
+      throw new Error(`Failed to resolve target page after manual verification for "${url.toString()}"`);
+    }
+
+    return finalState.html;
   } finally {
     await context.close();
   }
-
-  const secondTry = await readPageViaPersistentContext(url, contextOptions, {
-    ...options,
-    headless: true,
-  });
-
-  if (secondTry.challenge) {
-    throw new Error(`Challenge still present after manual verification for "${url.toString()}"`);
-  }
-
-  return secondTry.html;
 }

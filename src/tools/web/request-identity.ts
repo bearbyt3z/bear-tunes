@@ -214,8 +214,12 @@ export function buildPlaywrightContextOptions(profile: ClientProfile): BrowserCo
     deviceScaleFactor: profile.device.deviceScaleFactor,
     isMobile: profile.device.isMobile,
     hasTouch: profile.device.hasTouch,
-    locale: profile.identity.locale,
+    // Locale is intentionally left unset because it triggers a Cloudflare captcha loop.
+    // locale: profile.identity.locale,
     timezoneId: profile.identity.timezoneId,
+    extraHTTPHeaders: {
+      'Accept-Language': profile.request.acceptLanguage,
+    },
   };
 }
 
