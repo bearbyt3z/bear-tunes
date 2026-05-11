@@ -274,8 +274,7 @@ export class BearTunesTagger {
       'Fetched page for Next.js data extraction',
       {
         url: url.toString(),
-        success: page.success,
-        method: page.method,
+        attempts: page.attempts,
       },
     );
 

@@ -4,7 +4,10 @@ import { fetchPageWithPersistentProfile } from './browser-session.js';
 import { looksLikeChallengeResponse } from './challenge-detection.js';
 import { getClientProfile, buildFetchHeaders } from './request-identity.js';
 
-import type { ParsedPageFetchResult } from './browser-session.types.js';
+import type {
+  PageFetchAttempt,
+  ParsedPageFetchResult,
+} from './browser-session.types.js';
 
 /**
  * Fetches an HTML page and returns it as a parsed DOM document.
@@ -35,30 +38,50 @@ export async function fetchWebPage(url: URL): Promise<ParsedPageFetchResult> {
   const html = await response.text();
 
   if (looksLikeChallengeResponse(response, html)) {
+    const fetchAttempt: PageFetchAttempt = {
+      method: 'fetch',
+      success: false,
+      status: response.status,
+      reason: 'challenge-response',
+    };
+
     const result = await fetchPageWithPersistentProfile(url, {
       cacheDir: '.cache/playwright-profile',
     });
 
     return {
       success: result.success,
-      method: result.method,
       document: result.html === null
         ? null
         : new JSDOM(result.html, { url: url.toString() }).window.document,
+      attempts: [fetchAttempt, ...result.attempts],
     };
   }
 
   if (!response.ok) {
     return {
       success: false,
-      method: null,
       document: null,
+      attempts: [
+        {
+          method: 'fetch',
+          success: false,
+          status: response.status,
+          reason: `http-${response.status}`,
+        },
+      ],
     };
   }
 
   return {
     success: true,
-    method: 'fetch',
     document: new JSDOM(html, { url: url.toString() }).window.document,
+    attempts: [
+      {
+        method: 'fetch',
+        success: true,
+        status: response.status,
+      },
+    ],
   };
 }

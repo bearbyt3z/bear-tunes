@@ -16,6 +16,7 @@ import type {
 import type {
   BrowserFetchOptions,
   PageChallengeState,
+  PageFetchAttempt,
   RawPageFetchResult,
 } from './browser-session.types.js';
 
@@ -181,6 +182,18 @@ async function readPageViaPersistentContext(
   }
 }
 
+function getBrowserFailureReason(state: PageChallengeState): string {
+  if (state.hasRecaptchaFrame) {
+    return 'captcha';
+  }
+
+  if (state.looksLikeChallenge) {
+    return 'challenge-response';
+  }
+
+  return 'resolved-page-marker-not-found';
+}
+
 /**
  * Resolves a page through a persistent browser context and returns its final HTML.
  *
@@ -211,10 +224,21 @@ export async function fetchPageWithPersistentProfile(
   if (isResolvedPageState(firstTry)) {
     return {
       success: true,
-      method: 'browser-headless',
       html: firstTry.html,
+      attempts: [
+        {
+          method: 'browser-headless',
+          success: true,
+        },
+      ],
     };
   }
+
+  const headlessAttempt: PageFetchAttempt = {
+    method: 'browser-headless',
+    success: false,
+    reason: getBrowserFailureReason(firstTry),
+  };
 
   const userDataDir = getUserDataDir(options.cacheDir);
   const manualTimeoutMs = options.manualTimeoutMs ?? 180_000;
@@ -237,13 +261,28 @@ export async function fetchPageWithPersistentProfile(
     const finalState = await waitUntilResolvedPage(page, manualTimeoutMs);
 
     if (!isResolvedPageState(finalState)) {
-      throw new Error(`Failed to resolve target page after manual verification for "${url.toString()}"`);
+      const headfulAttempt: PageFetchAttempt = {
+        method: 'browser-headful',
+        success: false,
+        reason: getBrowserFailureReason(finalState),
+      };
+
+      return {
+        success: false,
+        html: null,
+        attempts: [headlessAttempt, headfulAttempt],
+      };
     }
+
+    const headfulAttempt: PageFetchAttempt = {
+      method: 'browser-headful',
+      success: true,
+    };
 
     return {
       success: true,
-      method: 'browser-headful',
       html: finalState.html,
+      attempts: [headlessAttempt, headfulAttempt],
     };
   } finally {
     await context.close();

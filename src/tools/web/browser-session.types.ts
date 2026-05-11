@@ -43,9 +43,16 @@ export interface PageChallengeState {
 
 export type PageFetchMethod = 'fetch' | 'browser-headless' | 'browser-headful';
 
+export interface PageFetchAttempt {
+  method: PageFetchMethod;
+  success: boolean;
+  reason?: string;
+  status?: number;
+}
+
 export interface BasePageFetchResult {
   success: boolean;
-  method: PageFetchMethod | null;
+  attempts: PageFetchAttempt[];
 }
 
 export interface RawPageFetchResult extends BasePageFetchResult {
