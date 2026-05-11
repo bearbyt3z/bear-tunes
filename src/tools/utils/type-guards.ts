@@ -7,14 +7,14 @@
  *
  * Usage:
  * ```ts
- * if (isEmptyPlainObject(trackInfo)) {
- *   // obj has type Record<string, never>
- *   // obj.key is a TS error - correct for empty object
+ * if (isEmptyPlainObject(payload)) {
+ *   // payload has type Record<string, never>
+ *   // payload.key is a TS error - correct for empty object
  * }
  * ```
  *
- * @param value - Value to check
- * @returns `true` if empty plain object
+ * @param value - Value to check.
+ * @returns `true` if the value is an empty plain object.
  */
 export function isEmptyPlainObject(value: unknown): value is Record<string, never> {
   return value !== null &&
