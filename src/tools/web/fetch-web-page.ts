@@ -10,7 +10,7 @@ import type {
 } from './browser-session.types.js';
 
 /**
- * Fetches an HTML page and returns it as a parsed DOM document.
+ * Fetches an HTML page and returns a parsed page fetch result.
  *
  * The function first tries to download the page with a regular HTTP fetch using
  * request headers built from the client profile. If the response looks like a
@@ -22,9 +22,8 @@ import type {
  * can be retrieved.
  *
  * @param url - The absolute page URL to download and parse.
- * @returns A parsed DOM document created from the final HTML response.
- * @throws {Error} When the HTTP request returns a non-success status code
- * and the response does not look like a challenge page.
+ * @returns The parsed page fetch result, including the parsed document when
+ * available and the full attempt history.
  */
 export async function fetchWebPage(url: URL): Promise<ParsedPageFetchResult> {
   const profile = await getClientProfile();

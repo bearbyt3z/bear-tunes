@@ -182,6 +182,13 @@ async function readPageViaPersistentContext(
   }
 }
 
+/**
+ * Maps the observed page state to a short reason describing why the browser
+ * attempt did not resolve the target page.
+ *
+ * @param state - Page state snapshot to classify.
+ * @returns A short machine-readable failure reason.
+ */
 function getBrowserFailureReason(state: PageChallengeState): string {
   if (state.hasRecaptchaFrame) {
     return 'captcha';
@@ -195,19 +202,17 @@ function getBrowserFailureReason(state: PageChallengeState): string {
 }
 
 /**
- * Resolves a page through a persistent browser context and returns its final HTML.
+ * Resolves a page through a persistent browser context and returns the final
+ * raw HTML together with the browser attempt history.
  *
- * The function first attempts to load the target page in headless mode using
- * the existing persistent browser state. If the resolved target page is not
- * available, it retries in headful mode so any manual verification can be
- * completed in the same persistent profile, then waits for the resolved target
- * page and returns its HTML.
+ * The function first tries to load the target page in headless mode using the
+ * existing persistent browser state. If the target page is still not resolved,
+ * it retries in headful mode so any manual verification can be completed in
+ * the same persistent profile.
  *
  * @param url - Target page URL.
  * @param options - Persistent browser loading options.
- * @returns The resolved target page HTML.
- * @throws {Error} When the resolved target page could not be obtained within
- * the manual verification timeout.
+ * @returns The final raw page fetch result, including attempt metadata.
  */
 export async function fetchPageWithPersistentProfile(
   url: URL,

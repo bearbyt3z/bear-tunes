@@ -41,24 +41,54 @@ export interface PageChallengeState {
   looksLikeChallenge: boolean;
 }
 
+/**
+ * Identifies the transport used during a single page fetch attempt.
+ */
 export type PageFetchMethod = 'fetch' | 'browser-headless' | 'browser-headful';
 
+/**
+ * Describes one attempt made while resolving the target page.
+ *
+ * A single high-level page fetch may include multiple attempts, for example
+ * an initial HTTP fetch followed by headless and headful browser fallbacks.
+ */
 export interface PageFetchAttempt {
+  /** Transport used for this attempt. */
   method: PageFetchMethod;
+
+  /** Whether this individual attempt succeeded. */
   success: boolean;
+
+  /** Optional short reason explaining why the attempt failed. */
   reason?: string;
+
+  /** Optional HTTP status observed for this attempt when available. */
   status?: number;
 }
 
+/**
+ * Common metadata returned by page fetch helpers.
+ */
 export interface BasePageFetchResult {
+  /** Whether the overall page resolution succeeded. */
   success: boolean;
+
+  /** Ordered history of attempts made while resolving the page. */
   attempts: PageFetchAttempt[];
 }
 
+/**
+ * Result returned by low-level page fetch helpers that work with raw HTML.
+ */
 export interface RawPageFetchResult extends BasePageFetchResult {
+  /** Final resolved HTML, or `null` when the page could not be resolved. */
   html: string | null;
 }
 
+/**
+ * Result returned by high-level page fetch helpers that expose a parsed DOM.
+ */
 export interface ParsedPageFetchResult extends BasePageFetchResult {
+  /** Parsed document created from the final HTML, or `null` on failure. */
   document: Document | null;
 }
