@@ -2,7 +2,7 @@ import * as path from 'node:path';
 
 import { downloadFile } from './download-file.js';
 import { getClientProfile, buildImageDownloadHeaders } from './request-identity.js';
-import { replaceFilenameExtension } from '#tools';
+import { replaceFilenameExtension } from '../utils/path.js';
 
 import type { DownloadImageOptions } from './download.types.js';
 
