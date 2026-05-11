@@ -40,3 +40,18 @@ export interface PageChallengeState {
   /** Whether the current title/HTML matches known challenge page heuristics. */
   looksLikeChallenge: boolean;
 }
+
+export type PageFetchMethod = 'fetch' | 'browser-headless' | 'browser-headful';
+
+export interface BasePageFetchResult {
+  success: boolean;
+  method: PageFetchMethod | null;
+}
+
+export interface RawPageFetchResult extends BasePageFetchResult {
+  html: string | null;
+}
+
+export interface ParsedPageFetchResult extends BasePageFetchResult {
+  document: Document | null;
+}

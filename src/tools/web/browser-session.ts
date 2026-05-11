@@ -13,7 +13,11 @@ import type {
   Page,
 } from 'playwright';
 
-import type { BrowserFetchOptions, PageChallengeState } from './browser-session.types.js';
+import type {
+  BrowserFetchOptions,
+  PageChallengeState,
+  RawPageFetchResult,
+} from './browser-session.types.js';
 
 /** Returns the persistent Playwright profile directory, creating it when needed. */
 function getUserDataDir(cacheDir?: string): string {
@@ -195,7 +199,7 @@ async function readPageViaPersistentContext(
 export async function fetchPageWithPersistentProfile(
   url: URL,
   options: BrowserFetchOptions = {},
-): Promise<string> {
+): Promise<RawPageFetchResult> {
   const profile = await getClientProfile();
   const contextOptions = buildPlaywrightContextOptions(profile);
 
@@ -205,7 +209,11 @@ export async function fetchPageWithPersistentProfile(
   });
 
   if (isResolvedPageState(firstTry)) {
-    return firstTry.html;
+    return {
+      success: true,
+      method: 'browser-headless',
+      html: firstTry.html,
+    };
   }
 
   const userDataDir = getUserDataDir(options.cacheDir);
@@ -232,7 +240,11 @@ export async function fetchPageWithPersistentProfile(
       throw new Error(`Failed to resolve target page after manual verification for "${url.toString()}"`);
     }
 
-    return finalState.html;
+    return {
+      success: true,
+      method: 'browser-headful',
+      html: finalState.html,
+    };
   } finally {
     await context.close();
   }

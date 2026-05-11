@@ -4,6 +4,8 @@ import { fetchPageWithPersistentProfile } from './browser-session.js';
 import { looksLikeChallengeResponse } from './challenge-detection.js';
 import { getClientProfile, buildFetchHeaders } from './request-identity.js';
 
+import type { ParsedPageFetchResult } from './browser-session.types.js';
+
 /**
  * Fetches an HTML page and returns it as a parsed DOM document.
  *
@@ -21,7 +23,7 @@ import { getClientProfile, buildFetchHeaders } from './request-identity.js';
  * @throws {Error} When the HTTP request returns a non-success status code
  * and the response does not look like a challenge page.
  */
-export async function fetchWebPage(url: URL): Promise<Document> {
+export async function fetchWebPage(url: URL): Promise<ParsedPageFetchResult> {
   const profile = await getClientProfile();
   const headers = buildFetchHeaders(profile);
 
@@ -33,16 +35,30 @@ export async function fetchWebPage(url: URL): Promise<Document> {
   const html = await response.text();
 
   if (looksLikeChallengeResponse(response, html)) {
-    const resolvedHtml = await fetchPageWithPersistentProfile(url, {
+    const result = await fetchPageWithPersistentProfile(url, {
       cacheDir: '.cache/playwright-profile',
     });
 
-    return new JSDOM(resolvedHtml, { url: url.toString() }).window.document;
+    return {
+      success: result.success,
+      method: result.method,
+      document: result.html === null
+        ? null
+        : new JSDOM(result.html, { url: url.toString() }).window.document,
+    };
   }
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status} for "${url.toString()}"`);
+    return {
+      success: false,
+      method: null,
+      document: null,
+    };
   }
 
-  return new JSDOM(html, { url: url.toString() }).window.document;
+  return {
+    success: true,
+    method: 'fetch',
+    document: new JSDOM(html, { url: url.toString() }).window.document,
+  };
 }

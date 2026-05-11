@@ -268,7 +268,22 @@ export class BearTunesTagger {
   }
 
   static async extractNextJSData(url: URL): Promise<unknown> {
-    const doc = await fetchWebPage(url);
+    const page = await fetchWebPage(url);
+
+    logger.debug(
+      'Fetched page for Next.js data extraction',
+      {
+        url: url.toString(),
+        success: page.success,
+        method: page.method,
+      },
+    );
+
+    if (!page.success || page.document === null) {
+      return undefined;
+    }
+
+    const doc = page.document;
 
     const nextJSElement = doc.querySelector('#__NEXT_DATA__'); // Next.js object containing element
     const nextJSText = nextJSElement?.textContent; // Next.js object text
