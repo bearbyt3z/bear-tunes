@@ -31,23 +31,23 @@ export function buildGenreTag(genreName?: string, subgenreName?: string): string
  * If both `artists` and `title` are missing, the function returns `undefined`.
  * If only one of them is available, the function returns only that part.
  *
- * @param trackInfo - Object containing track artists and title.
- * @param trackInfo.artists - Optional list of track artists.
- * @param trackInfo.title - Optional track title.
+ * @param trackMetadata - Object containing optional artists and title fields.
+ * @param trackMetadata.artists - Optional list of artists.
+ * @param trackMetadata.title - Optional title value.
  * @returns Formatted track full name, or `undefined` when no displayable data is available.
  */
 export function buildTrackFullName(
-  trackInfo: { artists?: string[]; title?: string },
+  trackMetadata: { artists?: string[]; title?: string },
 ): string | undefined {
-  const artistsLabel = trackInfo.artists && trackInfo.artists.length > 0
-    ? trackInfo.artists.join(', ')
+  const artistsLabel = trackMetadata.artists && trackMetadata.artists.length > 0
+    ? trackMetadata.artists.join(', ')
     : undefined;
 
-  if (artistsLabel && trackInfo.title) {
-    return `${artistsLabel} - ${trackInfo.title}`;
+  if (artistsLabel && trackMetadata.title) {
+    return `${artistsLabel} - ${trackMetadata.title}`;
   }
 
-  return artistsLabel ?? trackInfo.title;
+  return artistsLabel ?? trackMetadata.title;
 }
 
 /**
