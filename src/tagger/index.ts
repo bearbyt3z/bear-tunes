@@ -9,13 +9,15 @@ import {
   fetchBeatportTrackPayload,
 } from './beatport-data.js';
 import {
+  mapBeatportAlbumToAlbumInfo,
+  mapBeatportPublisherToPublisherInfo,
   mapBeatportSearchResultTrackToTrackInfo,
+  mapBeatportTrackToTrackInfo,
 } from './types.mapper.js';
 
 import logger from '#logger';
 import {
   normalizeTextCharacters,
-  normalizeTrackTitle,
 } from '#normalizer';
 import {
   arrayIntersection,
@@ -34,7 +36,6 @@ import {
   prompt,
   removeFilenameExtension,
   replacePathForbiddenCharsInArray,
-  roundToDecimalPlaces,
   secondsToTimeFormat,
   tryGetUrlFromFile,
 } from '#tools';
@@ -45,8 +46,6 @@ import {
 } from './types.js';
 
 import {
-  normalizeAlbumInfo,
-  normalizePublisherInfo,
   normalizeTrackInfo,
 } from '#shared-types-normalizer';
 
@@ -404,45 +403,32 @@ export class BearTunesTagger {
     return winner;
   }
 
-  async extractTrackData(trackUrl: URL, forceRadioEdit: boolean): Promise<TrackInfo> {
+  async extractTrackData(
+    trackUrl: URL,
+    forceRadioEdit: boolean,
+  ): Promise<TrackInfo> {
     const trackData = await fetchBeatportTrackPayload(trackUrl);
 
     if (!trackData) {
       return {};
     }
 
-    let title = normalizeTrackTitle(trackData.name, trackData.mix_name);
+    const publisher = await this.extractPublisherData(trackData.release.label);
+    const album = await this.extractAlbumData(trackData.release, trackData.number);
 
-    if (forceRadioEdit) {
-      const match = title.match(/Original Mix|Extended Mix/i);
-      if (match != null && match.length >= 1) {
-        title = title.replace(match[0], 'Radio Edit');
-      } else {
-        title += ' (Radio Edit)';
-      }
+    const mappedTrackInfo = mapBeatportTrackToTrackInfo(
+      trackData,
+      trackUrl,
+      forceRadioEdit,
+      album,
+      publisher,
+    );
+
+    if (!mappedTrackInfo) {
+      return {};
     }
 
-    const normalizedTrackInfo = normalizeTrackInfo({
-      url: trackUrl,
-      artists: trackData.artists.map((x: BeatportArtistInfo) => x.name),
-      title,
-      remixers: trackData.remixers.map((x: BeatportArtistInfo) => x.name),
-      released: trackData.new_release_date, // or publish_date?
-      genre: trackData.genre?.name,
-      subgenre: trackData.sub_genre?.name,
-      bpm: trackData.bpm,
-      key: trackData.key?.name,
-      isrc: trackData.isrc,
-      ufid: `track-${trackData.id}`,
-      waveform: trackData.image?.uri,
-      publisher: await this.extractPublisherData(trackData.release.label),
-      album: await this.extractAlbumData(trackData.release, trackData.number),
-      details: {
-        duration: roundToDecimalPlaces(trackData.length_ms / 1000.0, 2),
-      },
-    });
-
-    const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo, {
+    const parsedTrackInfo = trackInfoSchema.safeParse(mappedTrackInfo, {
       reportInput: true,
     });
 
@@ -458,7 +444,10 @@ export class BearTunesTagger {
     return parsedTrackInfo.data;
   }
 
-  async extractAlbumData(releaseInfo: BeatportReleaseInfo, trackNumber: number): Promise<AlbumInfo | undefined> {
+  async extractAlbumData(
+    releaseInfo: BeatportReleaseInfo,
+    trackNumber: number,
+  ): Promise<AlbumInfo | undefined> {
     const beatportAlbumPayload = await fetchBeatportAlbumPayload(
       this.options.domainURL,
       releaseInfo,
@@ -468,25 +457,23 @@ export class BearTunesTagger {
       return undefined;
     }
 
-    const { albumUrl, albumData } = beatportAlbumPayload;
-
-    const normalizedAlbumInfo = normalizeAlbumInfo({
-      artists: albumData.artists.map((x: BeatportArtistInfo) => x.name),
-      title: albumData.name,
-      catalogNumber: albumData.catalog_number,
+    const mappedAlbumInfo = mapBeatportAlbumToAlbumInfo(
+      beatportAlbumPayload.albumData,
+      beatportAlbumPayload.albumUrl,
       trackNumber,
-      trackTotal: albumData.track_count,
-      url: albumUrl,
-      artwork: albumData.image?.uri,
-    });
+    );
 
-    const parsedAlbumInfo = albumInfoSchema.safeParse(normalizedAlbumInfo, {
+    if (!mappedAlbumInfo) {
+      return undefined;
+    }
+
+    const parsedAlbumInfo = albumInfoSchema.safeParse(mappedAlbumInfo, {
       reportInput: true,
     });
 
     if (!parsedAlbumInfo.success) {
       logger.warn('Cannot validate normalized AlbumInfo extracted from Beatport API', {
-        albumUrl: albumUrl.toString(),
+        albumUrl: beatportAlbumPayload.albumUrl.toString(),
         issues: formatZodErrorIssues(parsedAlbumInfo.error),
       });
 
@@ -496,7 +483,9 @@ export class BearTunesTagger {
     return parsedAlbumInfo.data;
   }
 
-  async extractPublisherData(labelInfo: BeatportLabelInfo): Promise<PublisherInfo | undefined> {
+  async extractPublisherData(
+    labelInfo: BeatportLabelInfo,
+  ): Promise<PublisherInfo | undefined> {
     const beatportPublisherPayload = await fetchBeatportPublisherPayload(
       this.options.domainURL,
       labelInfo,
@@ -506,21 +495,22 @@ export class BearTunesTagger {
       return undefined;
     }
 
-    const { publisherUrl, publisherData } = beatportPublisherPayload;
+    const mappedPublisherInfo = mapBeatportPublisherToPublisherInfo(
+      beatportPublisherPayload.publisherData,
+      beatportPublisherPayload.publisherUrl,
+    );
 
-    const normalizedPublisherInfo = normalizePublisherInfo({
-      name: publisherData.name,
-      url: publisherUrl,
-      logotype: publisherData.image?.uri,
-    });
+    if (!mappedPublisherInfo) {
+      return undefined;
+    }
 
-    const parsedPublisherInfo = publisherInfoSchema.safeParse(normalizedPublisherInfo, {
+    const parsedPublisherInfo = publisherInfoSchema.safeParse(mappedPublisherInfo, {
       reportInput: true,
     });
 
     if (!parsedPublisherInfo.success) {
       logger.warn('Cannot validate normalized PublisherInfo extracted from Beatport API', {
-        publisherUrl: publisherUrl.toString(),
+        publisherUrl: beatportPublisherPayload.publisherUrl.toString(),
         issues: formatZodErrorIssues(parsedPublisherInfo.error),
       });
 
