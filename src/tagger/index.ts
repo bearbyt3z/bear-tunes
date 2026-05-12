@@ -3,6 +3,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import {
+  extractNextJSData,
+} from './nextjs-data.js';
+import {
   mapBeatportSearchResultTrackToTrackInfo,
 } from './types.mapper.js';
 
@@ -21,13 +24,10 @@ import {
   escapeUnescapedColons,
   executeCommandSync,
   extractTrackNameKeywords,
-  fetchWebPage,
   formatLocalDateToIsoDateString,
   formatZodErrorIssues,
   getFirstLine,
-  isObjectRecord,
   isSupportedArtworkFile,
-  isUnknownArray,
   prompt,
   removeFilenameExtension,
   replacePathForbiddenCharsInArray,
@@ -267,85 +267,6 @@ export class BearTunesTagger {
     }
   }
 
-  static async extractNextJSData(url: URL): Promise<unknown> {
-    const page = await fetchWebPage(url);
-
-    logger.debug(
-      'Fetched page for Next.js data extraction',
-      {
-        url: url.toString(),
-        attempts: page.attempts,
-      },
-    );
-
-    if (!page.success || page.document === null) {
-      return undefined;
-    }
-
-    const doc = page.document;
-
-    const nextJSElement = doc.querySelector('#__NEXT_DATA__'); // Next.js object containing element
-    const nextJSText = nextJSElement?.textContent; // Next.js object text
-
-    if (!nextJSText) throw new TypeError('Cannot obtain Next.js object.');
-
-    let data: unknown;
-    try {
-      data = JSON.parse(nextJSText);
-    } catch (error) {
-      throw new TypeError('Cannot parse Next.js object.', { cause: error });
-    }
-
-    if (!isObjectRecord(data)) {
-      throw new TypeError('Parsed Next.js object is not an object.');
-    }
-
-    const props = data.props;
-    if (!isObjectRecord(props)) {
-      throw new TypeError('Cannot unpack props from Next.js object.');
-    }
-
-    const pageProps = props.pageProps;
-    if (!isObjectRecord(pageProps)) {
-      throw new TypeError('Cannot unpack pageProps from Next.js object.');
-    }
-
-    const dehydratedState = pageProps.dehydratedState;
-    if (!isObjectRecord(dehydratedState)) {
-      throw new TypeError('Cannot unpack dehydratedState from Next.js object.');
-    }
-
-    const queries = dehydratedState.queries;
-    if (!isUnknownArray(queries) || queries.length < 1) {
-      throw new TypeError('Cannot unpack queries from Next.js object.');
-    }
-
-    const firstQuery = queries[0];
-    if (!isObjectRecord(firstQuery)) {
-      throw new TypeError('Cannot unpack first query from Next.js object.');
-    }
-
-    const state = firstQuery.state;
-    if (!isObjectRecord(state)) {
-      throw new TypeError('Cannot unpack state from Next.js object.');
-    }
-
-    const stateData = state.data;
-    if (!stateData) {
-      throw new TypeError('Cannot unpack state data from Next.js object.');
-    }
-
-    if (
-      isObjectRecord(stateData)
-      && 'data' in stateData
-      && isUnknownArray(stateData.data)
-    ) {
-      return stateData.data;
-    }
-
-    return stateData;
-  }
-
   private static isBetterMatchingTrack(
     inputTrackInfo: TrackInfo,
     winner: MatchingTrack | undefined,
@@ -414,7 +335,7 @@ export class BearTunesTagger {
   ): Promise<MatchingTrack | undefined> {
     let winner: MatchingTrack | undefined;
 
-    const rawTrackArray = await BearTunesTagger.extractNextJSData(
+    const rawTrackArray = await extractNextJSData(
       new URL(this.options.searchURL + encodeURIComponent(inputKeywords.join('+'))),
     );
 
@@ -496,7 +417,7 @@ export class BearTunesTagger {
   }
 
   async extractTrackData(trackUrl: URL, forceRadioEdit: boolean): Promise<TrackInfo> {
-    const rawTrackData = await BearTunesTagger.extractNextJSData(trackUrl);
+    const rawTrackData = await extractNextJSData(trackUrl);
 
     const parsedTrackData = beatportTrackInfoSchema.safeParse(rawTrackData, {
       reportInput: true,
@@ -567,7 +488,7 @@ export class BearTunesTagger {
       return undefined;
     }
 
-    const rawAlbumData = await BearTunesTagger.extractNextJSData(albumUrl);
+    const rawAlbumData = await extractNextJSData(albumUrl);
 
     const parsedAlbumData = beatportAlbumInfoSchema.safeParse(rawAlbumData);
 
@@ -615,7 +536,7 @@ export class BearTunesTagger {
       return undefined;
     }
 
-    const rawPublisherData = await BearTunesTagger.extractNextJSData(publisherUrl);
+    const rawPublisherData = await extractNextJSData(publisherUrl);
 
     const parsedPublisherData = beatportPublisherInfoSchema.safeParse(rawPublisherData);
 
