@@ -3,8 +3,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import {
-  extractNextJSData,
-} from './nextjs-data.js';
+  fetchBeatportAlbumPayload,
+  fetchBeatportPublisherPayload,
+  fetchBeatportSearchTrackPayload,
+  fetchBeatportTrackPayload,
+} from './beatport-data.js';
 import {
   mapBeatportSearchResultTrackToTrackInfo,
 } from './types.mapper.js';
@@ -52,13 +55,6 @@ import {
   publisherInfoSchema,
   trackInfoSchema,
 } from '#shared-types-schema';
-
-import {
-  beatportAlbumInfoSchema,
-  beatportPublisherInfoSchema,
-  beatportSearchResultTrackInfoArraySchema,
-  beatportTrackInfoSchema,
-} from './types.schema.js';
 
 import type {
   BearTunesTaggerOptions,
@@ -335,24 +331,16 @@ export class BearTunesTagger {
   ): Promise<MatchingTrack | undefined> {
     let winner: MatchingTrack | undefined;
 
-    const rawTrackArray = await extractNextJSData(
-      new URL(this.options.searchURL + encodeURIComponent(inputKeywords.join('+'))),
+    const trackArray = await fetchBeatportSearchTrackPayload(
+      this.options.searchURL,
+      inputKeywords,
     );
 
-    const parsedTrackArray = beatportSearchResultTrackInfoArraySchema.safeParse(rawTrackArray, {
-      reportInput: true,
-    });
-
-    if (!parsedTrackArray.success) {
-      logger.warn('Cannot validate raw Beatport search results payload', {
-        searchKeywords: inputKeywords,
-        issues: formatZodErrorIssues(parsedTrackArray.error),
-      });
-
+    if (!trackArray) {
       return undefined;
     }
 
-    for (const trackEntry of parsedTrackArray.data) {
+    for (const trackEntry of trackArray) {
       const mappedTrackInfo = mapBeatportSearchResultTrackToTrackInfo(
         trackEntry,
         this.options.domainURL,
@@ -417,22 +405,11 @@ export class BearTunesTagger {
   }
 
   async extractTrackData(trackUrl: URL, forceRadioEdit: boolean): Promise<TrackInfo> {
-    const rawTrackData = await extractNextJSData(trackUrl);
+    const trackData = await fetchBeatportTrackPayload(trackUrl);
 
-    const parsedTrackData = beatportTrackInfoSchema.safeParse(rawTrackData, {
-      reportInput: true,
-    });
-
-    if (!parsedTrackData.success) {
-      logger.warn('Cannot validate raw Beatport track payload', {
-        trackUrl: trackUrl.toString(),
-        issues: formatZodErrorIssues(parsedTrackData.error),
-      });
-
+    if (!trackData) {
       return {};
     }
-
-    const trackData = parsedTrackData.data;
 
     let title = normalizeTrackTitle(trackData.name, trackData.mix_name);
 
@@ -482,26 +459,16 @@ export class BearTunesTagger {
   }
 
   async extractAlbumData(releaseInfo: BeatportReleaseInfo, trackNumber: number): Promise<AlbumInfo | undefined> {
-    const albumUrl = releaseInfo ? new URL(`${this.options.domainURL}/release/${releaseInfo.slug}/${releaseInfo.id}`) : undefined;
+    const beatportAlbumPayload = await fetchBeatportAlbumPayload(
+      this.options.domainURL,
+      releaseInfo,
+    );
 
-    if (!albumUrl) {
+    if (!beatportAlbumPayload) {
       return undefined;
     }
 
-    const rawAlbumData = await extractNextJSData(albumUrl);
-
-    const parsedAlbumData = beatportAlbumInfoSchema.safeParse(rawAlbumData);
-
-    if (!parsedAlbumData.success) {
-      logger.warn('Cannot validate raw Beatport album payload', {
-        albumUrl: albumUrl.toString(),
-        issues: formatZodErrorIssues(parsedAlbumData.error),
-      });
-
-      return undefined;
-    }
-
-    const albumData = parsedAlbumData.data;
+    const { albumUrl, albumData } = beatportAlbumPayload;
 
     const normalizedAlbumInfo = normalizeAlbumInfo({
       artists: albumData.artists.map((x: BeatportArtistInfo) => x.name),
@@ -530,26 +497,16 @@ export class BearTunesTagger {
   }
 
   async extractPublisherData(labelInfo: BeatportLabelInfo): Promise<PublisherInfo | undefined> {
-    const publisherUrl = labelInfo ? new URL(`${this.options.domainURL}/label/${labelInfo.slug}/${labelInfo.id}`) : undefined;
+    const beatportPublisherPayload = await fetchBeatportPublisherPayload(
+      this.options.domainURL,
+      labelInfo,
+    );
 
-    if (!publisherUrl) {
+    if (!beatportPublisherPayload) {
       return undefined;
     }
 
-    const rawPublisherData = await extractNextJSData(publisherUrl);
-
-    const parsedPublisherData = beatportPublisherInfoSchema.safeParse(rawPublisherData);
-
-    if (!parsedPublisherData.success) {
-      logger.warn('Cannot validate raw Beatport publisher payload', {
-        publisherUrl: publisherUrl.toString(),
-        issues: formatZodErrorIssues(parsedPublisherData.error),
-      });
-
-      return undefined;
-    }
-
-    const publisherData = parsedPublisherData.data;
+    const { publisherUrl, publisherData } = beatportPublisherPayload;
 
     const normalizedPublisherInfo = normalizePublisherInfo({
       name: publisherData.name,
