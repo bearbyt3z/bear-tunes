@@ -43,7 +43,7 @@ export async function extractNextJSData(url: URL): Promise<unknown> {
   let data: unknown;
   try {
     data = JSON.parse(nextJSText);
-  } catch (error) {
+  } catch (error: unknown) {
     throw new TypeError('Cannot parse Next.js object.', { cause: error });
   }
 

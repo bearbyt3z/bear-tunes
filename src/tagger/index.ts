@@ -153,7 +153,7 @@ export class BearTunesTagger {
       let bestMatchingTrack;
       try {
         bestMatchingTrack = await this.findBestMatchingTrack(trackInfo, trackFilenameKeywords);
-      } catch (error) {
+      } catch (error: unknown) {
         logger.error(`Track matching failed for "${trackFilename}"`, { error });
         return {};
       }
@@ -261,7 +261,7 @@ export class BearTunesTagger {
       }
 
       return parsedTrackInfo.data;
-    } catch (error) {
+    } catch (error: unknown) {
       logger.warn('Cannot parse ID3 tag output from display plugin', { error });
       return {};
     }
@@ -834,7 +834,7 @@ export class BearTunesTagger {
 
       logger.info(verbose ? result.stdout : successMessage);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Failed to save MP3 ID3 tag.', {
         tool: 'eyeD3',
         id3Version: version,
@@ -1005,7 +1005,7 @@ export class BearTunesTagger {
 
       logger.info(verbose ? result.stdout : successMessage);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Failed to save FLAC ID3 tag', {
         tool: 'metaflac',
         error,
