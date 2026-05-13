@@ -62,7 +62,7 @@ export const beatportSearchResultTrackInfoSchema = z.object({
   track_id: z.number(),
   track_name: z.string(),
   track_number: z.number(),
-  track_image_uri: z.string(),
+  track_image_uri: z.string().optional(),
   genre: z.array(beatportSearchResultGenreInfoSchema),
 });
 

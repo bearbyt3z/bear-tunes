@@ -74,7 +74,7 @@ export interface BeatportSearchResultTrackInfo {
   track_id: number,
   track_name: string,
   track_number: number,
-  track_image_uri: string,
+  track_image_uri?: string,
   genre: BeatportSearchResultGenreInfo[],
 }
 
