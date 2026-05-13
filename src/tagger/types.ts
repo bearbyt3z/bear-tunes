@@ -62,7 +62,7 @@ export interface BeatportSearchResultTrackInfo {
   score: number,
   artists: BeatportSearchResultArtistInfo[],
   bpm: number,
-  catalog_number: string,
+  catalog_number?: string,
   isrc?: string,
   key_id?: number,
   key_name?: string,
@@ -125,7 +125,7 @@ export interface BeatportReleaseInfo {
 export interface BeatportTrackInfo {
   artists: BeatportArtistInfo[],
   bpm: number,
-  catalog_number: string,
+  catalog_number?: string,
   genre: BeatportGenreInfo,
   id: number,
   image: BeatportImageInfo,
@@ -149,7 +149,7 @@ export interface BeatportTrackInfo {
 export interface BeatportAlbumInfo {
   artists: BeatportArtistInfo[],
   bpm_range: { min: number, max: number },
-  catalog_number: string,
+  catalog_number?: string,
   id: number,
   image: BeatportImageInfo,
   label: BeatportLabelInfo,
