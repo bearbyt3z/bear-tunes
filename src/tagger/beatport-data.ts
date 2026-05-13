@@ -1,5 +1,8 @@
 import logger from '#logger';
-import { formatZodErrorIssues } from '#tools';
+import {
+  formatZodErrorIssues,
+  isRecordArray,
+} from '#tools';
 
 import { extractNextJSData } from './nextjs-data.js';
 import {
@@ -28,6 +31,39 @@ export interface BeatportPublisherPayloadResult {
   publisherData: BeatportPublisherInfo;
 }
 
+/**
+ * Returns the first array item referenced by validation issues.
+ *
+ * The function reads the first path segment from each issue and returns the
+ * matching item when the segment is a numeric array index.
+ *
+ * Usage:
+ * ```ts
+ * const problematicItem = getProblematicArrayItem(rawTrackArray, issues);
+ * ```
+ *
+ * @typeParam T - Type of objects stored in the input array.
+ * @param input - Array to read the problematic item from.
+ * @param issues - Validation issues whose paths may point to array items.
+ * @returns The item at the first numeric index found in issue paths, or `undefined` if no such index exists.
+ */
+function getProblematicArrayItem<T extends object>(
+  input: readonly T[],
+  issues: { path: unknown[] }[],
+): T | undefined {
+  for (const issue of issues) {
+    const [firstPathSegment] = issue.path;
+
+    if (typeof firstPathSegment !== 'number') {
+      continue;
+    }
+
+    return input[firstPathSegment];
+  }
+
+  return undefined;
+}
+
 export async function fetchBeatportSearchTrackPayload(
   searchURL: string,
   inputKeywords: string[],
@@ -41,9 +77,14 @@ export async function fetchBeatportSearchTrackPayload(
   });
 
   if (!parsedTrackArray.success) {
+    const problematicItem = isRecordArray(rawTrackArray)
+      ? getProblematicArrayItem(rawTrackArray, parsedTrackArray.error.issues)
+      : undefined;
+
     logger.warn('Cannot validate raw Beatport search results payload', {
       searchKeywords: inputKeywords,
       issues: formatZodErrorIssues(parsedTrackArray.error),
+      problematicItem: problematicItem,
     });
 
     return undefined;

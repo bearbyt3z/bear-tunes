@@ -76,6 +76,7 @@ export {
 
 export {
   isEmptyPlainObject,
+  isRecordArray,
   isObjectRecord,
   isReadonlyStringArray,
   isUnknownArray,

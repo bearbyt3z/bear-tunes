@@ -82,3 +82,26 @@ export function isReadonlyStringArray(value: unknown): value is readonly string[
 export function isUnknownArray(value: unknown): value is unknown[] {
   return Array.isArray(value);
 }
+
+/**
+ * Checks if a value is an array of non-null objects with string keys.
+ *
+ * Type guard returns `value is Record<string, unknown>[]`, meaning:
+ * - Runtime: the value is an array and every item is a non-null object
+ * - TypeScript: array elements are narrowed from `unknown` to `Record<string, unknown>`
+ *
+ * Usage:
+ * ```ts
+ * if (isRecordArray(value)) {
+ *   // value has type Record<string, unknown>[]
+ *   const firstItem = value;
+ * }
+ * ```
+ *
+ * @param value - Value to check.
+ * @returns `true` if the value is an array containing only non-null, non-array objects.
+ */
+export function isRecordArray(value: unknown): value is Record<string, unknown>[] {
+  return isUnknownArray(value)
+    && value.every((item) => typeof item === 'object' && item !== null && !Array.isArray(item));
+}
