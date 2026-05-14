@@ -169,6 +169,16 @@ async function readPageViaPersistentContext(
   try {
     const page = context.pages()[0] ?? await context.newPage();
 
+    const runtimeUserAgent = await page.evaluate(() => navigator.userAgent);
+    const maskedUserAgent = runtimeUserAgent
+      .replace('HeadlessChrome', 'Chrome')
+      .replace(/Chrome\/(\d+)\.\d+\.\d+\.\d+/, 'Chrome/$1.0.0.0');
+
+    const cdpSession = await context.newCDPSession(page);
+    await cdpSession.send('Network.setUserAgentOverride', {
+      userAgent: maskedUserAgent,
+    });
+
     await page.goto(url.toString(), {
       waitUntil: 'domcontentloaded',
       timeout: 30_000,
