@@ -7,7 +7,7 @@ import { looksLikeChallengeHtml } from './challenge-detection.js';
 import {
   buildPlaywrightContextOptions,
   getClientProfile,
-  normalizeBrowserUserAgent,
+  resolveBrowserUserAgent,
 } from './request-identity.js';
 import { ignoreError } from '../utils/error.js';
 
@@ -165,7 +165,7 @@ async function applyBrowserUserAgentOverride(
 
   const cdpSession = await context.newCDPSession(page);
   await cdpSession.send('Network.setUserAgentOverride', {
-    userAgent: normalizeBrowserUserAgent(runtimeUserAgent),
+    userAgent: resolveBrowserUserAgent(runtimeUserAgent),
   });
 }
 

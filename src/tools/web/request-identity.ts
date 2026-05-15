@@ -263,3 +263,13 @@ export function normalizeBrowserUserAgent(userAgent: string): string {
     .replace('HeadlessChrome', 'Chrome')
     .replace(/Chrome\/(\d+)\.\d+\.\d+\.\d+/, 'Chrome/$1.0.0.0');
 }
+
+/**
+ * Resolves the browser User-Agent to use for automated browser requests.
+ *
+ * @param runtimeUserAgent - Runtime User-Agent reported by the browser.
+ * @returns Browser User-Agent string to apply before navigation.
+ */
+export function resolveBrowserUserAgent(runtimeUserAgent: string): string {
+  return normalizeBrowserUserAgent(runtimeUserAgent);
+}
