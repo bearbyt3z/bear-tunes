@@ -4,7 +4,11 @@ import * as path from 'node:path';
 import { chromium } from 'playwright';
 
 import { looksLikeChallengeHtml } from './challenge-detection.js';
-import { buildPlaywrightContextOptions, getClientProfile } from './request-identity.js';
+import {
+  buildPlaywrightContextOptions,
+  getClientProfile,
+  normalizeBrowserUserAgent,
+} from './request-identity.js';
 import { ignoreError } from '../utils/error.js';
 
 import type {
@@ -170,13 +174,10 @@ async function readPageViaPersistentContext(
     const page = context.pages()[0] ?? await context.newPage();
 
     const runtimeUserAgent = await page.evaluate(() => navigator.userAgent);
-    const maskedUserAgent = runtimeUserAgent
-      .replace('HeadlessChrome', 'Chrome')
-      .replace(/Chrome\/(\d+)\.\d+\.\d+\.\d+/, 'Chrome/$1.0.0.0');
 
     const cdpSession = await context.newCDPSession(page);
     await cdpSession.send('Network.setUserAgentOverride', {
-      userAgent: maskedUserAgent,
+      userAgent: normalizeBrowserUserAgent(runtimeUserAgent),
     });
 
     await page.goto(url.toString(), {

@@ -248,3 +248,18 @@ export function buildImageDownloadHeaders(
 
   return headers;
 }
+
+/**
+ * Normalizes a runtime Chromium User-Agent string for browser automation.
+ *
+ * The normalization removes common headless markers and reduces the Chrome
+ * version to the major-only format used by reduced User-Agent strings.
+ *
+ * @param userAgent - Runtime browser User-Agent string.
+ * @returns Normalized User-Agent string suitable for browser requests.
+ */
+export function normalizeBrowserUserAgent(userAgent: string): string {
+  return userAgent
+    .replace('HeadlessChrome', 'Chrome')
+    .replace(/Chrome\/(\d+)\.\d+\.\d+\.\d+/, 'Chrome/$1.0.0.0');
+}
