@@ -148,6 +148,28 @@ async function waitUntilResolvedPage(
 }
 
 /**
+ * Applies a browser User-Agent override for the current page before navigation.
+ *
+ * The override uses the runtime browser User-Agent normalized through the
+ * request identity policy so headless Chromium matches the accepted browser
+ * identity more closely.
+ *
+ * @param context - Browser context owning the page.
+ * @param page - Page that will perform the navigation.
+ */
+async function applyBrowserUserAgentOverride(
+  context: BrowserContext,
+  page: Page,
+): Promise<void> {
+  const runtimeUserAgent = await page.evaluate(() => navigator.userAgent);
+
+  const cdpSession = await context.newCDPSession(page);
+  await cdpSession.send('Network.setUserAgentOverride', {
+    userAgent: normalizeBrowserUserAgent(runtimeUserAgent),
+  });
+}
+
+/**
  * Loads a page through a persistent browser context configured with the given
  * options and returns the current page state after initial settling.
  *
@@ -173,12 +195,7 @@ async function readPageViaPersistentContext(
   try {
     const page = context.pages()[0] ?? await context.newPage();
 
-    const runtimeUserAgent = await page.evaluate(() => navigator.userAgent);
-
-    const cdpSession = await context.newCDPSession(page);
-    await cdpSession.send('Network.setUserAgentOverride', {
-      userAgent: normalizeBrowserUserAgent(runtimeUserAgent),
-    });
+    await applyBrowserUserAgentOverride(context, page);
 
     await page.goto(url.toString(), {
       waitUntil: 'domcontentloaded',
