@@ -129,7 +129,7 @@ export interface BeatportTrackInfo {
   genre: BeatportGenreInfo,
   id: number,
   image: BeatportImageInfo,
-  isrc: string,
+  isrc?: string,
   key: BeatportKeyInfo,
   length: string, // minutes:seconds
   length_ms: number, // in miliseconds

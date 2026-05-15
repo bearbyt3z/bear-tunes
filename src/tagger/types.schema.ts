@@ -144,7 +144,7 @@ export const beatportTrackInfoSchema = z.object({
   genre: beatportGenreInfoSchema,
   id: z.number(),
   image: beatportImageInfoSchema,
-  isrc: z.string(),
+  isrc: z.string().optional(),
   key: beatportKeyInfoSchema,
   length: z.string(),
   length_ms: z.number(),
