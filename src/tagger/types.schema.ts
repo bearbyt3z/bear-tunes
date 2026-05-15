@@ -49,7 +49,7 @@ export const beatportSearchResultGenreInfoSchema = z.object({
 export const beatportSearchResultTrackInfoSchema = z.object({
   score: z.number(),
   artists: z.array(beatportSearchResultArtistInfoSchema),
-  bpm: z.number(),
+  bpm: z.number().optional(),
   catalog_number: z.string().optional(),
   isrc: z.string().optional(),
   key_id: z.number().optional(),
@@ -139,7 +139,7 @@ export const beatportReleaseInfoSchema = z.object({
  */
 export const beatportTrackInfoSchema = z.object({
   artists: z.array(beatportArtistInfoSchema),
-  bpm: z.number(),
+  bpm: z.number().optional(),
   catalog_number: z.string().optional(),
   genre: beatportGenreInfoSchema,
   id: z.number(),

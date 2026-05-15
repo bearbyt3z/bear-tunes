@@ -61,7 +61,7 @@ export interface BeatportSearchResultGenreInfo {
 export interface BeatportSearchResultTrackInfo {
   score: number,
   artists: BeatportSearchResultArtistInfo[],
-  bpm: number,
+  bpm?: number,
   catalog_number?: string,
   isrc?: string,
   key_id?: number,
@@ -124,7 +124,7 @@ export interface BeatportReleaseInfo {
 
 export interface BeatportTrackInfo {
   artists: BeatportArtistInfo[],
-  bpm: number,
+  bpm?: number,
   catalog_number?: string,
   genre: BeatportGenreInfo,
   id: number,
