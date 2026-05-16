@@ -16,6 +16,9 @@ import type {
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
+const DEFAULT_LOCALE = 'en-US';
+const DEFAULT_TIMEZONE_ID = 'Europe/Warsaw';
+
 /** Supported User-Agent profile templates used for cached identity rotation. */
 const UA_PROFILES: UAProfile[] = [
   {
@@ -172,6 +175,27 @@ export async function getUserAgent(): Promise<string> {
   return cache.fetch.userAgent;
 }
 
+function getDefaultDeviceProfile(): ClientProfile['device'] {
+  return {
+    viewport: { width: 1920, height: 915 },
+    screen: { width: 1920, height: 1080 },
+    deviceScaleFactor: 1,
+    isMobile: false,
+    hasTouch: false,
+  };
+}
+
+function getDefaultRequestProfile(): ClientProfile['request'] {
+  return {
+    accept:
+      'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    acceptLanguage: 'en-US,en;q=0.9',
+    acceptEncoding: 'gzip, deflate, br',
+    connection: 'keep-alive',
+    upgradeInsecureRequests: '1',
+  };
+}
+
 /**
  * Builds the canonical client profile containing identity, device, and request values.
  *
@@ -185,23 +209,11 @@ export async function getClientProfile(): Promise<ClientProfile> {
   return {
     identity: {
       userAgent,
-      locale: 'en-US',
-      timezoneId: 'Europe/Warsaw',
+      locale: DEFAULT_LOCALE,
+      timezoneId: DEFAULT_TIMEZONE_ID,
     },
-    device: {
-      viewport: { width: 1920, height: 915 },
-      screen: { width: 1920, height: 1080 },
-      deviceScaleFactor: 1,
-      isMobile: false,
-      hasTouch: false,
-    },
-    request: {
-      accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-      acceptLanguage: 'en-US,en;q=0.9',
-      acceptEncoding: 'gzip, deflate, br',
-      connection: 'keep-alive',
-      upgradeInsecureRequests: '1',
-    },
+    device: getDefaultDeviceProfile(),
+    request: getDefaultRequestProfile(),
   };
 }
 
@@ -218,27 +230,6 @@ export function buildFetchHeaders(profile: ClientProfile): Record<string, string
     'Accept-Encoding': profile.request.acceptEncoding,
     'Connection': profile.request.connection,
     'Upgrade-Insecure-Requests': profile.request.upgradeInsecureRequests,
-  };
-}
-
-/**
- * Builds Playwright browser context options from a client profile.
- *
- * @returns A Playwright browser context options object.
- */
-export function buildPlaywrightContextOptions(profile: ClientProfile): BrowserContextOptions {
-  return {
-    viewport: profile.device.viewport,
-    screen: profile.device.screen,
-    deviceScaleFactor: profile.device.deviceScaleFactor,
-    isMobile: profile.device.isMobile,
-    hasTouch: profile.device.hasTouch,
-    // Locale is intentionally left unset because it triggers a Cloudflare captcha loop.
-    // locale: profile.identity.locale,
-    timezoneId: profile.identity.timezoneId,
-    extraHTTPHeaders: {
-      'Accept-Language': profile.request.acceptLanguage,
-    },
   };
 }
 
@@ -304,4 +295,21 @@ export async function resolveBrowserUserAgent(
     : 'headful-observed';
 
   return saveBrowserUserAgent(normalizedUserAgent, source);
+}
+
+export function getBrowserContextOptions(): BrowserContextOptions {
+  const device = getDefaultDeviceProfile();
+  const request = getDefaultRequestProfile();
+
+  return {
+    viewport: device.viewport,
+    screen: device.screen,
+    deviceScaleFactor: device.deviceScaleFactor,
+    isMobile: device.isMobile,
+    hasTouch: device.hasTouch,
+    timezoneId: DEFAULT_TIMEZONE_ID,
+    extraHTTPHeaders: {
+      'Accept-Language': request.acceptLanguage,
+    },
+  };
 }

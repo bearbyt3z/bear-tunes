@@ -5,8 +5,7 @@ import { chromium } from 'playwright';
 
 import { looksLikeChallengeHtml } from './challenge-detection.js';
 import {
-  buildPlaywrightContextOptions,
-  getClientProfile,
+  getBrowserContextOptions,
   resolveBrowserUserAgent,
 } from './request-identity.js';
 import { ignoreError } from '../utils/error.js';
@@ -247,8 +246,7 @@ export async function fetchPageWithPersistentProfile(
   url: URL,
   options: BrowserFetchOptions = {},
 ): Promise<RawPageFetchResult> {
-  const profile = await getClientProfile();
-  const contextOptions = buildPlaywrightContextOptions(profile);
+  const contextOptions = getBrowserContextOptions();
 
   const firstTry = await readPageViaPersistentContext(url, contextOptions, {
     ...options,
