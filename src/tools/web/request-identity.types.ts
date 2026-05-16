@@ -16,12 +16,23 @@ export interface UAProfile {
   filter: UAFilter;
 }
 
-/** Cached User-Agent entry persisted on disk with creation and expiration timestamps. */
-export interface UACache {
+export interface FingerprintCacheEntry {
   userAgent: string;
-  profileName: string;
   createdAt: TimestampMs;
   expiresAt: TimestampMs;
+}
+
+export interface FetchIdentityCache extends FingerprintCacheEntry {
+  profileName: string;
+}
+
+export interface BrowserIdentityCache extends FingerprintCacheEntry {
+  source: 'headful-observed' | 'headless-normalized';
+}
+
+export interface IdentityCache {
+  fetch?: FetchIdentityCache;
+  browser?: BrowserIdentityCache;
 }
 
 /** Canonical client profile describing identity, device, and request settings. */

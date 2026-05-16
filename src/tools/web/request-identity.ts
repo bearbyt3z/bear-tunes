@@ -6,7 +6,14 @@ import UserAgent from 'user-agents';
 
 import type { BrowserContextOptions } from 'playwright';
 
-import type { UACache, UAProfile, ClientProfile } from './request-identity.types.js';
+import type {
+  BrowserIdentityCache,
+  ClientProfile,
+  FetchIdentityCache,
+  FingerprintCacheEntry,
+  IdentityCache,
+  UAProfile,
+} from './request-identity.types.js';
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -102,55 +109,83 @@ async function writeFileAtomic(filePath: string, content: string): Promise<void>
   await fs.promises.rename(tempFilePath, filePath);
 }
 
-/** Checks whether parsed JSON has the expected cached User-Agent shape. */
-function isValidUACache(value: unknown): value is UACache {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const cache = value as Record<string, unknown>;
-
+/** Checks whether parsed JSON has the expected shared fingerprint cache entry shape. */
+function isValidFingerprintCacheEntry(value: unknown): value is FingerprintCacheEntry {
   return (
-    typeof cache.userAgent === 'string' &&
-    cache.userAgent.length > 0 &&
-    typeof cache.profileName === 'string' &&
-    typeof cache.createdAt === 'number' &&
-    Number.isFinite(cache.createdAt) &&
-    typeof cache.expiresAt === 'number' &&
-    Number.isFinite(cache.expiresAt)
+    typeof value === 'object' &&
+    value !== null &&
+    'userAgent' in value &&
+    typeof value.userAgent === 'string' &&
+    value.userAgent.length > 0 &&
+    'createdAt' in value &&
+    typeof value.createdAt === 'number' &&
+    Number.isFinite(value.createdAt) &&
+    'expiresAt' in value &&
+    typeof value.expiresAt === 'number' &&
+    Number.isFinite(value.expiresAt)
   );
 }
 
-/**
- * Returns the current cached User-Agent string or generates a new one.
- *
- * The generated value is persisted on disk and reused until its cache entry
- * expires. This keeps repeated requests within a short time window consistent
- * instead of rotating the User-Agent on every fetch.
- *
- * @returns A cached or newly generated User-Agent string.
- */
+/** Checks whether parsed JSON has the expected fetch identity cache shape. */
+function isValidFetchIdentityCache(value: unknown): value is FetchIdentityCache {
+  return (
+    isValidFingerprintCacheEntry(value) &&
+    'profileName' in value &&
+    typeof value.profileName === 'string' &&
+    value.profileName.length > 0
+  );
+}
+
+/** Checks whether parsed JSON has the expected browser identity cache shape. */
+function isValidBrowserIdentityCache(value: unknown): value is BrowserIdentityCache {
+  return (
+    isValidFingerprintCacheEntry(value) &&
+    'source' in value &&
+    (value.source === 'headful-observed' ||
+      value.source === 'headless-normalized')
+  );
+}
+
+/** Checks whether parsed JSON has the expected identity cache container shape. */
+function isValidIdentityCache(value: unknown): value is IdentityCache {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  if ('fetch' in value && value.fetch !== undefined && !isValidFetchIdentityCache(value.fetch)) {
+    return false;
+  }
+
+  if ('browser' in value && value.browser !== undefined && !isValidBrowserIdentityCache(value.browser)) {
+    return false;
+  }
+
+  return true;
+}
+
 export async function getUserAgent(): Promise<string> {
   const now = Date.now();
-  const cached = await readJsonFile<unknown>(UA_CACHE_FILE);
+  const cached = await readJsonFile<IdentityCache>(UA_CACHE_FILE);
 
-  if (isValidUACache(cached) && cached.expiresAt > now) {
-    return cached.userAgent;
+  if (isValidIdentityCache(cached) && cached.fetch && cached.fetch.expiresAt > now) {
+    return cached.fetch.userAgent;
   }
 
   const profile = pickRandomProfile();
   const userAgent = generateUserAgent(profile);
 
-  const cache: UACache = {
+  const nextCache: IdentityCache = isValidIdentityCache(cached) ? cached : {};
+
+  nextCache.fetch = {
     userAgent,
     profileName: profile.name,
     createdAt: now,
     expiresAt: now + randomTtlMs(7, 14),
   };
 
-  await writeFileAtomic(UA_CACHE_FILE, JSON.stringify(cache, null, 2));
+  await writeFileAtomic(UA_CACHE_FILE, JSON.stringify(nextCache, null, 2));
 
-  return cache.userAgent;
+  return nextCache.fetch.userAgent;
 }
 
 /**
