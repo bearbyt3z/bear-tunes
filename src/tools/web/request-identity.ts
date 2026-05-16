@@ -8,6 +8,7 @@ import type { BrowserContextOptions } from 'playwright';
 
 import { identityCacheSchema } from './request-identity.schema.js';
 import type {
+  BrowserIdentityCache,
   ClientProfile,
   IdentityCache,
   UAProfile,
@@ -107,34 +108,68 @@ async function writeFileAtomic(filePath: string, content: string): Promise<void>
   await fs.promises.rename(tempFilePath, filePath);
 }
 
-export async function getUserAgent(): Promise<string> {
-  const now = Date.now();
+async function readIdentityCache(): Promise<IdentityCache> {
   const cached = await readJsonFile<unknown>(UA_CACHE_FILE);
   const parsedCache = identityCacheSchema.safeParse(cached);
 
-  if (
-    parsedCache.success &&
-    parsedCache.data.fetch &&
-    parsedCache.data.fetch.expiresAt > now
-  ) {
-    return parsedCache.data.fetch.userAgent;
+  return parsedCache.success ? parsedCache.data : {};
+}
+
+async function writeIdentityCache(cache: IdentityCache): Promise<void> {
+  await writeFileAtomic(UA_CACHE_FILE, JSON.stringify(cache, null, 2));
+}
+
+export async function getCachedBrowserUserAgent(): Promise<string | undefined> {
+  const now = Date.now();
+  const cache = await readIdentityCache();
+
+  if (cache.browser && cache.browser.expiresAt > now) {
+    return cache.browser.userAgent;
+  }
+
+  return undefined;
+}
+
+export async function saveBrowserUserAgent(
+  userAgent: string,
+  source: BrowserIdentityCache['source'],
+): Promise<string> {
+  const now = Date.now();
+  const cache = await readIdentityCache();
+
+  cache.browser = {
+    userAgent,
+    source,
+    createdAt: now,
+    expiresAt: now + randomTtlMs(7, 14),
+  };
+
+  await writeIdentityCache(cache);
+
+  return cache.browser.userAgent;
+}
+
+export async function getUserAgent(): Promise<string> {
+  const now = Date.now();
+  const cache = await readIdentityCache();
+
+  if (cache.fetch && cache.fetch.expiresAt > now) {
+    return cache.fetch.userAgent;
   }
 
   const profile = pickRandomProfile();
   const userAgent = generateUserAgent(profile);
 
-  const nextCache: IdentityCache = parsedCache.success ? parsedCache.data : {};
-
-  nextCache.fetch = {
+  cache.fetch = {
     userAgent,
     profileName: profile.name,
     createdAt: now,
     expiresAt: now + randomTtlMs(7, 14),
   };
 
-  await writeFileAtomic(UA_CACHE_FILE, JSON.stringify(nextCache, null, 2));
+  await writeIdentityCache(cache);
 
-  return nextCache.fetch.userAgent;
+  return cache.fetch.userAgent;
 }
 
 /**
@@ -254,6 +289,19 @@ export function normalizeBrowserUserAgent(userAgent: string): string {
  * @param runtimeUserAgent - Runtime User-Agent reported by the browser.
  * @returns Browser User-Agent string to apply before navigation.
  */
-export function resolveBrowserUserAgent(runtimeUserAgent: string): string {
-  return normalizeBrowserUserAgent(runtimeUserAgent);
+export async function resolveBrowserUserAgent(
+  runtimeUserAgent: string,
+): Promise<string> {
+  const cachedUserAgent = await getCachedBrowserUserAgent();
+
+  if (cachedUserAgent) {
+    return cachedUserAgent;
+  }
+
+  const normalizedUserAgent = normalizeBrowserUserAgent(runtimeUserAgent);
+  const source: BrowserIdentityCache['source'] = runtimeUserAgent.includes('HeadlessChrome')
+    ? 'headless-normalized'
+    : 'headful-observed';
+
+  return saveBrowserUserAgent(normalizedUserAgent, source);
 }

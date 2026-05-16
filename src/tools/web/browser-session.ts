@@ -162,10 +162,11 @@ async function applyBrowserUserAgentOverride(
   page: Page,
 ): Promise<void> {
   const runtimeUserAgent = await page.evaluate(() => navigator.userAgent);
+  const userAgent = await resolveBrowserUserAgent(runtimeUserAgent);
 
   const cdpSession = await context.newCDPSession(page);
   await cdpSession.send('Network.setUserAgentOverride', {
-    userAgent: resolveBrowserUserAgent(runtimeUserAgent),
+    userAgent,
   });
 }
 
@@ -285,6 +286,8 @@ export async function fetchPageWithPersistentProfile(
 
   try {
     const page = context.pages()[0] ?? await context.newPage();
+
+    await applyBrowserUserAgentOverride(context, page);
 
     await page.goto(url.toString(), {
       waitUntil: 'domcontentloaded',
