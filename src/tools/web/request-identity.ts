@@ -6,11 +6,9 @@ import UserAgent from 'user-agents';
 
 import type { BrowserContextOptions } from 'playwright';
 
+import { identityCacheSchema } from './request-identity.schema.js';
 import type {
-  BrowserIdentityCache,
   ClientProfile,
-  FetchIdentityCache,
-  FingerprintCacheEntry,
   IdentityCache,
   UAProfile,
 } from './request-identity.types.js';
@@ -109,72 +107,23 @@ async function writeFileAtomic(filePath: string, content: string): Promise<void>
   await fs.promises.rename(tempFilePath, filePath);
 }
 
-/** Checks whether parsed JSON has the expected shared fingerprint cache entry shape. */
-function isValidFingerprintCacheEntry(value: unknown): value is FingerprintCacheEntry {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'userAgent' in value &&
-    typeof value.userAgent === 'string' &&
-    value.userAgent.length > 0 &&
-    'createdAt' in value &&
-    typeof value.createdAt === 'number' &&
-    Number.isFinite(value.createdAt) &&
-    'expiresAt' in value &&
-    typeof value.expiresAt === 'number' &&
-    Number.isFinite(value.expiresAt)
-  );
-}
-
-/** Checks whether parsed JSON has the expected fetch identity cache shape. */
-function isValidFetchIdentityCache(value: unknown): value is FetchIdentityCache {
-  return (
-    isValidFingerprintCacheEntry(value) &&
-    'profileName' in value &&
-    typeof value.profileName === 'string' &&
-    value.profileName.length > 0
-  );
-}
-
-/** Checks whether parsed JSON has the expected browser identity cache shape. */
-function isValidBrowserIdentityCache(value: unknown): value is BrowserIdentityCache {
-  return (
-    isValidFingerprintCacheEntry(value) &&
-    'source' in value &&
-    (value.source === 'headful-observed' ||
-      value.source === 'headless-normalized')
-  );
-}
-
-/** Checks whether parsed JSON has the expected identity cache container shape. */
-function isValidIdentityCache(value: unknown): value is IdentityCache {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  if ('fetch' in value && value.fetch !== undefined && !isValidFetchIdentityCache(value.fetch)) {
-    return false;
-  }
-
-  if ('browser' in value && value.browser !== undefined && !isValidBrowserIdentityCache(value.browser)) {
-    return false;
-  }
-
-  return true;
-}
-
 export async function getUserAgent(): Promise<string> {
   const now = Date.now();
-  const cached = await readJsonFile<IdentityCache>(UA_CACHE_FILE);
+  const cached = await readJsonFile<unknown>(UA_CACHE_FILE);
+  const parsedCache = identityCacheSchema.safeParse(cached);
 
-  if (isValidIdentityCache(cached) && cached.fetch && cached.fetch.expiresAt > now) {
-    return cached.fetch.userAgent;
+  if (
+    parsedCache.success &&
+    parsedCache.data.fetch &&
+    parsedCache.data.fetch.expiresAt > now
+  ) {
+    return parsedCache.data.fetch.userAgent;
   }
 
   const profile = pickRandomProfile();
   const userAgent = generateUserAgent(profile);
 
-  const nextCache: IdentityCache = isValidIdentityCache(cached) ? cached : {};
+  const nextCache: IdentityCache = parsedCache.success ? parsedCache.data : {};
 
   nextCache.fetch = {
     userAgent,
