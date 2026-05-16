@@ -1,7 +1,10 @@
 import * as path from 'node:path';
 
 import { downloadFile } from './download-file.js';
-import { getClientProfile, buildImageDownloadHeaders } from './request-identity.js';
+import {
+  getFetchClientProfile,
+  buildImageDownloadHeaders,
+} from './request-identity.js';
 import { replaceFilenameExtension } from '../utils/path.js';
 
 import type { DownloadImageOptions } from './download.types.js';
@@ -82,7 +85,7 @@ export async function downloadImage(
   url: URL,
   options: DownloadImageOptions = {},
 ): Promise<string> {
-  const profile = await getClientProfile();
+  const profile = await getFetchClientProfile();
 
   const headers = buildImageDownloadHeaders(profile, options.referer);
 

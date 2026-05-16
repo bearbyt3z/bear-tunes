@@ -152,7 +152,7 @@ export async function saveBrowserUserAgent(
   return cache.browser.userAgent;
 }
 
-export async function getUserAgent(): Promise<string> {
+export async function getFetchUserAgent(): Promise<string> {
   const now = Date.now();
   const cache = await readIdentityCache();
 
@@ -197,14 +197,14 @@ function getDefaultRequestProfile(): ClientProfile['request'] {
 }
 
 /**
- * Builds the canonical client profile containing identity, device, and request values.
+ * Builds the canonical fetch client profile containing identity, device, and request values.
  *
- * The returned profile contains a complete set of client settings.
+ * The returned profile contains a complete set of client settings for regular HTTP requests.
  *
- * @returns A complete client profile.
+ * @returns A complete fetch client profile.
  */
-export async function getClientProfile(): Promise<ClientProfile> {
-  const userAgent = await getUserAgent();
+export async function getFetchClientProfile(): Promise<ClientProfile> {
+  const userAgent = await getFetchUserAgent();
 
   return {
     identity: {

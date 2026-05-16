@@ -2,7 +2,10 @@ import { JSDOM } from 'jsdom';
 
 import { fetchPageWithPersistentProfile } from './browser-session.js';
 import { looksLikeChallengeResponse } from './challenge-detection.js';
-import { getClientProfile, buildFetchHeaders } from './request-identity.js';
+import {
+  getFetchClientProfile,
+  buildFetchHeaders,
+} from './request-identity.js';
 
 import type {
   PageFetchAttempt,
@@ -26,7 +29,7 @@ import type {
  * available and the full attempt history.
  */
 export async function fetchWebPage(url: URL): Promise<ParsedPageFetchResult> {
-  const profile = await getClientProfile();
+  const profile = await getFetchClientProfile();
   const headers = buildFetchHeaders(profile);
 
   const response = await fetch(url.toString(), {
