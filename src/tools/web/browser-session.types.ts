@@ -1,3 +1,15 @@
+export enum PageFetchFailureReason {
+  ChallengeResponse = 'challenge-response',
+  Captcha = 'captcha',
+  ResolvedPageMarkerNotFound = 'resolved-page-marker-not-found',
+}
+
+export type HttpFailureReason = `http-${number}`;
+
+export type PageFetchAttemptFailureReason =
+  | PageFetchFailureReason
+  | HttpFailureReason;
+
 /**
  * Options controlling page loading through a persistent Playwright browser session.
  *
@@ -44,7 +56,11 @@ export interface PageChallengeState {
 /**
  * Identifies the transport used during a single page fetch attempt.
  */
-export type PageFetchMethod = 'fetch' | 'browser-headless' | 'browser-headful';
+export enum PageFetchMethod {
+  Fetch = 'fetch',
+  BrowserHeadless = 'browser-headless',
+  BrowserHeadful = 'browser-headful',
+}
 
 /**
  * Describes one attempt made while resolving the target page.
@@ -60,7 +76,7 @@ export interface PageFetchAttempt {
   success: boolean;
 
   /** Optional short reason explaining why the attempt failed. */
-  reason?: string;
+  reason?: PageFetchAttemptFailureReason;
 
   /** Optional HTTP status observed for this attempt when available. */
   status?: number;

@@ -3,6 +3,10 @@ import * as path from 'node:path';
 
 import { chromium } from 'playwright';
 
+import {
+  PageFetchFailureReason,
+  PageFetchMethod,
+} from './browser-session.types.js';
 import { looksLikeChallengeHtml } from './challenge-detection.js';
 import {
   getBrowserContextOptions,
@@ -20,6 +24,7 @@ import type {
   BrowserFetchOptions,
   PageChallengeState,
   PageFetchAttempt,
+  PageFetchAttemptFailureReason,
   RawPageFetchResult,
 } from './browser-session.types.js';
 
@@ -212,16 +217,16 @@ async function readPageStateViaPersistentContext(
  * @param state - Page state snapshot to classify.
  * @returns A short machine-readable failure reason.
  */
-function getBrowserFailureReason(state: PageChallengeState): string {
+function getBrowserFailureReason(state: PageChallengeState): PageFetchAttemptFailureReason {
   if (state.hasRecaptchaFrame) {
-    return 'captcha';
+    return PageFetchFailureReason.Captcha;
   }
 
   if (state.looksLikeChallenge) {
-    return 'challenge-response';
+    return PageFetchFailureReason.ChallengeResponse;
   }
 
-  return 'resolved-page-marker-not-found';
+  return PageFetchFailureReason.ResolvedPageMarkerNotFound;
 }
 
 export async function fetchPageWithPersistentProfile(
@@ -245,7 +250,7 @@ export async function fetchPageWithPersistentProfile(
       html: firstTry.html,
       attempts: [
         {
-          method: 'browser-headless',
+          method: PageFetchMethod.BrowserHeadless,
           success: true,
         },
       ],
@@ -253,7 +258,7 @@ export async function fetchPageWithPersistentProfile(
   }
 
   const headlessAttempt: PageFetchAttempt = {
-    method: 'browser-headless',
+    method: PageFetchMethod.BrowserHeadless,
     success: false,
     reason: getBrowserFailureReason(firstTry),
   };
@@ -272,7 +277,7 @@ export async function fetchPageWithPersistentProfile(
 
   if (!isResolvedPageState(finalState)) {
     const headfulAttempt: PageFetchAttempt = {
-      method: 'browser-headful',
+      method: PageFetchMethod.BrowserHeadful,
       success: false,
       reason: getBrowserFailureReason(finalState),
     };
@@ -285,7 +290,7 @@ export async function fetchPageWithPersistentProfile(
   }
 
   const headfulAttempt: PageFetchAttempt = {
-    method: 'browser-headful',
+    method: PageFetchMethod.BrowserHeadful,
     success: true,
   };
 

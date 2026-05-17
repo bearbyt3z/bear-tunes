@@ -1,6 +1,10 @@
 import { JSDOM } from 'jsdom';
 
 import { fetchPageWithPersistentProfile } from './browser-session.js';
+import {
+  PageFetchFailureReason,
+  PageFetchMethod,
+} from './browser-session.types.js';
 import { looksLikeChallengeResponse } from './challenge-detection.js';
 import {
   getFetchClientProfile,
@@ -8,9 +12,14 @@ import {
 } from './request-identity.js';
 
 import type {
+  HttpFailureReason,
   PageFetchAttempt,
   ParsedPageFetchResult,
 } from './browser-session.types.js';
+
+function getHttpFailureReason(status: number): HttpFailureReason {
+  return `http-${status}`;
+}
 
 /**
  * Fetches an HTML page and returns a parsed page fetch result.
@@ -41,10 +50,10 @@ export async function fetchWebPage(url: URL): Promise<ParsedPageFetchResult> {
 
   if (looksLikeChallengeResponse(response, html)) {
     const fetchAttempt: PageFetchAttempt = {
-      method: 'fetch',
+      method: PageFetchMethod.Fetch,
       success: false,
       status: response.status,
-      reason: 'challenge-response',
+      reason: PageFetchFailureReason.ChallengeResponse,
     };
 
     const result = await fetchPageWithPersistentProfile(url, {
@@ -66,10 +75,10 @@ export async function fetchWebPage(url: URL): Promise<ParsedPageFetchResult> {
       document: null,
       attempts: [
         {
-          method: 'fetch',
+          method: PageFetchMethod.Fetch,
           success: false,
           status: response.status,
-          reason: `http-${response.status}`,
+          reason: getHttpFailureReason(response.status),
         },
       ],
     };
@@ -80,7 +89,7 @@ export async function fetchWebPage(url: URL): Promise<ParsedPageFetchResult> {
     document: new JSDOM(html, { url: url.toString() }).window.document,
     attempts: [
       {
-        method: 'fetch',
+        method: PageFetchMethod.Fetch,
         success: true,
         status: response.status,
       },
