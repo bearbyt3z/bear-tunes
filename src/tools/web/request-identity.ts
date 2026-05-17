@@ -14,7 +14,9 @@ import { identityCacheSchema } from './request-identity.schema.js';
 import type { BrowserContextOptions } from 'playwright';
 
 import type {
+  ClientDeviceProfile,
   ClientProfile,
+  ClientRequestProfile,
   IdentityCache,
   UAProfile,
 } from './request-identity.types.js';
@@ -203,7 +205,7 @@ export async function getFetchUserAgent(): Promise<string> {
   return entry.userAgent;
 }
 
-function getDefaultDeviceProfile(): ClientProfile['device'] {
+function getDefaultDeviceProfile(): ClientDeviceProfile {
   return {
     viewport: { width: 1920, height: 915 },
     screen: { width: 1920, height: 1080 },
@@ -213,7 +215,7 @@ function getDefaultDeviceProfile(): ClientProfile['device'] {
   };
 }
 
-function getDefaultRequestProfile(): ClientProfile['request'] {
+function getDefaultRequestProfile(): ClientRequestProfile {
   return {
     accept:
       'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',

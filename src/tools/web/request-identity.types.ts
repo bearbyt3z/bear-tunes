@@ -45,25 +45,31 @@ export interface IdentityCache {
   browser?: BrowserIdentityCache;
 }
 
+export interface ClientIdentity {
+  userAgent: string;
+  locale: string;
+  timezoneId: string;
+}
+
+export interface ClientDeviceProfile {
+  viewport: { width: number; height: number };
+  screen: { width: number; height: number };
+  deviceScaleFactor: number;
+  isMobile: boolean;
+  hasTouch: boolean;
+}
+
+export interface ClientRequestProfile {
+  accept: string;
+  acceptLanguage: string;
+  acceptEncoding: string;
+  connection: string;
+  upgradeInsecureRequests: string;
+}
+
 /** Canonical client profile describing identity, device, and request settings. */
 export interface ClientProfile {
-  identity: {
-    userAgent: string;
-    locale: string;
-    timezoneId: string;
-  };
-  device: {
-    viewport: { width: number; height: number };
-    screen: { width: number; height: number };
-    deviceScaleFactor: number;
-    isMobile: boolean;
-    hasTouch: boolean;
-  };
-  request: {
-    accept: string;
-    acceptLanguage: string;
-    acceptEncoding: string;
-    connection: string;
-    upgradeInsecureRequests: string;
-  };
+  identity: ClientIdentity;
+  device: ClientDeviceProfile;
+  request: ClientRequestProfile;
 }
