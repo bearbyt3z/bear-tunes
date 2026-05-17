@@ -122,15 +122,43 @@ async function writeIdentityCache(cache: IdentityCache): Promise<void> {
   await writeFileAtomic(UA_CACHE_FILE, JSON.stringify(cache, null, 2));
 }
 
-export async function getCachedBrowserUserAgent(): Promise<string | undefined> {
-  const now = Date.now();
-  const cache = await readIdentityCache();
+type IdentityCacheKey = keyof IdentityCache;
+type IdentityCacheEntry<K extends IdentityCacheKey> = NonNullable<IdentityCache[K]>;
 
-  if (cache.browser && cache.browser.expiresAt > now) {
-    return cache.browser.userAgent;
+async function getCachedIdentityEntry<K extends IdentityCacheKey>(
+  key: K,
+  now = Date.now(),
+): Promise<IdentityCacheEntry<K> | undefined> {
+  const cache = await readIdentityCache();
+  const entry = cache[key];
+
+  if (!entry || entry.expiresAt <= now) {
+    return undefined;
   }
 
-  return undefined;
+  return entry as IdentityCacheEntry<K>;
+}
+
+async function saveIdentityEntry<K extends IdentityCacheKey>(
+  key: K,
+  entry: IdentityCacheEntry<K>,
+): Promise<IdentityCacheEntry<K>> {
+  const cache = await readIdentityCache();
+
+  const nextCache: IdentityCache = {
+    ...cache,
+    [key]: entry,
+  };
+
+  await writeIdentityCache(nextCache);
+
+  return entry;
+}
+
+export async function getCachedBrowserUserAgent(): Promise<string | undefined> {
+  const cachedEntry = await getCachedIdentityEntry('browser');
+
+  return cachedEntry?.userAgent;
 }
 
 export async function saveBrowserUserAgent(
@@ -138,41 +166,36 @@ export async function saveBrowserUserAgent(
   source: BrowserIdentityCache['source'],
 ): Promise<string> {
   const now = Date.now();
-  const cache = await readIdentityCache();
 
-  cache.browser = {
+  const entry = await saveIdentityEntry('browser', {
     userAgent,
     source,
     createdAt: now,
     expiresAt: now + randomTtlMs(7, 14),
-  };
+  });
 
-  await writeIdentityCache(cache);
-
-  return cache.browser.userAgent;
+  return entry.userAgent;
 }
 
 export async function getFetchUserAgent(): Promise<string> {
   const now = Date.now();
-  const cache = await readIdentityCache();
+  const cachedEntry = await getCachedIdentityEntry('fetch', now);
 
-  if (cache.fetch && cache.fetch.expiresAt > now) {
-    return cache.fetch.userAgent;
+  if (cachedEntry) {
+    return cachedEntry.userAgent;
   }
 
   const profile = pickRandomProfile();
   const userAgent = generateUserAgent(profile);
 
-  cache.fetch = {
+  const entry = await saveIdentityEntry('fetch', {
     userAgent,
     profileName: profile.name,
     createdAt: now,
     expiresAt: now + randomTtlMs(7, 14),
-  };
+  });
 
-  await writeIdentityCache(cache);
-
-  return cache.fetch.userAgent;
+  return entry.userAgent;
 }
 
 function getDefaultDeviceProfile(): ClientProfile['device'] {
