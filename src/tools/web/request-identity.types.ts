@@ -3,6 +3,16 @@ export type TimestampMs = number;
 
 export type DeviceCategory = 'desktop' | 'mobile';
 
+export enum RequestIdentityType {
+  Fetch = 'fetch',
+  Browser = 'browser',
+}
+
+export enum BrowserUserAgentSource {
+  HeadfulObserved = 'headful-observed',
+  HeadlessNormalized = 'headless-normalized',
+}
+
 /** Filters used when generating a matching User-Agent profile. */
 export interface UAFilter {
   deviceCategory: DeviceCategory;
@@ -27,7 +37,7 @@ export interface FetchIdentityCache extends FingerprintCacheEntry {
 }
 
 export interface BrowserIdentityCache extends FingerprintCacheEntry {
-  source: 'headful-observed' | 'headless-normalized';
+  source: BrowserUserAgentSource;
 }
 
 export interface IdentityCache {

@@ -4,11 +4,16 @@ import * as path from 'node:path';
 
 import UserAgent from 'user-agents';
 
-import type { BrowserContextOptions } from 'playwright';
+import {
+  RequestIdentityType,
+  BrowserUserAgentSource,
+} from './request-identity.types.js';
 
 import { identityCacheSchema } from './request-identity.schema.js';
+
+import type { BrowserContextOptions } from 'playwright';
+
 import type {
-  BrowserIdentityCache,
   ClientProfile,
   IdentityCache,
   UAProfile,
@@ -156,18 +161,18 @@ async function saveIdentityEntry<K extends IdentityCacheKey>(
 }
 
 export async function getCachedBrowserUserAgent(): Promise<string | undefined> {
-  const cachedEntry = await getCachedIdentityEntry('browser');
+  const cachedEntry = await getCachedIdentityEntry(RequestIdentityType.Browser);
 
   return cachedEntry?.userAgent;
 }
 
 export async function saveBrowserUserAgent(
   userAgent: string,
-  source: BrowserIdentityCache['source'],
+  source: BrowserUserAgentSource,
 ): Promise<string> {
   const now = Date.now();
 
-  const entry = await saveIdentityEntry('browser', {
+  const entry = await saveIdentityEntry(RequestIdentityType.Browser, {
     userAgent,
     source,
     createdAt: now,
@@ -179,7 +184,7 @@ export async function saveBrowserUserAgent(
 
 export async function getFetchUserAgent(): Promise<string> {
   const now = Date.now();
-  const cachedEntry = await getCachedIdentityEntry('fetch', now);
+  const cachedEntry = await getCachedIdentityEntry(RequestIdentityType.Fetch, now);
 
   if (cachedEntry) {
     return cachedEntry.userAgent;
@@ -188,7 +193,7 @@ export async function getFetchUserAgent(): Promise<string> {
   const profile = pickRandomProfile();
   const userAgent = generateUserAgent(profile);
 
-  const entry = await saveIdentityEntry('fetch', {
+  const entry = await saveIdentityEntry(RequestIdentityType.Fetch, {
     userAgent,
     profileName: profile.name,
     createdAt: now,
@@ -313,9 +318,9 @@ export async function resolveBrowserUserAgent(
   }
 
   const normalizedUserAgent = normalizeBrowserUserAgent(runtimeUserAgent);
-  const source: BrowserIdentityCache['source'] = runtimeUserAgent.includes('HeadlessChrome')
-    ? 'headless-normalized'
-    : 'headful-observed';
+  const source: BrowserUserAgentSource = runtimeUserAgent.includes('HeadlessChrome')
+    ? BrowserUserAgentSource.HeadlessNormalized
+    : BrowserUserAgentSource.HeadfulObserved;
 
   return saveBrowserUserAgent(normalizedUserAgent, source);
 }

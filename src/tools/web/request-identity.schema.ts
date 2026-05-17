@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { BrowserUserAgentSource } from './request-identity.types.js';
+
 export const fingerprintCacheEntrySchema = z.object({
   userAgent: z.string().min(1),
   createdAt: z.number(),
@@ -11,7 +13,7 @@ export const fetchIdentityCacheSchema = fingerprintCacheEntrySchema.extend({
 });
 
 export const browserIdentityCacheSchema = fingerprintCacheEntrySchema.extend({
-  source: z.enum(['headful-observed', 'headless-normalized']),
+  source: z.enum(BrowserUserAgentSource),
 });
 
 export const identityCacheSchema = z.object({
