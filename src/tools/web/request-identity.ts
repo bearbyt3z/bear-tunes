@@ -15,7 +15,7 @@ import type { BrowserContextOptions } from 'playwright';
 
 import type {
   ClientDeviceProfile,
-  ClientProfile,
+  FetchClientProfile,
   ClientRequestProfile,
   IdentityCache,
   UAProfile,
@@ -233,7 +233,7 @@ function getDefaultRequestProfile(): ClientRequestProfile {
  *
  * @returns A complete fetch client profile.
  */
-export async function getFetchClientProfile(): Promise<ClientProfile> {
+export async function getFetchClientProfile(): Promise<FetchClientProfile> {
   const userAgent = await getFetchUserAgent();
 
   return {
@@ -252,7 +252,7 @@ export async function getFetchClientProfile(): Promise<ClientProfile> {
  *
  * @returns A headers object ready to be passed to fetch().
  */
-export function buildFetchHeaders(profile: ClientProfile): Record<string, string> {
+export function buildFetchHeaders(profile: FetchClientProfile): Record<string, string> {
   return {
     'User-Agent': profile.identity.userAgent,
     'Accept': profile.request.accept,
@@ -271,7 +271,7 @@ export function buildFetchHeaders(profile: ClientProfile): Record<string, string
  * @returns HTTP headers object ready for fetch() requests.
  */
 export function buildImageDownloadHeaders(
-  profile: ClientProfile,
+  profile: FetchClientProfile,
   referer?: URL,
 ): Record<string, string> {
   const headers: Record<string, string> = {

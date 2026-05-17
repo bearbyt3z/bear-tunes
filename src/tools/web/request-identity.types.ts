@@ -68,7 +68,7 @@ export interface ClientRequestProfile {
 }
 
 /** Canonical client profile describing identity, device, and request settings. */
-export interface ClientProfile {
+export interface FetchClientProfile {
   identity: ClientIdentity;
   device: ClientDeviceProfile;
   request: ClientRequestProfile;
