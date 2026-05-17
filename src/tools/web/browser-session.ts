@@ -169,19 +169,16 @@ async function applyBrowserUserAgentOverride(
   });
 }
 
-/**
- * Loads a page through a persistent browser context configured with the given
- * options and returns the current page state after initial settling.
- *
- * @param url - Target page URL.
- * @param contextOptions - Playwright browser context options.
- * @param options - Persistent browser loading options.
- * @returns The current page state read from the persistent context.
- */
-async function readPageViaPersistentContext(
+async function readPageStateViaPersistentContext(
   url: URL,
   contextOptions: BrowserContextOptions,
   options: BrowserFetchOptions = {},
+  readFinalState: (page: Page) => Promise<PageChallengeState> = async (
+    page,
+  ): Promise<PageChallengeState> => {
+    await waitUntilPageSettles(page);
+    return safeGetPageState(page);
+  },
 ): Promise<PageChallengeState> {
   const userDataDir = getUserDataDir(options.cacheDir);
 
@@ -202,9 +199,7 @@ async function readPageViaPersistentContext(
       timeout: 30_000,
     });
 
-    await waitUntilPageSettles(page);
-
-    return await safeGetPageState(page);
+    return await readFinalState(page);
   } finally {
     await context.close();
   }
@@ -229,29 +224,20 @@ function getBrowserFailureReason(state: PageChallengeState): string {
   return 'resolved-page-marker-not-found';
 }
 
-/**
- * Resolves a page through a persistent browser context and returns the final
- * raw HTML together with the browser attempt history.
- *
- * The function first tries to load the target page in headless mode using the
- * existing persistent browser state. If the target page is still not resolved,
- * it retries in headful mode so any manual verification can be completed in
- * the same persistent profile.
- *
- * @param url - Target page URL.
- * @param options - Persistent browser loading options.
- * @returns The final raw page fetch result, including attempt metadata.
- */
 export async function fetchPageWithPersistentProfile(
   url: URL,
   options: BrowserFetchOptions = {},
 ): Promise<RawPageFetchResult> {
   const contextOptions = getBrowserContextOptions();
 
-  const firstTry = await readPageViaPersistentContext(url, contextOptions, {
-    ...options,
-    headless: true,
-  });
+  const firstTry = await readPageStateViaPersistentContext(
+    url,
+    contextOptions,
+    {
+      ...options,
+      headless: true,
+    },
+  );
 
   if (isResolvedPageState(firstTry)) {
     return {
@@ -272,53 +258,40 @@ export async function fetchPageWithPersistentProfile(
     reason: getBrowserFailureReason(firstTry),
   };
 
-  const userDataDir = getUserDataDir(options.cacheDir);
   const manualTimeoutMs = options.manualTimeoutMs ?? 180_000;
 
-  const context = await chromium.launchPersistentContext(userDataDir, {
-    ...contextOptions,
-    headless: false,
-  });
+  const finalState = await readPageStateViaPersistentContext(
+    url,
+    contextOptions,
+    {
+      ...options,
+      headless: false,
+    },
+    (page) => waitUntilResolvedPage(page, manualTimeoutMs),
+  );
 
-  await installStealthInitScript(context);
-
-  try {
-    const page = context.pages()[0] ?? await context.newPage();
-
-    await applyBrowserUserAgentOverride(context, page);
-
-    await page.goto(url.toString(), {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-
-    const finalState = await waitUntilResolvedPage(page, manualTimeoutMs);
-
-    if (!isResolvedPageState(finalState)) {
-      const headfulAttempt: PageFetchAttempt = {
-        method: 'browser-headful',
-        success: false,
-        reason: getBrowserFailureReason(finalState),
-      };
-
-      return {
-        success: false,
-        html: null,
-        attempts: [headlessAttempt, headfulAttempt],
-      };
-    }
-
+  if (!isResolvedPageState(finalState)) {
     const headfulAttempt: PageFetchAttempt = {
       method: 'browser-headful',
-      success: true,
+      success: false,
+      reason: getBrowserFailureReason(finalState),
     };
 
     return {
-      success: true,
-      html: finalState.html,
+      success: false,
+      html: null,
       attempts: [headlessAttempt, headfulAttempt],
     };
-  } finally {
-    await context.close();
   }
+
+  const headfulAttempt: PageFetchAttempt = {
+    method: 'browser-headful',
+    success: true,
+  };
+
+  return {
+    success: true,
+    html: finalState.html,
+    attempts: [headlessAttempt, headfulAttempt],
+  };
 }
