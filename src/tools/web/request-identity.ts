@@ -14,6 +14,8 @@ import { identityCacheSchema } from './request-identity.schema.js';
 import type { BrowserContextOptions } from 'playwright';
 
 import type {
+  BrowserIdentityCache,
+  BrowserNavigatorContext,
   ClientDeviceProfile,
   FetchClientProfile,
   ClientRequestProfile,
@@ -177,24 +179,58 @@ export async function getCachedBrowserUserAgent(
   return cachedEntry?.userAgent;
 }
 
-export async function saveBrowserUserAgent(
+export async function getCachedBrowserNavigatorContext(
   userAgentCacheFile: string,
-  userAgent: string,
-  source: BrowserUserAgentSource,
-): Promise<string> {
-  const now = Date.now();
-
-  const entry = await saveIdentityEntry(
+): Promise<BrowserNavigatorContext | undefined> {
+  const cachedEntry = await getCachedIdentityEntry(
     userAgentCacheFile,
-    RequestIdentityType.Browser, {
-      userAgent,
-      source,
-      createdAt: now,
-      expiresAt: now + randomTtlMs(7, 14),
-    },
+    RequestIdentityType.Browser,
   );
 
-  return entry.userAgent;
+  if (!cachedEntry) {
+    return undefined;
+  }
+
+  return {
+    userAgent: cachedEntry.userAgent,
+    platform: cachedEntry.platform,
+    language: cachedEntry.language,
+    languages: cachedEntry.languages,
+    vendor: cachedEntry.vendor,
+  };
+}
+
+export async function saveBrowserNavigatorContext(
+  userAgentCacheFile: string,
+  context: BrowserNavigatorContext,
+  source: BrowserUserAgentSource,
+): Promise<BrowserNavigatorContext> {
+  const now = Date.now();
+
+  const entry: BrowserIdentityCache = {
+    userAgent: context.userAgent,
+    platform: context.platform,
+    language: context.language,
+    languages: context.languages,
+    vendor: context.vendor,
+    source,
+    createdAt: now,
+    expiresAt: now + randomTtlMs(7, 14),
+  };
+
+  const savedEntry = await saveIdentityEntry(
+    userAgentCacheFile,
+    RequestIdentityType.Browser,
+    entry,
+  );
+
+  return {
+    userAgent: savedEntry.userAgent,
+    platform: savedEntry.platform,
+    language: savedEntry.language,
+    languages: savedEntry.languages,
+    vendor: savedEntry.vendor,
+  };
 }
 
 export async function getFetchUserAgent(
@@ -329,30 +365,30 @@ export function normalizeBrowserUserAgent(userAgent: string): string {
     .replace(/Chrome\/(\d+)\.\d+\.\d+\.\d+/, 'Chrome/$1.0.0.0');
 }
 
-/**
- * Resolves the browser User-Agent to use for automated browser requests.
- *
- * @param runtimeUserAgent - Runtime User-Agent reported by the browser.
- * @returns Browser User-Agent string to apply before navigation.
- */
-export async function resolveBrowserUserAgent(
-  runtimeUserAgent: string,
+export async function resolveBrowserNavigatorContext(
+  runtimeNavigator: BrowserNavigatorContext,
   userAgentCacheFile: string,
-): Promise<string> {
-  const cachedUserAgent = await getCachedBrowserUserAgent(userAgentCacheFile);
+): Promise<BrowserNavigatorContext> {
+  const cachedContext = await getCachedBrowserNavigatorContext(userAgentCacheFile);
 
-  if (cachedUserAgent) {
-    return cachedUserAgent;
+  if (cachedContext) {
+    return cachedContext;
   }
 
-  const normalizedUserAgent = normalizeBrowserUserAgent(runtimeUserAgent);
-  const source: BrowserUserAgentSource = runtimeUserAgent.includes('HeadlessChrome')
+  const normalizedUserAgent = normalizeBrowserUserAgent(runtimeNavigator.userAgent);
+  const source: BrowserUserAgentSource = runtimeNavigator.userAgent.includes('HeadlessChrome')
     ? BrowserUserAgentSource.HeadlessNormalized
     : BrowserUserAgentSource.HeadfulObserved;
 
-  return saveBrowserUserAgent(
+  return saveBrowserNavigatorContext(
     userAgentCacheFile,
-    normalizedUserAgent,
+    {
+      userAgent: normalizedUserAgent,
+      platform: runtimeNavigator.platform,
+      language: runtimeNavigator.language,
+      languages: runtimeNavigator.languages,
+      vendor: runtimeNavigator.vendor,
+    },
     source,
   );
 }

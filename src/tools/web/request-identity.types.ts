@@ -13,6 +13,14 @@ export enum BrowserUserAgentSource {
   HeadlessNormalized = 'headless-normalized',
 }
 
+export interface BrowserNavigatorContext {
+  userAgent: string;
+  platform: string;
+  language: string;
+  languages: string[];
+  vendor: string;
+}
+
 /** Filters used when generating a matching User-Agent profile. */
 export interface UAFilter {
   deviceCategory: DeviceCategory;
@@ -36,7 +44,7 @@ export interface FetchIdentityCache extends FingerprintCacheEntry {
   profileName: string;
 }
 
-export interface BrowserIdentityCache extends FingerprintCacheEntry {
+export interface BrowserIdentityCache extends FingerprintCacheEntry, BrowserNavigatorContext {
   source: BrowserUserAgentSource;
 }
 

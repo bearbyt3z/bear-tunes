@@ -14,6 +14,10 @@ export const fetchIdentityCacheSchema = fingerprintCacheEntrySchema.extend({
 
 export const browserIdentityCacheSchema = fingerprintCacheEntrySchema.extend({
   source: z.enum(BrowserUserAgentSource),
+  platform: z.string(),
+  language: z.string(),
+  languages: z.array(z.string()),
+  vendor: z.string(),
 });
 
 export const identityCacheSchema = z.object({

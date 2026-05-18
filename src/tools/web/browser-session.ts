@@ -9,7 +9,7 @@ import {
 import { looksLikeChallengeHtml } from './challenge-detection.js';
 import {
   getBrowserContextOptions,
-  resolveBrowserUserAgent,
+  resolveBrowserNavigatorContext,
 } from './request-identity.js';
 import { ignoreError } from '../utils/error.js';
 
@@ -26,6 +26,9 @@ import type {
   PageFetchAttemptFailureReason,
   RawPageFetchResult,
 } from './browser-session.types.js';
+import type {
+  BrowserNavigatorContext,
+} from './request-identity.types.js';
 
 /** Returns the persistent Playwright profile directory, creating it when needed. */
 function getUserDataDir(browserProfileDir: string): string {
@@ -43,8 +46,34 @@ function getUserDataDir(browserProfileDir: string): string {
  *
  * @param context - Playwright browser context to patch before navigation.
  */
-async function installStealthInitScript(context: BrowserContext): Promise<void> {
-  await context.addInitScript(() => {
+async function installStealthInitScript(
+  context: BrowserContext,
+  navigatorContext: BrowserNavigatorContext,
+): Promise<void> {
+  await context.addInitScript((overrides: BrowserNavigatorContext) => {
+    const defineNavigatorValue = <K extends keyof BrowserNavigatorContext>(
+      property: K,
+      value: BrowserNavigatorContext[K],
+    ): void => {
+      try {
+        Object.defineProperty(Navigator.prototype, property, {
+          get: () => value,
+          configurable: true,
+        });
+      } catch (error: unknown) {
+        void error;
+      }
+
+      try {
+        Object.defineProperty(navigator, property, {
+          get: () => value,
+          configurable: true,
+        });
+      } catch (error: unknown) {
+        void error;
+      }
+    };
+
     try {
       Object.defineProperty(Navigator.prototype, 'webdriver', {
         get: () => undefined,
@@ -62,7 +91,13 @@ async function installStealthInitScript(context: BrowserContext): Promise<void> 
     } catch (error: unknown) {
       void error;
     }
-  });
+
+    defineNavigatorValue('userAgent', overrides.userAgent);
+    defineNavigatorValue('platform', overrides.platform);
+    defineNavigatorValue('language', overrides.language);
+    defineNavigatorValue('languages', overrides.languages);
+    defineNavigatorValue('vendor', overrides.vendor);
+  }, navigatorContext);
 }
 
 /**
@@ -159,21 +194,30 @@ async function waitUntilResolvedPage(
  * @param context - Browser context owning the page.
  * @param page - Page that will perform the navigation.
  */
-async function applyBrowserUserAgentOverride(
+async function applyBrowserNavigatorOverrides(
   context: BrowserContext,
   page: Page,
   userAgentCacheFile: string,
-): Promise<void> {
-  const runtimeUserAgent = await page.evaluate(() => navigator.userAgent);
-  const userAgent = await resolveBrowserUserAgent(
-    runtimeUserAgent,
+): Promise<BrowserNavigatorContext> {
+  const runtimeNavigator = await page.evaluate(() => ({
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    language: navigator.language,
+    languages: [...navigator.languages],
+    vendor: navigator.vendor,
+  }));
+
+  const navigatorContext = await resolveBrowserNavigatorContext(
+    runtimeNavigator,
     userAgentCacheFile,
   );
 
   const cdpSession = await context.newCDPSession(page);
   await cdpSession.send('Network.setUserAgentOverride', {
-    userAgent,
+    userAgent: navigatorContext.userAgent,
   });
+
+  return navigatorContext;
 }
 
 async function readPageStateViaPersistentContext(
@@ -194,16 +238,16 @@ async function readPageStateViaPersistentContext(
     headless: options.headless ?? true,
   });
 
-  await installStealthInitScript(context);
-
   try {
     const page = context.pages()[0] ?? await context.newPage();
 
-    await applyBrowserUserAgentOverride(
+    const navigatorContext = await applyBrowserNavigatorOverrides(
       context,
       page,
       options.userAgentCacheFile,
     );
+
+    await installStealthInitScript(context, navigatorContext);
 
     await page.goto(url.toString(), {
       waitUntil: 'domcontentloaded',
