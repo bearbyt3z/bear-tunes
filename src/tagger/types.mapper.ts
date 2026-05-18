@@ -56,6 +56,10 @@ export function mapBeatportSearchResultTrackToTrackInfo(
 
   const [genre, subgenre] = trackEntry.genre.map((genreEntry) => genreEntry.genre_name);
 
+  const details = trackEntry.length === undefined
+    ? undefined
+    : { duration: roundToDecimalPlaces(trackEntry.length / 1000, 2) };
+
   return normalizeTrackInfo({
     url: `${domainURL}/track/${slugify(trackEntry.track_name)}/${trackEntry.track_id}`,
     artists,
@@ -66,9 +70,7 @@ export function mapBeatportSearchResultTrackToTrackInfo(
     isrc: trackEntry.isrc,
     genre,
     subgenre,
-    details: {
-      duration: roundToDecimalPlaces(trackEntry.length / 1000.0, 2),
-    },
+    details,
   });
 }
 

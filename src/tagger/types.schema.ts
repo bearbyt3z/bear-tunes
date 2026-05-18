@@ -55,7 +55,7 @@ export const beatportSearchResultTrackInfoSchema = z.object({
   key_id: z.number().optional(),
   key_name: z.string().optional(),
   label: beatportSearchResultLabelInfoSchema,
-  length: z.number(),
+  length: z.number().optional(),
   mix_name: z.string(),
   release: beatportSearchResultReleaseInfoSchema,
   release_date: z.string(),
