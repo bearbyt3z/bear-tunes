@@ -83,9 +83,10 @@ export function validateImageMimeType(
  */
 export async function downloadImage(
   url: URL,
+  userAgentCacheFile: string,
   options: DownloadImageOptions = {},
 ): Promise<string> {
-  const profile = await getFetchClientProfile();
+  const profile = await getFetchClientProfile(userAgentCacheFile);
 
   const headers = buildImageDownloadHeaders(profile, options.referer);
 
@@ -112,6 +113,7 @@ export async function downloadAndSaveArtwork(
   trackPath: string,
   artworkUrl: URL | undefined,
   refererUrl: URL | undefined,
+  userAgentCacheFile: string,
 ): Promise<string | undefined> {
   if (!artworkUrl) {
     return;
@@ -122,7 +124,7 @@ export async function downloadAndSaveArtwork(
   const artworkExtension = path.posix.extname(artworkUrl.pathname) || '.unrecognized';
   const artworkPath = replaceFilenameExtension(trackPath, artworkExtension);
 
-  await downloadImage(artworkUrl, {
+  await downloadImage(artworkUrl, userAgentCacheFile, {
     outputFilePath: artworkPath,
     referer: refererUrl,
   });

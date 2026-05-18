@@ -1,5 +1,4 @@
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 
 import { chromium } from 'playwright';
 
@@ -29,10 +28,9 @@ import type {
 } from './browser-session.types.js';
 
 /** Returns the persistent Playwright profile directory, creating it when needed. */
-function getUserDataDir(cacheDir?: string): string {
-  const dir = cacheDir ?? path.join(process.cwd(), '.cache', 'playwright-profile');
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+function getUserDataDir(browserProfileDir: string): string {
+  fs.mkdirSync(browserProfileDir, { recursive: true });
+  return browserProfileDir;
 }
 
 /**
@@ -164,9 +162,13 @@ async function waitUntilResolvedPage(
 async function applyBrowserUserAgentOverride(
   context: BrowserContext,
   page: Page,
+  userAgentCacheFile: string,
 ): Promise<void> {
   const runtimeUserAgent = await page.evaluate(() => navigator.userAgent);
-  const userAgent = await resolveBrowserUserAgent(runtimeUserAgent);
+  const userAgent = await resolveBrowserUserAgent(
+    runtimeUserAgent,
+    userAgentCacheFile,
+  );
 
   const cdpSession = await context.newCDPSession(page);
   await cdpSession.send('Network.setUserAgentOverride', {
@@ -177,7 +179,7 @@ async function applyBrowserUserAgentOverride(
 async function readPageStateViaPersistentContext(
   url: URL,
   contextOptions: BrowserContextOptions,
-  options: BrowserFetchOptions = {},
+  options: BrowserFetchOptions,
   readFinalState: (page: Page) => Promise<PageChallengeState> = async (
     page,
   ): Promise<PageChallengeState> => {
@@ -185,7 +187,7 @@ async function readPageStateViaPersistentContext(
     return safeGetPageState(page);
   },
 ): Promise<PageChallengeState> {
-  const userDataDir = getUserDataDir(options.cacheDir);
+  const userDataDir = getUserDataDir(options.browserProfileDir);
 
   const context = await chromium.launchPersistentContext(userDataDir, {
     ...contextOptions,
@@ -197,7 +199,11 @@ async function readPageStateViaPersistentContext(
   try {
     const page = context.pages()[0] ?? await context.newPage();
 
-    await applyBrowserUserAgentOverride(context, page);
+    await applyBrowserUserAgentOverride(
+      context,
+      page,
+      options.userAgentCacheFile,
+    );
 
     await page.goto(url.toString(), {
       waitUntil: 'domcontentloaded',
@@ -231,7 +237,7 @@ function getBrowserFailureReason(state: PageChallengeState): PageFetchAttemptFai
 
 export async function fetchPageWithPersistentProfile(
   url: URL,
-  options: BrowserFetchOptions = {},
+  options: BrowserFetchOptions,
 ): Promise<RawPageFetchResult> {
   const contextOptions = getBrowserContextOptions();
 

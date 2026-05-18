@@ -17,6 +17,10 @@ import type {
   ParsedPageFetchResult,
 } from './browser-session.types.js';
 
+import type {
+  FetchWebPageOptions,
+} from './fetch-web-page.types.js';
+
 function getHttpFailureReason(status: number): HttpFailureReason {
   return `http-${status}`;
 }
@@ -37,8 +41,11 @@ function getHttpFailureReason(status: number): HttpFailureReason {
  * @returns The parsed page fetch result, including the parsed document when
  * available and the full attempt history.
  */
-export async function fetchWebPage(url: URL): Promise<ParsedPageFetchResult> {
-  const profile = await getFetchClientProfile();
+export async function fetchWebPage(
+  url: URL,
+  options: FetchWebPageOptions,
+): Promise<ParsedPageFetchResult> {
+  const profile = await getFetchClientProfile(options.userAgentCacheFile);
   const headers = buildFetchHeaders(profile);
 
   const response = await fetch(url.toString(), {
@@ -57,7 +64,8 @@ export async function fetchWebPage(url: URL): Promise<ParsedPageFetchResult> {
     };
 
     const result = await fetchPageWithPersistentProfile(url, {
-      cacheDir: '.cache/playwright-profile',
+      browserProfileDir: options.browserProfileDir,
+      userAgentCacheFile: options.userAgentCacheFile,
     });
 
     return {

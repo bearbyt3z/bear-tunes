@@ -1,3 +1,7 @@
+import {
+  BROWSER_PROFILE_DIR,
+  USER_AGENT_CACHE_FILE,
+} from '#config';
 import logger from '#logger';
 import {
   fetchWebPage,
@@ -17,7 +21,10 @@ import {
  * @throws {TypeError} When the page does not expose the expected Next.js structure.
  */
 export async function extractNextJSData(url: URL): Promise<unknown> {
-  const page = await fetchWebPage(url);
+  const page = await fetchWebPage(url, {
+    browserProfileDir: BROWSER_PROFILE_DIR,
+    userAgentCacheFile: USER_AGENT_CACHE_FILE,
+  });
 
   logger.debug(
     'Fetched page for Next.js data extraction',

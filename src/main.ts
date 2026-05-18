@@ -17,6 +17,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import process from 'node:process';
 
+import { USER_AGENT_CACHE_FILE } from '#config';
 import logger from '#logger';
 import {
   downloadAndSaveArtwork,
@@ -103,6 +104,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
             filePathRenamed,
             trackInfo.album?.artwork,
             trackInfo.album?.url,
+            USER_AGENT_CACHE_FILE,
           );
         }
       }
@@ -131,6 +133,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
               filePathRenamed,
               trackInfo.album?.artwork,
               trackInfo.album?.url,
+              USER_AGENT_CACHE_FILE,
             );
 
             if (artworkPath) {

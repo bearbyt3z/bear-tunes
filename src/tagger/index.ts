@@ -15,6 +15,7 @@ import {
   mapBeatportTrackToTrackInfo,
 } from './types.mapper.js';
 
+import { USER_AGENT_CACHE_FILE } from '#config';
 import logger from '#logger';
 import {
   normalizeTextCharacters,
@@ -549,7 +550,7 @@ export class BearTunesTagger {
     }
 
     try {
-      const filename = await downloadImage(imageUrl, {
+      const filename = await downloadImage(imageUrl, USER_AGENT_CACHE_FILE, {
         referer: sourcePageUrl,
       });
 

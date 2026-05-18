@@ -55,9 +55,6 @@ const UA_PROFILES: UAProfile[] = [
   },
 ];
 
-const CACHE_DIR = path.join(process.cwd(), '.cache');
-const UA_CACHE_FILE = path.join(CACHE_DIR, 'user-agent.json');
-
 /** Returns a random integer from the inclusive range between min and max, or throws for an invalid range. */
 function randomInt(min: number, max: number): number {
   if (!Number.isInteger(min) || !Number.isInteger(max) || min > max) {
@@ -118,25 +115,31 @@ async function writeFileAtomic(filePath: string, content: string): Promise<void>
   await fs.promises.rename(tempFilePath, filePath);
 }
 
-async function readIdentityCache(): Promise<IdentityCache> {
-  const cached = await readJsonFile<unknown>(UA_CACHE_FILE);
+async function readIdentityCache(
+  userAgentCacheFile: string,
+): Promise<IdentityCache> {
+  const cached = await readJsonFile(userAgentCacheFile);
   const parsedCache = identityCacheSchema.safeParse(cached);
 
   return parsedCache.success ? parsedCache.data : {};
 }
 
-async function writeIdentityCache(cache: IdentityCache): Promise<void> {
-  await writeFileAtomic(UA_CACHE_FILE, JSON.stringify(cache, null, 2));
+async function writeIdentityCache(
+  userAgentCacheFile: string,
+  cache: IdentityCache,
+): Promise<void> {
+  await writeFileAtomic(userAgentCacheFile, JSON.stringify(cache, null, 2));
 }
 
 type IdentityCacheKey = keyof IdentityCache;
 type IdentityCacheEntry<K extends IdentityCacheKey> = NonNullable<IdentityCache[K]>;
 
 async function getCachedIdentityEntry<K extends IdentityCacheKey>(
+  userAgentCacheFile: string,
   key: K,
   now = Date.now(),
 ): Promise<IdentityCacheEntry<K> | undefined> {
-  const cache = await readIdentityCache();
+  const cache = await readIdentityCache(userAgentCacheFile);
   const entry = cache[key];
 
   if (!entry || entry.expiresAt <= now) {
@@ -147,46 +150,62 @@ async function getCachedIdentityEntry<K extends IdentityCacheKey>(
 }
 
 async function saveIdentityEntry<K extends IdentityCacheKey>(
+  userAgentCacheFile: string,
   key: K,
   entry: IdentityCacheEntry<K>,
 ): Promise<IdentityCacheEntry<K>> {
-  const cache = await readIdentityCache();
+  const cache = await readIdentityCache(userAgentCacheFile);
 
   const nextCache: IdentityCache = {
     ...cache,
     [key]: entry,
   };
 
-  await writeIdentityCache(nextCache);
+  await writeIdentityCache(userAgentCacheFile, nextCache);
 
   return entry;
 }
 
-export async function getCachedBrowserUserAgent(): Promise<string | undefined> {
-  const cachedEntry = await getCachedIdentityEntry(RequestIdentityType.Browser);
+export async function getCachedBrowserUserAgent(
+  userAgentCacheFile: string,
+): Promise<string | undefined> {
+  const cachedEntry = await getCachedIdentityEntry(
+    userAgentCacheFile,
+    RequestIdentityType.Browser,
+  );
 
   return cachedEntry?.userAgent;
 }
 
 export async function saveBrowserUserAgent(
+  userAgentCacheFile: string,
   userAgent: string,
   source: BrowserUserAgentSource,
 ): Promise<string> {
   const now = Date.now();
 
-  const entry = await saveIdentityEntry(RequestIdentityType.Browser, {
-    userAgent,
-    source,
-    createdAt: now,
-    expiresAt: now + randomTtlMs(7, 14),
-  });
+  const entry = await saveIdentityEntry(
+    userAgentCacheFile,
+    RequestIdentityType.Browser, {
+      userAgent,
+      source,
+      createdAt: now,
+      expiresAt: now + randomTtlMs(7, 14),
+    },
+  );
 
   return entry.userAgent;
 }
 
-export async function getFetchUserAgent(): Promise<string> {
+export async function getFetchUserAgent(
+  userAgentCacheFile: string,
+): Promise<string> {
   const now = Date.now();
-  const cachedEntry = await getCachedIdentityEntry(RequestIdentityType.Fetch, now);
+  const cachedEntry = await getCachedIdentityEntry(
+    userAgentCacheFile,
+    RequestIdentityType.Fetch,
+    now,
+  );
 
   if (cachedEntry) {
     return cachedEntry.userAgent;
@@ -195,12 +214,16 @@ export async function getFetchUserAgent(): Promise<string> {
   const profile = pickRandomProfile();
   const userAgent = generateUserAgent(profile);
 
-  const entry = await saveIdentityEntry(RequestIdentityType.Fetch, {
-    userAgent,
-    profileName: profile.name,
-    createdAt: now,
-    expiresAt: now + randomTtlMs(7, 14),
-  });
+  const entry = await saveIdentityEntry(
+    userAgentCacheFile,
+    RequestIdentityType.Fetch,
+    {
+      userAgent,
+      profileName: profile.name,
+      createdAt: now,
+      expiresAt: now + randomTtlMs(7, 14),
+    },
+  );
 
   return entry.userAgent;
 }
@@ -233,8 +256,10 @@ function getDefaultRequestProfile(): ClientRequestProfile {
  *
  * @returns A complete fetch client profile.
  */
-export async function getFetchClientProfile(): Promise<FetchClientProfile> {
-  const userAgent = await getFetchUserAgent();
+export async function getFetchClientProfile(
+  userAgentCacheFile: string,
+): Promise<FetchClientProfile> {
+  const userAgent = await getFetchUserAgent(userAgentCacheFile);
 
   return {
     identity: {
@@ -312,8 +337,9 @@ export function normalizeBrowserUserAgent(userAgent: string): string {
  */
 export async function resolveBrowserUserAgent(
   runtimeUserAgent: string,
+  userAgentCacheFile: string,
 ): Promise<string> {
-  const cachedUserAgent = await getCachedBrowserUserAgent();
+  const cachedUserAgent = await getCachedBrowserUserAgent(userAgentCacheFile);
 
   if (cachedUserAgent) {
     return cachedUserAgent;
@@ -324,7 +350,11 @@ export async function resolveBrowserUserAgent(
     ? BrowserUserAgentSource.HeadlessNormalized
     : BrowserUserAgentSource.HeadfulObserved;
 
-  return saveBrowserUserAgent(normalizedUserAgent, source);
+  return saveBrowserUserAgent(
+    userAgentCacheFile,
+    normalizedUserAgent,
+    source,
+  );
 }
 
 export function getBrowserContextOptions(): BrowserContextOptions {

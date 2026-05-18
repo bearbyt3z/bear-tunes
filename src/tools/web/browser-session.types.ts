@@ -18,16 +18,19 @@ export type PageFetchAttemptFailureReason =
  * cannot be resolved automatically.
  */
 export interface BrowserFetchOptions {
-  /** Optional path to the persistent Playwright user data directory. */
-  cacheDir?: string;
+  /** Path to the persistent Playwright user data directory. */
+  browserProfileDir: string;
+
+  /** Path to the User-Agent identity cache file. */
+  userAgentCacheFile: string;
 
   /** Whether to launch the persistent browser context in headless mode. */
   headless?: boolean;
 
   /**
-  * Maximum time to wait for manual verification in a headful browser window
-  * before treating the page resolution as failed.
-  */
+   * Maximum time to wait for manual verification in a headful browser window
+   * before treating the page resolution as failed.
+   */
   manualTimeoutMs?: number;
 }
 
