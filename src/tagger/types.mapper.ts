@@ -51,7 +51,12 @@ export function mapBeatportSearchResultTrackToTrackInfo(
     .map((artist) => artist.artist_name);
 
   const remixers = trackEntry.artists
-    .filter((artist) => artist.artist_type_name === BeatportSearchResultArtistType.Remixer)
+    .filter((artist) =>
+      [
+        BeatportSearchResultArtistType.Remixer,
+        BeatportSearchResultArtistType.Beatsource_Remixer,
+      ].includes(artist.artist_type_name),
+    )
     .map((artist) => artist.artist_name);
 
   const [genre, subgenre] = trackEntry.genre.map((genreEntry) => genreEntry.genre_name);

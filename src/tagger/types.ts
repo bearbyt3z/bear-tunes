@@ -32,6 +32,7 @@ export enum ID3Version {
 export enum BeatportSearchResultArtistType {
   Artist = 'Artist',
   Remixer = 'Remixer',
+  Beatsource_Remixer = 'Beatsource Remixer',
   Producer = 'Producer', // accepted for API compatibility; currently not used in track tagging
   DJ = 'DJ', // accepted for API compatibility; currently not used in track tagging
 }
