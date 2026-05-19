@@ -372,10 +372,19 @@ export async function resolveBrowserNavigatorContext(
     return cachedContext;
   }
 
+  return {
+    userAgent: normalizeBrowserUserAgent(runtimeNavigator.userAgent),
+    platform: runtimeNavigator.platform,
+    language: runtimeNavigator.language,
+    vendor: runtimeNavigator.vendor,
+  };
+}
+
+export async function saveAcceptedBrowserNavigatorContext(
+  runtimeNavigator: BrowserNavigatorContext,
+  userAgentCacheFile: string,
+): Promise<BrowserNavigatorContext> {
   const normalizedUserAgent = normalizeBrowserUserAgent(runtimeNavigator.userAgent);
-  const source: BrowserUserAgentSource = runtimeNavigator.userAgent.includes('HeadlessChrome')
-    ? BrowserUserAgentSource.HeadlessNormalized
-    : BrowserUserAgentSource.HeadfulObserved;
 
   return saveBrowserNavigatorContext(
     userAgentCacheFile,
@@ -385,7 +394,7 @@ export async function resolveBrowserNavigatorContext(
       language: runtimeNavigator.language,
       vendor: runtimeNavigator.vendor,
     },
-    source,
+    BrowserUserAgentSource.HeadfulObserved,
   );
 }
 

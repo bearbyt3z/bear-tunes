@@ -10,6 +10,7 @@ import { looksLikeChallengeHtml } from './challenge-detection.js';
 import {
   getBrowserContextOptions,
   resolveBrowserNavigatorContext,
+  saveAcceptedBrowserNavigatorContext,
 } from './request-identity.js';
 import { ignoreError } from '../utils/error.js';
 
@@ -186,6 +187,17 @@ async function waitUntilResolvedPage(
   }
 }
 
+async function readRuntimeBrowserNavigatorContext(
+  page: Page,
+): Promise<BrowserNavigatorContext> {
+  return page.evaluate(() => ({
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    language: navigator.language,
+    vendor: navigator.vendor,
+  }));
+}
+
 /**
  * Applies a browser User-Agent override for the current page before navigation.
  *
@@ -201,12 +213,7 @@ async function applyBrowserNavigatorOverrides(
   page: Page,
   userAgentCacheFile: string,
 ): Promise<BrowserNavigatorContext> {
-  const runtimeNavigator = await page.evaluate(() => ({
-    userAgent: navigator.userAgent,
-    platform: navigator.platform,
-    language: navigator.language,
-    vendor: navigator.vendor,
-  }));
+  const runtimeNavigator = await readRuntimeBrowserNavigatorContext(page);
 
   const navigatorContext = await resolveBrowserNavigatorContext(
     runtimeNavigator,
@@ -315,39 +322,62 @@ export async function fetchPageWithPersistentProfile(
   };
 
   const manualTimeoutMs = options.manualTimeoutMs ?? 180_000;
+  const userDataDir = getUserDataDir(options.browserProfileDir);
 
-  const finalState = await readPageStateViaPersistentContext(
-    url,
-    contextOptions,
-    {
-      ...options,
-      headless: false,
-    },
-    (page) => waitUntilResolvedPage(page, manualTimeoutMs),
-  );
+  const context = await chromium.launchPersistentContext(userDataDir, {
+    ...contextOptions,
+    headless: false,
+  });
 
-  if (!isResolvedPageState(finalState)) {
+  try {
+    const page = context.pages()[0] ?? await context.newPage();
+
+    const navigatorContext = await applyBrowserNavigatorOverrides(
+      context,
+      page,
+      options.userAgentCacheFile,
+    );
+
+    await installStealthInitScript(context, navigatorContext);
+
+    await page.goto(url.toString(), {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+
+    const finalState = await waitUntilResolvedPage(page, manualTimeoutMs);
+
+    if (!isResolvedPageState(finalState)) {
+      const headfulAttempt: PageFetchAttempt = {
+        method: PageFetchMethod.BrowserHeadful,
+        success: false,
+        reason: getBrowserFailureReason(finalState),
+      };
+
+      return {
+        success: false,
+        html: null,
+        attempts: [headlessAttempt, headfulAttempt],
+      };
+    }
+
+    const acceptedNavigator = await readRuntimeBrowserNavigatorContext(page);
+    await saveAcceptedBrowserNavigatorContext(
+      acceptedNavigator,
+      options.userAgentCacheFile,
+    );
+
     const headfulAttempt: PageFetchAttempt = {
       method: PageFetchMethod.BrowserHeadful,
-      success: false,
-      reason: getBrowserFailureReason(finalState),
+      success: true,
     };
 
     return {
-      success: false,
-      html: null,
+      success: true,
+      html: finalState.html,
       attempts: [headlessAttempt, headfulAttempt],
     };
+  } finally {
+    await context.close();
   }
-
-  const headfulAttempt: PageFetchAttempt = {
-    method: PageFetchMethod.BrowserHeadful,
-    success: true,
-  };
-
-  return {
-    success: true,
-    html: finalState.html,
-    attempts: [headlessAttempt, headfulAttempt],
-  };
 }
