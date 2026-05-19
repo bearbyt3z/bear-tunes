@@ -212,12 +212,14 @@ async function applyBrowserNavigatorOverrides(
   context: BrowserContext,
   page: Page,
   userAgentCacheFile: string,
+  preferCached: boolean,
 ): Promise<BrowserNavigatorContext> {
   const runtimeNavigator = await readRuntimeBrowserNavigatorContext(page);
 
   const navigatorContext = await resolveBrowserNavigatorContext(
     runtimeNavigator,
     userAgentCacheFile,
+    preferCached,
   );
 
   const cdpSession = await context.newCDPSession(page);
@@ -253,6 +255,7 @@ async function readPageStateViaPersistentContext(
       context,
       page,
       options.userAgentCacheFile,
+      true,
     );
 
     await installStealthInitScript(context, navigatorContext);
@@ -336,6 +339,7 @@ export async function fetchPageWithPersistentProfile(
       context,
       page,
       options.userAgentCacheFile,
+      false,
     );
 
     await installStealthInitScript(context, navigatorContext);

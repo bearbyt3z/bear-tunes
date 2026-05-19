@@ -365,11 +365,14 @@ export function normalizeBrowserUserAgent(userAgent: string): string {
 export async function resolveBrowserNavigatorContext(
   runtimeNavigator: BrowserNavigatorContext,
   userAgentCacheFile: string,
+  preferCached: boolean,
 ): Promise<BrowserNavigatorContext> {
-  const cachedContext = await getCachedBrowserNavigatorContext(userAgentCacheFile);
+  if (preferCached) {
+    const cachedContext = await getCachedBrowserNavigatorContext(userAgentCacheFile);
 
-  if (cachedContext) {
-    return cachedContext;
+    if (cachedContext) {
+      return cachedContext;
+    }
   }
 
   return {
