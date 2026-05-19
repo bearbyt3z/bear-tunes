@@ -17,7 +17,6 @@ export interface BrowserNavigatorContext {
   userAgent: string;
   platform: string;
   language: string;
-  languages: string[];
   vendor: string;
 }
 

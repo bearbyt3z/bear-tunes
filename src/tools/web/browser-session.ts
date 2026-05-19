@@ -92,10 +92,12 @@ async function installStealthInitScript(
       void error;
     }
 
+    // Keep the replayed navigator fingerprint intentionally minimal.
+    // Replaying navigator.languages caused a Cloudflare captcha loop,
+    // so do not add it back unless this behavior is re-tested.
     defineNavigatorValue('userAgent', overrides.userAgent);
     defineNavigatorValue('platform', overrides.platform);
     defineNavigatorValue('language', overrides.language);
-    defineNavigatorValue('languages', overrides.languages);
     defineNavigatorValue('vendor', overrides.vendor);
   }, navigatorContext);
 }
@@ -203,7 +205,6 @@ async function applyBrowserNavigatorOverrides(
     userAgent: navigator.userAgent,
     platform: navigator.platform,
     language: navigator.language,
-    languages: [...navigator.languages],
     vendor: navigator.vendor,
   }));
 

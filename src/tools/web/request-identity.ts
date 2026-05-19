@@ -195,7 +195,6 @@ export async function getCachedBrowserNavigatorContext(
     userAgent: cachedEntry.userAgent,
     platform: cachedEntry.platform,
     language: cachedEntry.language,
-    languages: cachedEntry.languages,
     vendor: cachedEntry.vendor,
   };
 }
@@ -211,7 +210,6 @@ export async function saveBrowserNavigatorContext(
     userAgent: context.userAgent,
     platform: context.platform,
     language: context.language,
-    languages: context.languages,
     vendor: context.vendor,
     source,
     createdAt: now,
@@ -228,7 +226,6 @@ export async function saveBrowserNavigatorContext(
     userAgent: savedEntry.userAgent,
     platform: savedEntry.platform,
     language: savedEntry.language,
-    languages: savedEntry.languages,
     vendor: savedEntry.vendor,
   };
 }
@@ -386,7 +383,6 @@ export async function resolveBrowserNavigatorContext(
       userAgent: normalizedUserAgent,
       platform: runtimeNavigator.platform,
       language: runtimeNavigator.language,
-      languages: runtimeNavigator.languages,
       vendor: runtimeNavigator.vendor,
     },
     source,
