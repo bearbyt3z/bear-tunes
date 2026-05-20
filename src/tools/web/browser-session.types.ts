@@ -1,21 +1,35 @@
+/**
+ * Browser-detected reason why a page fetch attempt did not produce a resolved page.
+ */
 export enum PageFetchFailureReason {
   ChallengeResponse = 'challenge-response',
   Captcha = 'captcha',
   ResolvedPageMarkerNotFound = 'resolved-page-marker-not-found',
 }
 
+/**
+ * HTTP status-based failure reason recorded in the attempt history.
+ */
 export type HttpFailureReason = `http-${number}`;
 
+/**
+ * Reason recorded for a single page fetch attempt that did not produce a
+ * resolved page.
+ *
+ * The value can describe either a browser-detected failure condition or an
+ * HTTP status-based failure reported by a non-browser transport.
+ */
 export type PageFetchAttemptFailureReason =
   | PageFetchFailureReason
   | HttpFailureReason;
 
 /**
- * Options controlling page loading through a persistent Playwright browser session.
+ * Configuration of a page fetch performed through a persistent Playwright
+ * browser profile.
  *
- * These options affect how the persistent browser profile is opened and how long
- * the caller waits for manual verification to complete when the target page
- * cannot be resolved automatically.
+ * The profile directory controls browser state continuity across runs, while
+ * the remaining options define how the browser is launched and how long manual
+ * verification may continue before the attempt is treated as failed.
  */
 export interface BrowserFetchOptions {
   /** Path to the persistent Playwright user data directory. */
@@ -24,40 +38,41 @@ export interface BrowserFetchOptions {
   /** Path to the User-Agent identity cache file. */
   userAgentCacheFile: string;
 
-  /** Whether to launch the persistent browser context in headless mode. */
+  /** Whether the persistent browser context is launched without a visible window. */
   headless?: boolean;
 
   /**
-   * Maximum time to wait for manual verification in a headful browser window
-   * before treating the page resolution as failed.
+   * Maximum time allowed for manual verification in a visible browser session
+   * before the attempt is treated as failed.
    */
   manualTimeoutMs?: number;
 }
 
 /**
- * Snapshot of the currently loaded page together with lightweight signals used
- * to evaluate whether the target page was resolved successfully or still looks
- * like a challenge/interstitial page.
+ * Snapshot of the active page together with lightweight challenge indicators.
+ *
+ * This structure captures the minimal set of signals needed to distinguish a
+ * resolved target page from an interstitial, challenge, or CAPTCHA page.
  */
 export interface PageChallengeState {
-  /** Current page URL at the time of the snapshot. */
+  /** Page URL captured for the snapshot. */
   url: string;
 
-  /** Current document title, or an empty string when it cannot be read. */
+  /** Document title captured for the snapshot, or an empty string when unavailable. */
   title: string;
 
-  /** Current page HTML content, or an empty string when it cannot be read. */
+  /** HTML captured for the snapshot, or an empty string when unavailable. */
   html: string;
 
-  /** Whether the page currently exposes a visible reCAPTCHA iframe marker. */
+  /** Whether the page exposes a visible reCAPTCHA frame marker. */
   hasRecaptchaFrame: boolean;
 
-  /** Whether the current title/HTML matches known challenge page heuristics. */
+  /** Whether the captured title or HTML matches challenge detection heuristics. */
   looksLikeChallenge: boolean;
 }
 
 /**
- * Identifies the transport used during a single page fetch attempt.
+ * Transport or execution mode used for a single page fetch attempt.
  */
 export enum PageFetchMethod {
   Fetch = 'fetch',
@@ -66,48 +81,49 @@ export enum PageFetchMethod {
 }
 
 /**
- * Describes one attempt made while resolving the target page.
+ * Outcome of one attempt made while resolving a page.
  *
- * A single high-level page fetch may include multiple attempts, for example
- * an initial HTTP fetch followed by headless and headful browser fallbacks.
+ * A complete page resolution may consist of multiple attempts performed with
+ * different transports or browser modes. Each attempt records its method,
+ * result, and optional failure details.
  */
 export interface PageFetchAttempt {
-  /** Transport used for this attempt. */
+  /** Transport or browser mode used by the attempt. */
   method: PageFetchMethod;
 
-  /** Whether this individual attempt succeeded. */
+  /** Whether the attempt produced a resolved page. */
   success: boolean;
 
-  /** Optional short reason explaining why the attempt failed. */
+  /** Failure reason recorded for an unsuccessful attempt. */
   reason?: PageFetchAttemptFailureReason;
 
-  /** Optional HTTP status observed for this attempt when available. */
+  /** HTTP status associated with the attempt when one is available. */
   status?: number;
 }
 
 /**
- * Common metadata returned by page fetch helpers.
+ * Shared result metadata returned by page fetch operations.
  */
 export interface BasePageFetchResult {
-  /** Whether the overall page resolution succeeded. */
+  /** Whether the page was resolved successfully. */
   success: boolean;
 
-  /** Ordered history of attempts made while resolving the page. */
+  /** Ordered list of attempts performed during page resolution. */
   attempts: PageFetchAttempt[];
 }
 
 /**
- * Result returned by low-level page fetch helpers that work with raw HTML.
+ * Result of a page fetch operation that returns raw HTML.
  */
 export interface RawPageFetchResult extends BasePageFetchResult {
-  /** Final resolved HTML, or `null` when the page could not be resolved. */
+  /** Resolved HTML document, or `null` when resolution failed. */
   html: string | null;
 }
 
 /**
- * Result returned by high-level page fetch helpers that expose a parsed DOM.
+ * Result of a page fetch operation that returns a parsed document.
  */
 export interface ParsedPageFetchResult extends BasePageFetchResult {
-  /** Parsed document created from the final HTML, or `null` on failure. */
+  /** Parsed document created from the resolved HTML, or `null` when resolution failed. */
   document: Document | null;
 }
