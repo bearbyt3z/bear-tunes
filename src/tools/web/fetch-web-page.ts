@@ -21,25 +21,29 @@ import type {
   FetchWebPageOptions,
 } from './fetch-web-page.types.js';
 
+/**
+ * Converts an HTTP status code to the machine-readable failure reason format
+ * used by page fetch attempt records.
+ *
+ * @param status - HTTP status code returned by the request.
+ * @returns HTTP failure reason derived from the status code.
+ */
 function getHttpFailureReason(status: number): HttpFailureReason {
   return `http-${status}`;
 }
 
 /**
- * Fetches an HTML page and returns a parsed page fetch result.
+ * Resolves a web page and returns the parsed page fetch result.
  *
- * The function first tries to download the page with a regular HTTP fetch using
- * request headers built from the client profile. If the response looks like a
- * challenge page, it falls back to a persistent Playwright browser session.
+ * The operation first performs a regular HTTP fetch using headers built from
+ * the canonical fetch client profile. When the response is classified as a
+ * challenge page, the operation falls back to a persistent Playwright browser
+ * session and returns the combined attempt history.
  *
- * @remarks
- * The Playwright fallback may retry the page in headless and headful modes
- * while reusing the same persistent profile state until the final page content
- * can be retrieved.
- *
- * @param url - The absolute page URL to download and parse.
- * @returns The parsed page fetch result, including the parsed document when
- * available and the full attempt history.
+ * @param url - Absolute page URL to resolve and parse.
+ * @param options - File system locations required by the page fetch pipeline.
+ * @returns Parsed page fetch result, including the resolved document when
+ * available and the ordered attempt history.
  */
 export async function fetchWebPage(
   url: URL,
