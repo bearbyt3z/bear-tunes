@@ -31,7 +31,16 @@ import type {
   BrowserNavigatorContext,
 } from './request-identity.types.js';
 
-/** Returns the persistent Playwright profile directory, creating it when needed. */
+/**
+ * Returns the persistent Playwright user data directory used by browser-based
+ * page fetch operations.
+ *
+ * The directory is created before use so persistent browser state can be
+ * reused across runs.
+ *
+ * @param browserProfileDir - Path to the persistent Playwright profile directory.
+ * @returns The ensured persistent profile directory path.
+ */
 function getUserDataDir(browserProfileDir: string): string {
   fs.mkdirSync(browserProfileDir, { recursive: true });
   return browserProfileDir;
@@ -46,6 +55,7 @@ function getUserDataDir(browserProfileDir: string): string {
  * less likely to detect the automated browser environment.
  *
  * @param context - Playwright browser context to patch before navigation.
+ * @param navigatorContext - Navigator property values replayed into the page.
  */
 async function installStealthInitScript(
   context: BrowserContext,
@@ -187,6 +197,16 @@ async function waitUntilResolvedPage(
   }
 }
 
+/**
+ * Reads the navigator values exposed by the live browser page.
+ *
+ * The returned snapshot represents the runtime browser identity observed after
+ * the page has been created and can be persisted as an accepted browser
+ * navigator context.
+ *
+ * @param page - Playwright page whose navigator properties are read.
+ * @returns Navigator values exposed by the live browser page.
+ */
 async function readRuntimeBrowserNavigatorContext(
   page: Page,
 ): Promise<BrowserNavigatorContext> {
@@ -199,14 +219,17 @@ async function readRuntimeBrowserNavigatorContext(
 }
 
 /**
- * Applies a browser User-Agent override for the current page before navigation.
+ * Applies navigator-related browser identity overrides before page navigation.
  *
- * The override uses the runtime browser User-Agent normalized through the
- * request identity policy so headless Chromium matches the accepted browser
- * identity more closely.
+ * The override starts from the runtime browser navigator values and resolves
+ * them through the request identity policy so browser-based fetches reuse an
+ * accepted navigator context more consistently.
  *
  * @param context - Browser context owning the page.
  * @param page - Page that will perform the navigation.
+ * @param userAgentCacheFile - Path to the persisted navigator identity cache file.
+ * @param preferCached - Whether a cached accepted navigator context should be preferred.
+ * @returns The navigator context applied to the browser page.
  */
 async function applyBrowserNavigatorOverrides(
   context: BrowserContext,
@@ -230,6 +253,19 @@ async function applyBrowserNavigatorOverrides(
   return navigatorContext;
 }
 
+/**
+ * Opens a persistent Playwright browser context, navigates to the target page,
+ * and returns the page state produced by the supplied final-state reader.
+ *
+ * The helper centralizes persistent profile startup, navigator override
+ * application, stealth script installation, and initial navigation.
+ *
+ * @param url - Target page URL.
+ * @param contextOptions - Browser context options used to launch the persistent context.
+ * @param options - Browser fetch configuration controlling profile reuse and browser mode.
+ * @param readFinalState - Callback that reads the final page state after navigation.
+ * @returns The page state returned by the final-state reader.
+ */
 async function readPageStateViaPersistentContext(
   url: URL,
   contextOptions: BrowserContextOptions,
@@ -272,11 +308,11 @@ async function readPageStateViaPersistentContext(
 }
 
 /**
- * Maps the observed page state to a short reason describing why the browser
- * attempt did not resolve the target page.
+ * Maps an observed page state to the browser failure reason recorded for the
+ * attempt.
  *
  * @param state - Page state snapshot to classify.
- * @returns A short machine-readable failure reason.
+ * @returns The browser failure reason derived from the observed page state.
  */
 function getBrowserFailureReason(state: PageChallengeState): PageFetchAttemptFailureReason {
   if (state.hasRecaptchaFrame) {
@@ -290,6 +326,21 @@ function getBrowserFailureReason(state: PageChallengeState): PageFetchAttemptFai
   return PageFetchFailureReason.ResolvedPageMarkerNotFound;
 }
 
+/**
+ * Resolves a page through a persistent Playwright browser profile.
+ *
+ * The operation first attempts to load the page in a headless persistent
+ * browser context. If that attempt does not produce a resolved page, the same
+ * persistent profile is retried in a visible browser session and allowed to
+ * continue until the page resolves or the manual timeout expires.
+ *
+ * The returned result contains the final HTML on success and a complete
+ * attempt history describing both browser phases.
+ *
+ * @param url - Target page URL.
+ * @param options - Browser fetch configuration controlling profile reuse and manual timeout.
+ * @returns The resolved page result together with the ordered browser attempt history.
+ */
 export async function fetchPageWithPersistentProfile(
   url: URL,
   options: BrowserFetchOptions,
