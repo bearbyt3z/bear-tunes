@@ -28,7 +28,9 @@ const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 const DEFAULT_LOCALE = 'en-US';
 const DEFAULT_TIMEZONE_ID = 'Europe/Warsaw';
 
-/** Supported User-Agent profile templates used for cached identity rotation. */
+/**
+ * Supported User-Agent profile templates used to generate request identities.
+ */
 const UA_PROFILES: UAProfile[] = [
   {
     name: 'chrome-windows',
@@ -57,7 +59,14 @@ const UA_PROFILES: UAProfile[] = [
   },
 ];
 
-/** Returns a random integer from the inclusive range between min and max, or throws for an invalid range. */
+/**
+ * Returns a random integer from the inclusive range between `min` and `max`.
+ *
+ * @param min - Inclusive lower bound.
+ * @param max - Inclusive upper bound.
+ * @returns Random integer from the inclusive range.
+ * @throws {Error} When the bounds do not form a valid integer range.
+ */
 function randomInt(min: number, max: number): number {
   if (!Number.isInteger(min) || !Number.isInteger(max) || min > max) {
     throw new Error(`Invalid randomInt range: min=${min}, max=${max}`);
@@ -66,29 +75,57 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-/** Returns a random duration in milliseconds for the given day range. */
+/**
+ * Returns a random cache lifetime in milliseconds for the inclusive day range.
+ *
+ * @param minDays - Inclusive lower bound expressed in days.
+ * @param maxDays - Inclusive upper bound expressed in days.
+ * @returns Random duration in milliseconds.
+ */
 function randomTtlMs(minDays = 3, maxDays = 10): number {
   const minMs = minDays * MILLISECONDS_PER_DAY;
   const maxMs = maxDays * MILLISECONDS_PER_DAY;
   return randomInt(minMs, maxMs);
 }
 
-/** Selects one of the configured User-Agent profile templates. */
+/**
+ * Selects one configured User-Agent profile template.
+ *
+ * @returns Selected User-Agent profile template.
+ */
 function pickRandomProfile(): UAProfile {
   return UA_PROFILES[randomInt(0, UA_PROFILES.length - 1)];
 }
 
-/** Generates a concrete User-Agent string for the selected profile template. */
+/**
+ * Generates a concrete User-Agent string from a profile template.
+ *
+ * @param profile - User-Agent profile template used for generation.
+ * @returns Generated User-Agent string.
+ */
 function generateUserAgent(profile: UAProfile): string {
   return new UserAgent([profile.match, profile.filter]).toString();
 }
 
-/** Ensures that the target directory exists, creating it recursively if needed. */
+/**
+ * Ensures that a directory exists.
+ *
+ * Missing parent directories are created recursively.
+ *
+ * @param dirPath - Directory path to ensure.
+ */
 async function ensureDir(dirPath: string): Promise<void> {
   await fs.promises.mkdir(dirPath, { recursive: true });
 }
 
-/** Reads and parses a JSON file, returning null when the file does not exist. */
+/**
+ * Reads and parses a JSON file.
+ *
+ * The function returns `null` when the target file does not exist.
+ *
+ * @param filePath - Path to the JSON file.
+ * @returns Parsed JSON value or `null` when the file is missing.
+ */
 async function readJsonFile<T>(filePath: string): Promise<T | null> {
   try {
     const raw = await fs.promises.readFile(filePath, 'utf8');
@@ -104,7 +141,12 @@ async function readJsonFile<T>(filePath: string): Promise<T | null> {
   }
 }
 
-/** Writes a file through a temporary sibling file to avoid partial cache writes. */
+/**
+ * Writes a file atomically through a temporary sibling file.
+ *
+ * @param filePath - Target file path.
+ * @param content - Final file content.
+ */
 async function writeFileAtomic(filePath: string, content: string): Promise<void> {
   const dirPath = path.dirname(filePath);
   const tempFilePath = path.join(
@@ -117,6 +159,14 @@ async function writeFileAtomic(filePath: string, content: string): Promise<void>
   await fs.promises.rename(tempFilePath, filePath);
 }
 
+/**
+ * Reads the persisted request identity cache and validates its structure.
+ *
+ * Invalid or missing cache content is treated as an empty cache object.
+ *
+ * @param userAgentCacheFile - Path to the persisted request identity cache file.
+ * @returns Parsed request identity cache object.
+ */
 async function readIdentityCache(
   userAgentCacheFile: string,
 ): Promise<IdentityCache> {
@@ -126,6 +176,12 @@ async function readIdentityCache(
   return parsedCache.success ? parsedCache.data : {};
 }
 
+/**
+ * Writes the persisted request identity cache to disk.
+ *
+ * @param userAgentCacheFile - Path to the persisted request identity cache file.
+ * @param cache - Request identity cache content to persist.
+ */
 async function writeIdentityCache(
   userAgentCacheFile: string,
   cache: IdentityCache,
@@ -133,9 +189,20 @@ async function writeIdentityCache(
   await writeFileAtomic(userAgentCacheFile, JSON.stringify(cache, null, 2));
 }
 
+/** Cache key representing one persisted request identity family. */
 type IdentityCacheKey = keyof IdentityCache;
+
+/** Non-null persisted cache entry type for a selected identity cache key. */
 type IdentityCacheEntry<K extends IdentityCacheKey> = NonNullable<IdentityCache[K]>;
 
+/**
+ * Returns a non-expired persisted identity cache entry for the selected key.
+ *
+ * @param userAgentCacheFile - Path to the persisted request identity cache file.
+ * @param key - Cache key identifying the requested identity family.
+ * @param now - Timestamp used to evaluate cache expiration.
+ * @returns Cached identity entry or `undefined` when missing or expired.
+ */
 async function getCachedIdentityEntry<K extends IdentityCacheKey>(
   userAgentCacheFile: string,
   key: K,
@@ -151,6 +218,14 @@ async function getCachedIdentityEntry<K extends IdentityCacheKey>(
   return entry as IdentityCacheEntry<K>;
 }
 
+/**
+ * Persists one identity cache entry under the selected cache key.
+ *
+ * @param userAgentCacheFile - Path to the persisted request identity cache file.
+ * @param key - Cache key identifying the identity family to update.
+ * @param entry - Cache entry to persist.
+ * @returns The persisted cache entry.
+ */
 async function saveIdentityEntry<K extends IdentityCacheKey>(
   userAgentCacheFile: string,
   key: K,
@@ -168,6 +243,13 @@ async function saveIdentityEntry<K extends IdentityCacheKey>(
   return entry;
 }
 
+/**
+ * Returns the cached browser User-Agent value when a non-expired browser
+ * identity entry is available.
+ *
+ * @param userAgentCacheFile - Path to the persisted request identity cache file.
+ * @returns Cached browser User-Agent string or `undefined`.
+ */
 export async function getCachedBrowserUserAgent(
   userAgentCacheFile: string,
 ): Promise<string | undefined> {
@@ -179,6 +261,13 @@ export async function getCachedBrowserUserAgent(
   return cachedEntry?.userAgent;
 }
 
+/**
+ * Returns the cached browser navigator context when a non-expired browser
+ * identity entry is available.
+ *
+ * @param userAgentCacheFile - Path to the persisted request identity cache file.
+ * @returns Cached browser navigator context or `undefined`.
+ */
 export async function getCachedBrowserNavigatorContext(
   userAgentCacheFile: string,
 ): Promise<BrowserNavigatorContext | undefined> {
@@ -199,6 +288,14 @@ export async function getCachedBrowserNavigatorContext(
   };
 }
 
+/**
+ * Persists a browser navigator context together with its cache metadata.
+ *
+ * @param userAgentCacheFile - Path to the persisted request identity cache file.
+ * @param context - Browser navigator context to persist.
+ * @param source - Source assigned to the persisted browser identity.
+ * @returns Persisted browser navigator context.
+ */
 export async function saveBrowserNavigatorContext(
   userAgentCacheFile: string,
   context: BrowserNavigatorContext,
@@ -230,6 +327,12 @@ export async function saveBrowserNavigatorContext(
   };
 }
 
+/**
+ * Returns a cached fetch User-Agent string or generates and persists a new one.
+ *
+ * @param userAgentCacheFile - Path to the persisted request identity cache file.
+ * @returns Fetch User-Agent string.
+ */
 export async function getFetchUserAgent(
   userAgentCacheFile: string,
 ): Promise<string> {
@@ -261,6 +364,11 @@ export async function getFetchUserAgent(
   return entry.userAgent;
 }
 
+/**
+ * Returns the default device profile used by generated client identities.
+ *
+ * @returns Default client device profile.
+ */
 function getDefaultDeviceProfile(): ClientDeviceProfile {
   return {
     viewport: { width: 1920, height: 915 },
@@ -271,6 +379,11 @@ function getDefaultDeviceProfile(): ClientDeviceProfile {
   };
 }
 
+/**
+ * Returns the default request header profile used by generated client identities.
+ *
+ * @returns Default client request profile.
+ */
 function getDefaultRequestProfile(): ClientRequestProfile {
   return {
     accept:
@@ -283,11 +396,11 @@ function getDefaultRequestProfile(): ClientRequestProfile {
 }
 
 /**
- * Builds the canonical fetch client profile containing identity, device, and request values.
+ * Returns the canonical fetch client profile containing identity, device, and
+ * request header values.
  *
- * The returned profile contains a complete set of client settings for regular HTTP requests.
- *
- * @returns A complete fetch client profile.
+ * @param userAgentCacheFile - Path to the persisted request identity cache file.
+ * @returns Complete fetch client profile.
  */
 export async function getFetchClientProfile(
   userAgentCacheFile: string,
@@ -306,9 +419,10 @@ export async function getFetchClientProfile(
 }
 
 /**
- * Builds HTTP request headers from a client profile.
+ * Builds HTTP request headers from a fetch client profile.
  *
- * @returns A headers object ready to be passed to fetch().
+ * @param profile - Fetch client profile providing identity and request settings.
+ * @returns HTTP headers object ready for fetch requests.
  */
 export function buildFetchHeaders(profile: FetchClientProfile): Record<string, string> {
   return {
@@ -324,9 +438,12 @@ export function buildFetchHeaders(profile: FetchClientProfile): Record<string, s
 /**
  * Builds browser-like HTTP headers for image download requests.
  *
+ * The returned headers prefer image content types through the Accept header
+ * and may include a Referer header when one is provided.
+ *
  * @param profile - Client profile containing user agent and request preferences.
  * @param referer - Optional referrer URL to include in the Referer header.
- * @returns HTTP headers object ready for fetch() requests.
+ * @returns HTTP headers object ready for fetch requests.
  */
 export function buildImageDownloadHeaders(
   profile: FetchClientProfile,
@@ -362,6 +479,17 @@ export function normalizeBrowserUserAgent(userAgent: string): string {
     .replace(/Chrome\/(\d+)\.\d+\.\d+\.\d+/, 'Chrome/$1.0.0.0');
 }
 
+/**
+ * Resolves the browser navigator context used for browser-based page fetches.
+ *
+ * A cached accepted navigator context may be reused when requested. Otherwise,
+ * the runtime navigator context is normalized and returned.
+ *
+ * @param runtimeNavigator - Navigator context read from the live browser.
+ * @param userAgentCacheFile - Path to the persisted request identity cache file.
+ * @param preferCached - Whether a cached accepted browser navigator context should be preferred.
+ * @returns Browser navigator context used for the browser request flow.
+ */
 export async function resolveBrowserNavigatorContext(
   runtimeNavigator: BrowserNavigatorContext,
   userAgentCacheFile: string,
@@ -383,6 +511,13 @@ export async function resolveBrowserNavigatorContext(
   };
 }
 
+/**
+ * Normalizes and persists an accepted browser navigator context.
+ *
+ * @param runtimeNavigator - Navigator context read from the live browser.
+ * @param userAgentCacheFile - Path to the persisted request identity cache file.
+ * @returns Persisted accepted browser navigator context.
+ */
 export async function saveAcceptedBrowserNavigatorContext(
   runtimeNavigator: BrowserNavigatorContext,
   userAgentCacheFile: string,
@@ -401,6 +536,12 @@ export async function saveAcceptedBrowserNavigatorContext(
   );
 }
 
+/**
+ * Returns the default Playwright browser context options derived from the
+ * canonical client device and request profiles.
+ *
+ * @returns Browser context options for browser-based page fetches.
+ */
 export function getBrowserContextOptions(): BrowserContextOptions {
   const device = getDefaultDeviceProfile();
   const request = getDefaultRequestProfile();
