@@ -10,10 +10,13 @@ import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
 import type { DownloadFileOptions } from './download.types.js';
 
 /**
- * Converts a Fetch API response body into a Node.js readable stream.
+ * Converts a Fetch API response body to a Node.js readable stream.
  *
- * This helper isolates the DOM-vs-Node stream typing workaround used by
- * Readable.fromWeb(), so the cast does not leak into higher-level code.
+ * The helper encapsulates the stream type conversion required by
+ * `Readable.fromWeb()`.
+ *
+ * @param body - Fetch API response body stream.
+ * @returns Node.js readable stream created from the response body.
  */
 function bodyToReadable(body: ReadableStream<Uint8Array>): Readable {
   // TypeScript mismatch between DOM ReadableStream returned by fetch()
@@ -24,9 +27,13 @@ function bodyToReadable(body: ReadableStream<Uint8Array>): Readable {
 /**
  * Resolves the output filename for a downloaded resource.
  *
- * If no filename is provided, the filename is derived from the URL path.
- * If a filename without extension is provided, the extension is copied
- * from the URL filename when available.
+ * When no filename is provided, the filename is derived from the URL path.
+ * When a filename without extension is provided, the extension is copied from
+ * the URL filename when available.
+ *
+ * @param url - Source resource URL.
+ * @param filename - Optional output filename or file path override.
+ * @returns Resolved output filename or file path.
  */
 function resolveDownloadFilename(url: URL, filename?: string): string {
   // URL.pathname always uses forward-slash-separated URL paths,
@@ -48,15 +55,19 @@ function resolveDownloadFilename(url: URL, filename?: string): string {
 }
 
 /**
- * Downloads a remote file to the local filesystem using fetch().
+ * Downloads a remote file to the local filesystem with `fetch()`.
+ *
+ * The response body is streamed to the resolved output path. When the write
+ * fails after the file has been opened, any partially written file is removed.
  *
  * @param url - Source URL to download.
  * @param options - Download options.
  * @param options.outputFilePath - Optional target output file path.
  * @param options.headers - Optional additional HTTP request headers.
  * @param options.validateResponse - Optional response validator executed after
- * successful response but before writing to disk.
- * @returns The resolved output filename after the file has been written.
+ * a successful response and before writing to disk.
+ * @returns Resolved output file path after the file has been written.
+ * @throws {Error} When the HTTP response is unsuccessful or the response body is missing.
  */
 export async function downloadFile(
   url: URL,
