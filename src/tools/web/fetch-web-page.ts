@@ -6,6 +6,7 @@ import {
   PageFetchMethod,
 } from './browser-session.types.js';
 import { looksLikeChallengeResponse } from './challenge-detection.js';
+import { fetchResource } from './fetch-resource.js';
 import {
   getFetchClientProfile,
   buildFetchHeaders,
@@ -52,9 +53,9 @@ export async function fetchWebPage(
   const profile = await getFetchClientProfile(options.userAgentCacheFile);
   const headers = buildFetchHeaders(profile);
 
-  const response = await fetch(url.toString(), {
+  const response = await fetchResource(url, {
     headers,
-    redirect: 'follow',
+    followRedirect: true,
   });
 
   const html = await response.text();
