@@ -154,7 +154,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
   }
 
   if (noFilesWereProcessed) {
-    logger.error(`There are no suitable files in directory: ${inputDirectory}`);
+    logger.warn(`There are no suitable files in directory: ${inputDirectory}`);
     process.exitCode = 1;
   }
 };
