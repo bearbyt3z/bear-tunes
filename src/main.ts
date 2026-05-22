@@ -145,12 +145,23 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
 
         if (!isEmptyPlainObject(trackInfo)) {
           const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
-          await downloadAndSaveArtwork(
-            filePathRenamed,
-            trackInfo.album?.artwork,
-            trackInfo.album?.url,
-            USER_AGENT_CACHE_FILE,
-          );
+
+          try {
+            const artworkPath = await downloadAndSaveArtwork(
+              filePathRenamed,
+              trackInfo.album?.artwork,
+              trackInfo.album?.url,
+              USER_AGENT_CACHE_FILE,
+            );
+
+            if (artworkPath) {
+              logger.info(`Artwork written to: "${artworkPath}"`);
+            } else {
+              logger.info('No artwork to download.');
+            }
+          } catch (error) {
+            logger.error('Artwork download failed', { error });
+          }
         }
       }
     } else if (extension === '.aif' || extension === '.aiff') {
