@@ -66,6 +66,95 @@ export class BearTunesConverter {
     Object.assign(this.options, options);
   }
 
+  aiffToFlac(
+    aiffFilePath: string,
+    outputPath: string | undefined = undefined,
+    deleteAiffAfterConvertion = false,
+  ): BearTunesConverterResult {
+    const result: BearTunesConverterResult = {
+      status: 0,
+      error: undefined,
+      lameStdout: undefined,
+      lameStderr: undefined,
+      outputPath: undefined,
+    };
+
+    try {
+      if (!fs.lstatSync(aiffFilePath).isFile() || !aiffFilePath.match(/\.(aif|aiff)$/i)) {
+        result.status = 101;
+        result.error = new TypeError(
+          `${this.constructor.name}: Specified path ${aiffFilePath} is not a file or does not have *.aif or *.aiff extension`,
+        );
+      }
+    } catch (error) {
+      result.status = 102;
+      result.error = new ReferenceError(
+        `${this.constructor.name}: Cannot access file ${aiffFilePath} (incorrect path?)`,
+        { cause: error },
+      );
+    }
+
+    let outputPathComputed: string | undefined;
+
+    try {
+      if (outputPath === undefined) {
+        outputPathComputed = aiffFilePath.replace(/\.(aif|aiff)$/i, '.flac');
+      } else if (fs.lstatSync(outputPath).isDirectory()) {
+        outputPathComputed = outputPath.replace(/\/+$/, path.sep)
+          + path.basename(aiffFilePath).replace(/\.(aif|aiff)$/i, '.flac');
+      } else if (fs.lstatSync(outputPath).isFile()) {
+        if (outputPath.match(/\.flac$/i)) {
+          outputPathComputed = outputPath;
+        } else {
+          result.status = 103;
+          result.error = new TypeError(
+            `${this.constructor.name}: Specified output path ${outputPath} is a file but does not have *.flac extension`,
+          );
+        }
+      } else {
+        result.status = 104;
+        result.error = new TypeError(
+          `${this.constructor.name}: Specified output path ${outputPath} is neither a file nor directory`,
+        );
+      }
+    } catch (error) {
+      result.status = 105;
+      result.error = new ReferenceError(
+        `${this.constructor.name}: Cannot access file ${outputPath} (incorrect path?)`,
+        { cause: error },
+      );
+    }
+
+    if (result.status !== 0 || outputPathComputed === undefined) {
+      return result;
+    }
+
+    result.outputPath = outputPathComputed;
+
+    const childResult = childProcess.spawnSync(
+      'flac',
+      ['--verify', '-8', '--force', '--output-name', outputPathComputed, aiffFilePath],
+      { stdio: 'inherit' },
+    );
+
+    if (childResult.status === null) {
+      result.status = 106;
+      result.error = new Error(`Convertion failed due to a signal: ${childResult.signal ?? 'signal is null'}`);
+      return result;
+    }
+
+    if (childResult.status === 0 && deleteAiffAfterConvertion) {
+      fs.unlinkSync(aiffFilePath);
+    }
+
+    result.status = childResult.status;
+    result.error = childResult.error;
+    result.lameStdout = childResult.stdout?.toString();
+    result.lameStderr = childResult.stderr?.toString();
+
+    return result;
+  }
+
   flacToMp3(flacFilePath: string, outputPath: string | undefined = undefined, deleteFlacAfterConvertion = false): BearTunesConverterResult {
     const result: BearTunesConverterResult = {
       status: 0,

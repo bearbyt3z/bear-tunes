@@ -38,6 +38,51 @@ const converter = new BearTunesConverter({ verbose: true });
 const tagger = new BearTunesTagger({ verbose: false });
 const renamer = new BearTunesRenamer({ verbose: true });
 
+const flacFiles: string[] = [];
+
+const processFlacFile = async (filePath: string, outputDirectory?: string): Promise<void> => {
+  logger.silly('########################################');
+  logger.info(`Converting flac to mp3: ${filePath}`);
+
+  const result = converter.flacToMp3(filePath);
+
+  if (result.status === 0 && result.outputPath) {
+    logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
+    flacFiles.push(result.outputPath);
+
+    const trackInfo = await tagger.processTrack(result.outputPath);
+
+    if (!isEmptyPlainObject(trackInfo)) {
+      renamer.rename(result.outputPath, trackInfo, outputDirectory);
+
+      await tagger.saveId3TagToFlacFile(filePath, trackInfo);
+
+      const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
+
+      try {
+        const artworkPath = await downloadAndSaveArtwork(
+          filePathRenamed,
+          trackInfo.album?.artwork,
+          trackInfo.album?.url,
+          USER_AGENT_CACHE_FILE,
+        );
+
+        if (artworkPath) {
+          logger.info(`Artwork written to: "${artworkPath}"`);
+        } else {
+          logger.info('No artwork to download.');
+        }
+      } catch (error) {
+        logger.error('Artwork download failed', { error });
+      }
+    }
+  } else {
+    let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
+    warnMessage += `${result.error?.message}:\nLame stderr: ${result.lameStderr}`;
+    logger.warn(warnMessage);
+  }
+};
+
 const processAllFilesInDirectory = async (inputDirectory: string, outputDirectory?: string): Promise<void> => {
   if (!fs.existsSync(inputDirectory)) {
     // logger.silly(`Path specified doesn't exist: ${inputDirectory}`);
@@ -74,10 +119,9 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
   //   process.exit(4);  // breaks process when no files in subdirectory!!!
   // }
 
-  const flacFiles: string[] = [];
-
   for (const file of files) {
     const filePath = path.join(inputDirectory, file);
+    const extension = path.extname(file).toLowerCase();
 
     let fileStat;
     try {
@@ -89,7 +133,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
 
     if (fileStat.isDirectory()) {
       await processAllFilesInDirectory(filePath);
-    } else if (path.extname(file) === '.mp3') {
+    } else if (extension === '.mp3') {
       const flacIndex = flacFiles.indexOf(filePath);
 
       if (flacIndex > -1) {
@@ -108,48 +152,24 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
           );
         }
       }
-    } else if (path.extname(file) === '.flac') {
+    } else if (extension === '.aif' || extension === '.aiff') {
       noFilesWereProcessed = false;
       logger.silly('########################################');
-      logger.info(`Converting flac to mp3: ${filePath}`);
+      logger.info(`Converting aiff to flac: ${filePath}`);
 
-      const result = converter.flacToMp3(filePath);
+      const result = converter.aiffToFlac(filePath, undefined, true);
 
       if (result.status === 0 && result.outputPath) {
-        logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
-        flacFiles.push(result.outputPath);
-
-        const trackInfo = await tagger.processTrack(result.outputPath);
-
-        if (!isEmptyPlainObject(trackInfo)) {
-          renamer.rename(result.outputPath, trackInfo, outputDirectory);
-
-          await tagger.saveId3TagToFlacFile(filePath, trackInfo);
-
-          const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
-
-          try {
-            const artworkPath = await downloadAndSaveArtwork(
-              filePathRenamed,
-              trackInfo.album?.artwork,
-              trackInfo.album?.url,
-              USER_AGENT_CACHE_FILE,
-            );
-
-            if (artworkPath) {
-              logger.info(`Artwork written to: "${artworkPath}"`);
-            } else {
-              logger.info('No artwork to download.');
-            }
-          } catch (error) {
-            logger.error('Artwork download failed', { error });
-          }
-        }
+        logger.info(`aiff file: ${filePath}\nwas converted to flac: ${result.outputPath}`);
+        await processFlacFile(result.outputPath, outputDirectory);
       } else {
         let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
-        warnMessage += `${result.error?.message}:\nLame stderr: ${result.lameStderr}`;
+        warnMessage += `${result.error?.message}:\nflac stderr: ${result.lameStderr}`;
         logger.warn(warnMessage);
       }
+    } else if (extension === '.flac') {
+      noFilesWereProcessed = false;
+      await processFlacFile(filePath, outputDirectory);
     }
   }
 
