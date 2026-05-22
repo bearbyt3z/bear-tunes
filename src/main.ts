@@ -137,7 +137,7 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
     }
 
     if (fileStat.isDirectory()) {
-      await processAllFilesInDirectory(filePath);
+      await processAllFilesInDirectory(filePath, outputDirectory);
     } else if (extension === '.mp3') {
       const flacIndex = flacFiles.indexOf(filePath);
 
