@@ -128,7 +128,8 @@ async function safeGetPageState(page: Page): Promise<PageChallengeState> {
   const html = await page.content().catch(() => '');
   const hasRecaptchaFrame =
     (await page.$('iframe[title*="reCAPTCHA"]').catch(() => null)) !== null;
-  const looksLikeChallenge = looksLikeChallengeHtml(`${title}\n${html}`);
+  const looksLikeChallenge =
+    looksLikeChallengeHtml(title) || looksLikeChallengeHtml(html);
 
   return {
     url,
@@ -140,14 +141,26 @@ async function safeGetPageState(page: Page): Promise<PageChallengeState> {
 }
 
 /**
- * Returns whether the current page state already represents the resolved
- * target page HTML expected by the caller.
+ * Returns whether the current page state looks like a resolved, usable HTML document.
+ *
+ * A page state is considered resolved when it contains basic document structure
+ * and does not appear to be an active challenge or CAPTCHA page.
  *
  * @param state - Page state snapshot to evaluate.
- * @returns `true` when the target page is considered resolved.
+ * @returns `true` when the page contains a usable HTML document without active challenge indicators.
  */
 function isResolvedPageState(state: PageChallengeState): boolean {
-  return state.html.includes('__NEXT_DATA__');
+  const normalizedHtml = state.html.toLowerCase();
+
+  const hasUsableDocument =
+    state.url.trim().length > 0 &&
+    state.title.trim().length > 0 &&
+    normalizedHtml.includes('<html') &&
+    normalizedHtml.includes('<body');
+
+  return hasUsableDocument
+    && !state.hasRecaptchaFrame
+    && !state.looksLikeChallenge;
 }
 
 /**
