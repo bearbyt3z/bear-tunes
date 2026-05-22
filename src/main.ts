@@ -38,7 +38,7 @@ const converter = new BearTunesConverter({ verbose: true });
 const tagger = new BearTunesTagger({ verbose: false });
 const renamer = new BearTunesRenamer({ verbose: true });
 
-const flacFiles: string[] = [];
+const flacFiles = new Set<string>();
 
 const processFlacFile = async (filePath: string, outputDirectory?: string): Promise<void> => {
   logger.silly('########################################');
@@ -48,17 +48,15 @@ const processFlacFile = async (filePath: string, outputDirectory?: string): Prom
 
   if (result.status === 0 && result.outputPath) {
     logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
-    flacFiles.push(result.outputPath);
+    flacFiles.add(result.outputPath);
 
     const trackInfo = await tagger.processTrack(result.outputPath);
 
     if (!isEmptyPlainObject(trackInfo)) {
       const mp3FilePathRenamed = renamer.rename(result.outputPath, trackInfo, outputDirectory);
 
-      const generatedMp3Index = flacFiles.indexOf(result.outputPath);
-      if (generatedMp3Index > -1) {
-        flacFiles.splice(generatedMp3Index, 1, mp3FilePathRenamed);
-      }
+      flacFiles.delete(result.outputPath);
+      flacFiles.add(mp3FilePathRenamed);
 
       await tagger.saveId3TagToFlacFile(filePath, trackInfo);
 
@@ -139,10 +137,8 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
     if (fileStat.isDirectory()) {
       await processAllFilesInDirectory(filePath, outputDirectory);
     } else if (extension === '.mp3') {
-      const flacIndex = flacFiles.indexOf(filePath);
-
-      if (flacIndex > -1) {
-        flacFiles.splice(flacIndex, 1);
+      if (flacFiles.has(filePath)) {
+        flacFiles.delete(filePath);
       } else {
         noFilesWereProcessed = false;
         const trackInfo = await tagger.processTrack(filePath);
