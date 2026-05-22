@@ -53,7 +53,12 @@ const processFlacFile = async (filePath: string, outputDirectory?: string): Prom
     const trackInfo = await tagger.processTrack(result.outputPath);
 
     if (!isEmptyPlainObject(trackInfo)) {
-      renamer.rename(result.outputPath, trackInfo, outputDirectory);
+      const mp3FilePathRenamed = renamer.rename(result.outputPath, trackInfo, outputDirectory);
+
+      const generatedMp3Index = flacFiles.indexOf(result.outputPath);
+      if (generatedMp3Index > -1) {
+        flacFiles.splice(generatedMp3Index, 1, mp3FilePathRenamed);
+      }
 
       await tagger.saveId3TagToFlacFile(filePath, trackInfo);
 
