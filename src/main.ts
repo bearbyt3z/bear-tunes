@@ -137,6 +137,30 @@ const processAiffFile = async (filePath: string, outputDirectory?: string): Prom
   }
 };
 
+const processSupportedFile = async (
+  filePath: string,
+  outputDirectory?: string,
+): Promise<boolean> => {
+  const extension = path.extname(filePath).toLowerCase();
+
+  if (extension === '.mp3') {
+    await processMp3File(filePath, outputDirectory);
+    return true;
+  }
+
+  if (extension === '.aif' || extension === '.aiff') {
+    await processAiffFile(filePath, outputDirectory);
+    return true;
+  }
+
+  if (extension === '.flac') {
+    await processFlacFile(filePath, outputDirectory);
+    return true;
+  }
+
+  return false;
+};
+
 const processAllFilesInDirectory = async (inputDirectory: string, outputDirectory?: string): Promise<void> => {
   if (!fs.existsSync(inputDirectory)) {
     // logger.silly(`Path specified doesn't exist: ${inputDirectory}`);
@@ -175,7 +199,6 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
 
   for (const file of files) {
     const filePath = path.join(inputDirectory, file);
-    const extension = path.extname(file).toLowerCase();
 
     let fileStat;
     try {
@@ -187,15 +210,12 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
 
     if (fileStat.isDirectory()) {
       await processAllFilesInDirectory(filePath, outputDirectory);
-    } else if (extension === '.mp3') {
-      noFilesWereProcessed = false;
-      await processMp3File(filePath, outputDirectory);
-    } else if (extension === '.aif' || extension === '.aiff') {
-      noFilesWereProcessed = false;
-      await processAiffFile(filePath, outputDirectory);
-    } else if (extension === '.flac') {
-      noFilesWereProcessed = false;
-      await processFlacFile(filePath, outputDirectory);
+    } else {
+      const wasProcessed = await processSupportedFile(filePath, outputDirectory);
+
+      if (wasProcessed) {
+        noFilesWereProcessed = false;
+      }
     }
   }
 
