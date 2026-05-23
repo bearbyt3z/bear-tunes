@@ -28,6 +28,8 @@ import { BearTunesConverter } from '#converter';
 import { BearTunesRenamer } from '#renamer';
 import { BearTunesTagger } from '#tagger';
 
+import type { BearTunesConverterResult } from '#converter';
+
 // const { createLogger, format, transports } = require('winston');
 // const { combine, timestamp, label, printf } = format;
 
@@ -61,6 +63,16 @@ const downloadArtworkForTrack = async (
   } catch (error) {
     logger.error('Artwork download failed', { error });
   }
+};
+
+const logConversionFailure = (
+  filePath: string,
+  result: BearTunesConverterResult,
+  stderrLabel: string,
+): void => {
+  let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
+  warnMessage += `${result.error?.message}:\n${stderrLabel}: ${result.lameStderr}`;
+  logger.warn(warnMessage);
 };
 
 const processMp3File = async (filePath: string, outputDirectory?: string): Promise<void> => {
@@ -115,9 +127,7 @@ const processFlacFile = async (filePath: string, outputDirectory?: string): Prom
       logger.warn(`No track info found for converted FLAC/MP3 pair: ${filePath}`);
     }
   } else {
-    let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
-    warnMessage += `${result.error?.message}:\nLame stderr: ${result.lameStderr}`;
-    logger.warn(warnMessage);
+    logConversionFailure(filePath, result, 'Lame stderr');
   }
 };
 
@@ -131,9 +141,7 @@ const processAiffFile = async (filePath: string, outputDirectory?: string): Prom
     logger.info(`aiff file: ${filePath}\nwas converted to flac: ${result.outputPath}`);
     await processFlacFile(result.outputPath, outputDirectory);
   } else {
-    let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
-    warnMessage += `${result.error?.message}:\nflac stderr: ${result.lameStderr}`;
-    logger.warn(warnMessage);
+    logConversionFailure(filePath, result, 'flac stderr');
   }
 };
 
