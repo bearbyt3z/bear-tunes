@@ -63,6 +63,25 @@ const downloadArtworkForTrack = async (
   }
 };
 
+const processMp3File = async (filePath: string, outputDirectory?: string): Promise<void> => {
+  if (flacFiles.has(filePath)) {
+    flacFiles.delete(filePath);
+    return;
+  }
+
+  const trackInfo = await tagger.processTrack(filePath);
+
+  if (!isEmptyPlainObject(trackInfo)) {
+    const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
+
+    await downloadArtworkForTrack(
+      filePathRenamed,
+      trackInfo.album?.artwork,
+      trackInfo.album?.url,
+    );
+  }
+};
+
 const processFlacFile = async (filePath: string, outputDirectory?: string): Promise<void> => {
   logger.silly('########################################');
   logger.info(`Converting flac to mp3: ${filePath}`);
@@ -149,22 +168,9 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
     if (fileStat.isDirectory()) {
       await processAllFilesInDirectory(filePath, outputDirectory);
     } else if (extension === '.mp3') {
-      if (flacFiles.has(filePath)) {
-        flacFiles.delete(filePath);
-      } else {
-        noFilesWereProcessed = false;
-        const trackInfo = await tagger.processTrack(filePath);
+      noFilesWereProcessed = false;
 
-        if (!isEmptyPlainObject(trackInfo)) {
-          const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
-
-          await downloadArtworkForTrack(
-            filePathRenamed,
-            trackInfo.album?.artwork,
-            trackInfo.album?.url,
-          );
-        }
-      }
+      await processMp3File(filePath, outputDirectory);
     } else if (extension === '.aif' || extension === '.aiff') {
       noFilesWereProcessed = false;
       logger.silly('########################################');
