@@ -117,6 +117,22 @@ const processFlacFile = async (filePath: string, outputDirectory?: string): Prom
   }
 };
 
+const processAiffFile = async (filePath: string, outputDirectory?: string): Promise<void> => {
+  logger.silly('########################################');
+  logger.info(`Converting aiff to flac: ${filePath}`);
+
+  const result = converter.aiffToFlac(filePath, undefined, true);
+
+  if (result.status === 0 && result.outputPath) {
+    logger.info(`aiff file: ${filePath}\nwas converted to flac: ${result.outputPath}`);
+    await processFlacFile(result.outputPath, outputDirectory);
+  } else {
+    let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
+    warnMessage += `${result.error?.message}:\nflac stderr: ${result.lameStderr}`;
+    logger.warn(warnMessage);
+  }
+};
+
 const processAllFilesInDirectory = async (inputDirectory: string, outputDirectory?: string): Promise<void> => {
   if (!fs.existsSync(inputDirectory)) {
     // logger.silly(`Path specified doesn't exist: ${inputDirectory}`);
@@ -169,23 +185,10 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
       await processAllFilesInDirectory(filePath, outputDirectory);
     } else if (extension === '.mp3') {
       noFilesWereProcessed = false;
-
       await processMp3File(filePath, outputDirectory);
     } else if (extension === '.aif' || extension === '.aiff') {
       noFilesWereProcessed = false;
-      logger.silly('########################################');
-      logger.info(`Converting aiff to flac: ${filePath}`);
-
-      const result = converter.aiffToFlac(filePath, undefined, true);
-
-      if (result.status === 0 && result.outputPath) {
-        logger.info(`aiff file: ${filePath}\nwas converted to flac: ${result.outputPath}`);
-        await processFlacFile(result.outputPath, outputDirectory);
-      } else {
-        let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
-        warnMessage += `${result.error?.message}:\nflac stderr: ${result.lameStderr}`;
-        logger.warn(warnMessage);
-      }
+      await processAiffFile(filePath, outputDirectory);
     } else if (extension === '.flac') {
       noFilesWereProcessed = false;
       await processFlacFile(filePath, outputDirectory);
