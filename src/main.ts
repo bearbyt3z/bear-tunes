@@ -40,6 +40,29 @@ const renamer = new BearTunesRenamer({ verbose: true });
 
 const flacFiles = new Set<string>();
 
+const downloadArtworkForTrack = async (
+  filePath: string,
+  artworkUrl?: URL,
+  albumUrl?: URL,
+): Promise<void> => {
+  try {
+    const artworkPath = await downloadAndSaveArtwork(
+      filePath,
+      artworkUrl,
+      albumUrl,
+      USER_AGENT_CACHE_FILE,
+    );
+
+    if (artworkPath) {
+      logger.info(`Artwork written to: "${artworkPath}"`);
+    } else {
+      logger.info('No artwork to download.');
+    }
+  } catch (error) {
+    logger.error('Artwork download failed', { error });
+  }
+};
+
 const processFlacFile = async (filePath: string, outputDirectory?: string): Promise<void> => {
   logger.silly('########################################');
   logger.info(`Converting flac to mp3: ${filePath}`);
@@ -62,22 +85,11 @@ const processFlacFile = async (filePath: string, outputDirectory?: string): Prom
 
       const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
 
-      try {
-        const artworkPath = await downloadAndSaveArtwork(
-          filePathRenamed,
-          trackInfo.album?.artwork,
-          trackInfo.album?.url,
-          USER_AGENT_CACHE_FILE,
-        );
-
-        if (artworkPath) {
-          logger.info(`Artwork written to: "${artworkPath}"`);
-        } else {
-          logger.info('No artwork to download.');
-        }
-      } catch (error) {
-        logger.error('Artwork download failed', { error });
-      }
+      await downloadArtworkForTrack(
+        filePathRenamed,
+        trackInfo.album?.artwork,
+        trackInfo.album?.url,
+      );
     }
   } else {
     let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
@@ -146,22 +158,11 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
         if (!isEmptyPlainObject(trackInfo)) {
           const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
 
-          try {
-            const artworkPath = await downloadAndSaveArtwork(
-              filePathRenamed,
-              trackInfo.album?.artwork,
-              trackInfo.album?.url,
-              USER_AGENT_CACHE_FILE,
-            );
-
-            if (artworkPath) {
-              logger.info(`Artwork written to: "${artworkPath}"`);
-            } else {
-              logger.info('No artwork to download.');
-            }
-          } catch (error) {
-            logger.error('Artwork download failed', { error });
-          }
+          await downloadArtworkForTrack(
+            filePathRenamed,
+            trackInfo.album?.artwork,
+            trackInfo.album?.url,
+          );
         }
       }
     } else if (extension === '.aif' || extension === '.aiff') {
