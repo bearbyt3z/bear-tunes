@@ -161,41 +161,35 @@ const processSupportedFile = async (
   return false;
 };
 
-const processAllFilesInDirectory = async (inputDirectory: string, outputDirectory?: string): Promise<void> => {
-  if (!fs.existsSync(inputDirectory)) {
-    // logger.silly(`Path specified doesn't exist: ${inputDirectory}`);
-    // logger.verbose(`Path specified doesn't exist: ${inputDirectory}`);
-    // logger.debug(`Path specified doesn't exist: ${inputDirectory}`);
-    // logger.info(`Path specified doesn't exist: ${inputDirectory}`);
-    // logger.warn(`Path specified doesn't exist: ${inputDirectory}`);
-    logger.error(`Path specified doesn't exist: ${inputDirectory}`);
+const readDirectoryEntries = async (directoryPath: string): Promise<string[] | undefined> => {
+  if (!fs.existsSync(directoryPath)) {
+    logger.error(`Path specified doesn't exist: ${directoryPath}`);
     process.exitCode = 1;
     return;
-    // process.exit(1);
   }
 
-  if (!fs.statSync(inputDirectory).isDirectory()) {
-    logger.error(`Path specified isn't a directory: ${inputDirectory}`);
+  if (!fs.statSync(directoryPath).isDirectory()) {
+    logger.error(`Path specified isn't a directory: ${directoryPath}`);
     process.exitCode = 2;
     return;
-    // process.exit(2);
   }
-
-  let noFilesWereProcessed = true;
-  let files: string[];
 
   try {
-    files = await fs.promises.readdir(inputDirectory);
+    return await fs.promises.readdir(directoryPath);
   } catch {
-    logger.error(`Couldn't read directory: ${inputDirectory}`);
+    logger.error(`Couldn't read directory: ${directoryPath}`);
     process.exitCode = 3;
     return;
-    // process.exit(3);
   }
-  // if (files.length < 1) {
-  //   console.error(`There are no files in a directory: ${inputDirectory}`);
-  //   process.exit(4);  // breaks process when no files in subdirectory!!!
-  // }
+};
+
+const processAllFilesInDirectory = async (inputDirectory: string, outputDirectory?: string): Promise<void> => {
+  let noFilesWereProcessed = true;
+
+  const files = await readDirectoryEntries(inputDirectory);
+  if (!files) {
+    return;
+  }
 
   for (const file of files) {
     const filePath = path.join(inputDirectory, file);
