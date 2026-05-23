@@ -79,6 +79,8 @@ const processMp3File = async (filePath: string, outputDirectory?: string): Promi
       trackInfo.album?.artwork,
       trackInfo.album?.url,
     );
+  } else {
+    logger.warn(`No track info found for MP3 file: ${filePath}`);
   }
 };
 
@@ -109,6 +111,8 @@ const processFlacFile = async (filePath: string, outputDirectory?: string): Prom
         trackInfo.album?.artwork,
         trackInfo.album?.url,
       );
+    } else {
+      logger.warn(`No track info found for converted FLAC/MP3 pair: ${filePath}`);
     }
   } else {
     let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
