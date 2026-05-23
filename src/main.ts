@@ -161,7 +161,9 @@ const processSupportedFile = async (
   return false;
 };
 
-const readDirectoryEntries = async (directoryPath: string): Promise<string[] | undefined> => {
+const readDirectoryEntries = async (
+  directoryPath: string,
+): Promise<fs.Dirent[] | undefined> => {
   if (!fs.existsSync(directoryPath)) {
     logger.error(`Path specified doesn't exist: ${directoryPath}`);
     process.exitCode = 1;
@@ -175,7 +177,7 @@ const readDirectoryEntries = async (directoryPath: string): Promise<string[] | u
   }
 
   try {
-    return await fs.promises.readdir(directoryPath);
+    return await fs.promises.readdir(directoryPath, { withFileTypes: true });
   } catch {
     logger.error(`Couldn't read directory: ${directoryPath}`);
     process.exitCode = 3;
@@ -186,23 +188,15 @@ const readDirectoryEntries = async (directoryPath: string): Promise<string[] | u
 const processAllFilesInDirectory = async (inputDirectory: string, outputDirectory?: string): Promise<void> => {
   let noFilesWereProcessed = true;
 
-  const files = await readDirectoryEntries(inputDirectory);
-  if (!files) {
+  const entries = await readDirectoryEntries(inputDirectory);
+  if (!entries) {
     return;
   }
 
-  for (const file of files) {
-    const filePath = path.join(inputDirectory, file);
+  for (const entry of entries) {
+    const filePath = path.join(inputDirectory, entry.name);
 
-    let fileStat;
-    try {
-      fileStat = fs.statSync(filePath);
-    } catch {
-      logger.error(`Path does not exist or is not accessible: ${filePath}`);
-      continue;
-    }
-
-    if (fileStat.isDirectory()) {
+    if (entry.isDirectory()) {
       await processAllFilesInDirectory(filePath, outputDirectory);
     } else {
       const wasProcessed = await processSupportedFile(filePath, outputDirectory);
