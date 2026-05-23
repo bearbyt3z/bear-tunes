@@ -185,6 +185,16 @@ const readDirectoryEntries = async (
   }
 };
 
+const pathExists = async (filePath: string): Promise<boolean> => {
+  try {
+    await fs.promises.access(filePath, fs.constants.F_OK);
+    return true;
+  } catch {
+    logger.error(`Path does not exist or is not accessible: ${filePath}`);
+    return false;
+  }
+};
+
 const processAllFilesInDirectory = async (inputDirectory: string, outputDirectory?: string): Promise<void> => {
   let noFilesWereProcessed = true;
 
@@ -195,6 +205,10 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
 
   for (const entry of entries) {
     const filePath = path.join(inputDirectory, entry.name);
+
+    if (!(await pathExists(filePath))) {
+      continue;
+    }
 
     if (entry.isDirectory()) {
       await processAllFilesInDirectory(filePath, outputDirectory);
