@@ -288,18 +288,20 @@ const pathExists = async (filePath: string): Promise<boolean> => {
  * Recursively traverses an input directory and processes every supported audio file it finds.
  *
  * The function descends into subdirectories, dispatches supported files to their
- * format-specific handlers, and reports when a directory contains no processable files.
+ * format-specific handlers, and aggregates whether any supported files were processed
+ * anywhere in the current directory subtree.
  *
  * @param inputDirectory - The directory to scan recursively.
  * @param outputDirectory - An optional destination directory for renamed output files.
- * @returns A promise that resolves when traversal and processing finish for the entire subtree.
+ * @returns A promise resolving to `true` when at least one supported file was processed
+ * in the current directory subtree, otherwise `false`.
  */
-const processAllFilesInDirectory = async (inputDirectory: string, outputDirectory?: string): Promise<void> => {
-  let noFilesWereProcessed = true;
+const processAllFilesInDirectory = async (inputDirectory: string, outputDirectory?: string): Promise<boolean> => {
+  let anyFilesWereProcessed = false;
 
   const entries = await readDirectoryEntries(inputDirectory);
   if (!entries) {
-    return;
+    return false;
   }
 
   for (const entry of entries) {
@@ -310,20 +312,21 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
     }
 
     if (entry.isDirectory()) {
-      await processAllFilesInDirectory(filePath, outputDirectory);
+      const subtreeProcessedAnyFiles = await processAllFilesInDirectory(filePath, outputDirectory);
+
+      if (subtreeProcessedAnyFiles) {
+        anyFilesWereProcessed = true;
+      }
     } else {
       const wasProcessed = await processSupportedFile(filePath, outputDirectory);
 
       if (wasProcessed) {
-        noFilesWereProcessed = false;
+        anyFilesWereProcessed = true;
       }
     }
   }
 
-  if (noFilesWereProcessed) {
-    logger.warn(`There are no suitable files in directory: ${inputDirectory}`);
-    process.exitCode = 1;
-  }
+  return anyFilesWereProcessed;
 };
 
 // Last-resort handlers for errors that escape normal try/catch.
@@ -342,14 +345,23 @@ process.on('uncaughtException', (error) => {
   process.exitCode = 1;
 });
 
-// Start the main async workflow (process all files) and attach a single, top-level
-// error handler for anything that bubbles up as a rejected Promise.
+// Start the main async workflow and evaluate whether any supported files were
+// processed anywhere in the input directory tree.
 //
-// If an error reaches this point, it means we couldn't (or chose not to) recover
-// locally, so we log it and signal failure to the calling environment (CI, shell).
+// The `then()` branch handles the successful completion path and marks the run as
+// unsuccessful only when no supported files were processed at all. The `catch()`
+// branch remains the top-level fallback for unexpected errors that escape local
+// handling.
+//
 // We set `process.exitCode` instead of calling `process.exit(1)` to let Node finish
 // any pending I/O (e.g., flushing stderr) and exit naturally.
 processAllFilesInDirectory(inputDirectory, outputDirectory)
+  .then((anyFilesWereProcessed) => {
+    if (!anyFilesWereProcessed) {
+      logger.warn(`There are no suitable files in directory tree: ${inputDirectory}`);
+      process.exitCode = 1;
+    }
+  })
   .catch((error: unknown) => {
     logger.error(error);
     process.exitCode = 1;
