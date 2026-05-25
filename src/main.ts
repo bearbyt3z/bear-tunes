@@ -271,34 +271,48 @@ const processSupportedFile = async (
 };
 
 /**
- * Validates that a path exists, points to a directory, and can be read,
- * then returns its directory entries.
+ * Validates that a path resolves to a readable directory and then returns its entries.
  *
- * When validation fails, the function logs the reason and returns a
- * `DirectoryProcessingStatus` value describing the failure, so callers can
- * propagate the outcome without relying on side effects such as `process.exitCode`.
+ * The function first inspects the path metadata to distinguish between a missing path,
+ * a non-directory path, and other filesystem access failures. It then attempts to read
+ * the directory entries.
+ *
+ * When validation or reading fails, the function logs the reason and returns a
+ * `DirectoryProcessingStatus` value describing the failure, so callers can propagate
+ * the outcome without relying on side effects such as `process.exitCode`.
  *
  * @param directoryPath - The directory path to validate and read.
- * @returns A promise resolving to directory entries when the directory is valid and readable,
- * or to a `DirectoryProcessingStatus` error value when validation or reading fails.
+ * @returns A promise resolving to directory entries when the path points to a readable
+ * directory, or to a `DirectoryProcessingStatus` error value when validation or reading fails.
  */
 const readDirectoryEntries = async (
   directoryPath: string,
 ): Promise<ReadDirectoryEntriesResult> => {
-  if (!fs.existsSync(directoryPath)) {
-    logger.error(`Path specified doesn't exist: ${directoryPath}`);
-    return DirectoryProcessingStatus.PathDoesNotExist;
+  let stats: fs.Stats;
+
+  try {
+    stats = await fs.promises.stat(directoryPath);
+  } catch (error: unknown) {
+    const errnoError = error as NodeJS.ErrnoException;
+
+    if (errnoError.code === 'ENOENT') {
+      logger.error(`Path specified doesn't exist: ${directoryPath}`);
+      return DirectoryProcessingStatus.PathDoesNotExist;
+    }
+
+    logger.error(`Couldn't stat path: ${directoryPath}`, { error });
+    return DirectoryProcessingStatus.CannotReadDirectory;
   }
 
-  if (!fs.statSync(directoryPath).isDirectory()) {
+  if (!stats.isDirectory()) {
     logger.error(`Path specified isn't a directory: ${directoryPath}`);
     return DirectoryProcessingStatus.PathIsNotDirectory;
   }
 
   try {
     return await fs.promises.readdir(directoryPath, { withFileTypes: true });
-  } catch {
-    logger.error(`Couldn't read directory: ${directoryPath}`);
+  } catch (error: unknown) {
+    logger.error(`Couldn't read directory: ${directoryPath}`, { error });
     return DirectoryProcessingStatus.CannotReadDirectory;
   }
 };
