@@ -305,7 +305,7 @@ const pathExists = async (filePath: string): Promise<boolean> => {
     await fs.promises.access(filePath, fs.constants.F_OK);
     return true;
   } catch {
-    logger.error(`Path does not exist or is not accessible: ${filePath}`);
+    logger.warn(`Path does not exist or is not accessible: ${filePath}`);
     return false;
   }
 };
