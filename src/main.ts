@@ -131,27 +131,31 @@ const logConversionFailure = (
  *
  * @param filePath - The MP3 file to process.
  * @param outputDirectory - An optional destination directory for renamed output files.
- * @returns A promise that resolves when MP3 processing is complete.
+ * @returns A promise resolving to `true` when the MP3 file was successfully processed,
+ * or to `false` when the file was skipped or could not be processed.
  */
-const processMp3File = async (filePath: string, outputDirectory?: string): Promise<void> => {
+const processMp3File = async (filePath: string, outputDirectory?: string): Promise<boolean> => {
   if (flacFiles.has(filePath)) {
     flacFiles.delete(filePath);
-    return;
+    return false;
   }
 
   const trackInfo = await tagger.processTrack(filePath);
 
-  if (!isEmptyPlainObject(trackInfo)) {
-    const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
-
-    await downloadArtworkForTrack(
-      filePathRenamed,
-      trackInfo.album?.artwork,
-      trackInfo.album?.url,
-    );
-  } else {
+  if (isEmptyPlainObject(trackInfo)) {
     logger.warn(`No track info found for MP3 file: ${filePath}`);
+    return false;
   }
+
+  const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
+
+  await downloadArtworkForTrack(
+    filePathRenamed,
+    trackInfo.album?.artwork,
+    trackInfo.album?.url,
+  );
+
+  return true;
 };
 
 /**
@@ -163,41 +167,47 @@ const processMp3File = async (filePath: string, outputDirectory?: string): Promi
  *
  * @param filePath - The FLAC file to convert and post-process.
  * @param outputDirectory - An optional destination directory for renamed output files.
- * @returns A promise that resolves when FLAC processing is complete.
+ * @returns A promise resolving to `true` when the FLAC file and its derived outputs
+ * were successfully processed, or to `false` when conversion or metadata extraction failed.
  */
-const processFlacFile = async (filePath: string, outputDirectory?: string): Promise<void> => {
+const processFlacFile = async (filePath: string, outputDirectory?: string): Promise<boolean> => {
   logger.silly('########################################');
   logger.info(`Converting flac to mp3: ${filePath}`);
 
   const result = converter.flacToMp3(filePath);
 
-  if (result.status === 0 && result.outputPath) {
-    logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
-    flacFiles.add(result.outputPath);
-
-    const trackInfo = await tagger.processTrack(result.outputPath);
-
-    if (!isEmptyPlainObject(trackInfo)) {
-      const mp3FilePathRenamed = renamer.rename(result.outputPath, trackInfo, outputDirectory);
-
-      flacFiles.delete(result.outputPath);
-      flacFiles.add(mp3FilePathRenamed);
-
-      await tagger.saveId3TagToFlacFile(filePath, trackInfo);
-
-      const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
-
-      await downloadArtworkForTrack(
-        filePathRenamed,
-        trackInfo.album?.artwork,
-        trackInfo.album?.url,
-      );
-    } else {
-      logger.warn(`No track info found for converted FLAC/MP3 pair: ${filePath}`);
-    }
-  } else {
+  if (result.status !== 0 || !result.outputPath) {
     logConversionFailure(filePath, result, 'Lame stderr');
+    return false;
   }
+
+  logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
+  flacFiles.add(result.outputPath);
+
+  const trackInfo = await tagger.processTrack(result.outputPath);
+
+  if (isEmptyPlainObject(trackInfo)) {
+    flacFiles.delete(result.outputPath);
+    logger.warn(`No track info found for converted FLAC/MP3 pair: ${filePath}`);
+    return false;
+  }
+
+  const mp3FilePathRenamed = renamer.rename(result.outputPath, trackInfo, outputDirectory);
+
+  flacFiles.delete(result.outputPath);
+  flacFiles.add(mp3FilePathRenamed);
+
+  await tagger.saveId3TagToFlacFile(filePath, trackInfo);
+
+  const filePathRenamed = renamer.rename(filePath, trackInfo, outputDirectory);
+
+  await downloadArtworkForTrack(
+    filePathRenamed,
+    trackInfo.album?.artwork,
+    trackInfo.album?.url,
+  );
+
+  return true;
 };
 
 /**
@@ -209,20 +219,24 @@ const processFlacFile = async (filePath: string, outputDirectory?: string): Prom
  *
  * @param filePath - The AIFF file to convert.
  * @param outputDirectory - An optional destination directory for renamed output files.
- * @returns A promise that resolves when AIFF processing is complete.
+ * @returns A promise resolving to `true` when the AIFF file was successfully converted
+ * and processed through the FLAC pipeline, or to `false` when conversion or subsequent
+ * processing failed.
  */
-const processAiffFile = async (filePath: string, outputDirectory?: string): Promise<void> => {
+const processAiffFile = async (filePath: string, outputDirectory?: string): Promise<boolean> => {
   logger.silly('########################################');
   logger.info(`Converting aiff to flac: ${filePath}`);
 
   const result = converter.aiffToFlac(filePath, undefined, true);
 
-  if (result.status === 0 && result.outputPath) {
-    logger.info(`aiff file: ${filePath}\nwas converted to flac: ${result.outputPath}`);
-    await processFlacFile(result.outputPath, outputDirectory);
-  } else {
+  if (result.status !== 0 || !result.outputPath) {
     logConversionFailure(filePath, result, 'flac stderr');
+    return false;
   }
+
+  logger.info(`aiff file: ${filePath}\nwas converted to flac: ${result.outputPath}`);
+
+  return await processFlacFile(result.outputPath, outputDirectory);
 };
 
 /**
@@ -232,7 +246,8 @@ const processAiffFile = async (filePath: string, outputDirectory?: string): Prom
  *
  * @param filePath - The file path to inspect and process.
  * @param outputDirectory - An optional destination directory for renamed output files.
- * @returns A promise resolving to `true` when the file type is supported, otherwise `false`.
+ * @returns A promise resolving to `true` when a supported file was successfully processed,
+ * or to `false` when the file is unsupported or processing did not succeed.
  */
 const processSupportedFile = async (
   filePath: string,
@@ -241,18 +256,15 @@ const processSupportedFile = async (
   const extension = path.extname(filePath).toLowerCase();
 
   if (extension === '.mp3') {
-    await processMp3File(filePath, outputDirectory);
-    return true;
+    return await processMp3File(filePath, outputDirectory);
   }
 
   if (extension === '.aif' || extension === '.aiff') {
-    await processAiffFile(filePath, outputDirectory);
-    return true;
+    return await processAiffFile(filePath, outputDirectory);
   }
 
   if (extension === '.flac') {
-    await processFlacFile(filePath, outputDirectory);
-    return true;
+    return await processFlacFile(filePath, outputDirectory);
   }
 
   return false;
