@@ -43,6 +43,32 @@ const renamer = new BearTunesRenamer({ verbose: true });
 const flacFiles = new Set<string>();
 
 /**
+ * Describes the aggregated outcome of directory traversal and file processing.
+ *
+ * Values of this enum are propagated through recursive calls and translated to
+ * process exit codes only at the top-level entrypoint.
+ */
+enum DirectoryProcessingStatus {
+  FilesProcessed,
+  NoSupportedFilesFound,
+  PathDoesNotExist,
+  PathIsNotDirectory,
+  CannotReadDirectory,
+}
+
+/**
+ * Represents the result of validating and reading a directory.
+ *
+ * The function returns directory entries on success, or a directory-processing
+ * status describing why validation or reading failed.
+ */
+type ReadDirectoryEntriesResult =
+  | fs.Dirent[]
+  | DirectoryProcessingStatus.PathDoesNotExist
+  | DirectoryProcessingStatus.PathIsNotDirectory
+  | DirectoryProcessingStatus.CannotReadDirectory;
+
+/**
  * Downloads and stores album artwork for a processed track when artwork metadata is available.
  *
  * The function logs whether artwork was written, unavailable, or failed to download,
@@ -233,35 +259,35 @@ const processSupportedFile = async (
 };
 
 /**
- * Validates that a path exists and points to a readable directory, then returns its entries.
+ * Validates that a path exists, points to a directory, and can be read,
+ * then returns its directory entries.
  *
- * When validation fails, the function logs the reason, updates `process.exitCode`,
- * and returns `undefined` so the caller can stop processing that branch safely.
+ * When validation fails, the function logs the reason and returns a
+ * `DirectoryProcessingStatus` value describing the failure, so callers can
+ * propagate the outcome without relying on side effects such as `process.exitCode`.
  *
  * @param directoryPath - The directory path to validate and read.
- * @returns A promise resolving to directory entries, or `undefined` when the directory cannot be read.
+ * @returns A promise resolving to directory entries when the directory is valid and readable,
+ * or to a `DirectoryProcessingStatus` error value when validation or reading fails.
  */
 const readDirectoryEntries = async (
   directoryPath: string,
-): Promise<fs.Dirent[] | undefined> => {
+): Promise<ReadDirectoryEntriesResult> => {
   if (!fs.existsSync(directoryPath)) {
     logger.error(`Path specified doesn't exist: ${directoryPath}`);
-    process.exitCode = 1;
-    return;
+    return DirectoryProcessingStatus.PathDoesNotExist;
   }
 
   if (!fs.statSync(directoryPath).isDirectory()) {
     logger.error(`Path specified isn't a directory: ${directoryPath}`);
-    process.exitCode = 2;
-    return;
+    return DirectoryProcessingStatus.PathIsNotDirectory;
   }
 
   try {
     return await fs.promises.readdir(directoryPath, { withFileTypes: true });
   } catch {
     logger.error(`Couldn't read directory: ${directoryPath}`);
-    process.exitCode = 3;
-    return;
+    return DirectoryProcessingStatus.CannotReadDirectory;
   }
 };
 
@@ -288,20 +314,28 @@ const pathExists = async (filePath: string): Promise<boolean> => {
  * Recursively traverses an input directory and processes every supported audio file it finds.
  *
  * The function descends into subdirectories, dispatches supported files to their
- * format-specific handlers, and aggregates whether any supported files were processed
- * anywhere in the current directory subtree.
+ * format-specific handlers, and aggregates the final processing result for the
+ * entire current directory subtree.
+ *
+ * If any nested directory fails validation or cannot be read, that status is
+ * returned immediately and propagated to the top-level caller. Otherwise, the
+ * function reports whether at least one supported file was processed anywhere
+ * in the subtree.
  *
  * @param inputDirectory - The directory to scan recursively.
  * @param outputDirectory - An optional destination directory for renamed output files.
- * @returns A promise resolving to `true` when at least one supported file was processed
- * in the current directory subtree, otherwise `false`.
+ * @returns A promise resolving to a `DirectoryProcessingStatus` that describes
+ * the outcome for the entire current directory subtree.
  */
-const processAllFilesInDirectory = async (inputDirectory: string, outputDirectory?: string): Promise<boolean> => {
+const processAllFilesInDirectory = async (
+  inputDirectory: string,
+  outputDirectory?: string,
+): Promise<DirectoryProcessingStatus> => {
   let anyFilesWereProcessed = false;
 
   const entries = await readDirectoryEntries(inputDirectory);
-  if (!entries) {
-    return false;
+  if (!Array.isArray(entries)) {
+    return entries;
   }
 
   for (const entry of entries) {
@@ -312,10 +346,20 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
     }
 
     if (entry.isDirectory()) {
-      const subtreeProcessedAnyFiles = await processAllFilesInDirectory(filePath, outputDirectory);
+      const subtreeResult = await processAllFilesInDirectory(filePath, outputDirectory);
 
-      if (subtreeProcessedAnyFiles) {
-        anyFilesWereProcessed = true;
+      switch (subtreeResult) {
+        case DirectoryProcessingStatus.FilesProcessed:
+          anyFilesWereProcessed = true;
+          break;
+
+        case DirectoryProcessingStatus.NoSupportedFilesFound:
+          break;
+
+        case DirectoryProcessingStatus.PathDoesNotExist:
+        case DirectoryProcessingStatus.PathIsNotDirectory:
+        case DirectoryProcessingStatus.CannotReadDirectory:
+          return subtreeResult;
       }
     } else {
       const wasProcessed = await processSupportedFile(filePath, outputDirectory);
@@ -326,7 +370,9 @@ const processAllFilesInDirectory = async (inputDirectory: string, outputDirector
     }
   }
 
-  return anyFilesWereProcessed;
+  return anyFilesWereProcessed
+    ? DirectoryProcessingStatus.FilesProcessed
+    : DirectoryProcessingStatus.NoSupportedFilesFound;
 };
 
 // Last-resort handlers for errors that escape normal try/catch.
@@ -345,21 +391,38 @@ process.on('uncaughtException', (error) => {
   process.exitCode = 1;
 });
 
-// Start the main async workflow and evaluate whether any supported files were
-// processed anywhere in the input directory tree.
+// Start the main async workflow and handle the aggregated processing status for
+// the entire input directory tree.
 //
-// The `then()` branch handles the successful completion path and marks the run as
-// unsuccessful only when no supported files were processed at all. The `catch()`
-// branch remains the top-level fallback for unexpected errors that escape local
-// handling.
+// The `then()` branch handles the normal completion path by mapping the returned
+// `DirectoryProcessingStatus` to logging and process exit codes. The `catch()`
+// branch remains the top-level fallback for unexpected errors that escape the
+// explicit status-based flow.
 //
 // We set `process.exitCode` instead of calling `process.exit(1)` to let Node finish
 // any pending I/O (e.g., flushing stderr) and exit naturally.
 processAllFilesInDirectory(inputDirectory, outputDirectory)
-  .then((anyFilesWereProcessed) => {
-    if (!anyFilesWereProcessed) {
-      logger.warn(`There are no suitable files in directory tree: ${inputDirectory}`);
-      process.exitCode = 1;
+  .then((result) => {
+    switch (result) {
+      case DirectoryProcessingStatus.FilesProcessed:
+        return;
+
+      case DirectoryProcessingStatus.NoSupportedFilesFound:
+        logger.warn(`There are no suitable files in directory tree: ${inputDirectory}`);
+        process.exitCode = 1;
+        return;
+
+      case DirectoryProcessingStatus.PathDoesNotExist:
+        process.exitCode = 2;
+        return;
+
+      case DirectoryProcessingStatus.PathIsNotDirectory:
+        process.exitCode = 3;
+        return;
+
+      case DirectoryProcessingStatus.CannotReadDirectory:
+        process.exitCode = 4;
+        return;
     }
   })
   .catch((error: unknown) => {
