@@ -62,8 +62,10 @@ export class BearTunesConverter {
   options: BearTunesConverterOptions;
 
   constructor(options: Partial<BearTunesConverterOptions> = {}) {
-    this.options = defaultConverterOptions;
-    Object.assign(this.options, options);
+    this.options = {
+      ...defaultConverterOptions,
+      ...options,
+    };
   }
 
   aiffToFlac(
