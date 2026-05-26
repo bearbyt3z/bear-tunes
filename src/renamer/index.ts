@@ -22,8 +22,10 @@ export class BearTunesRenamer {
   options: BearTunesRenamerOptions;
 
   constructor(options: Partial<BearTunesRenamerOptions> = {}) {
-    this.options = defaultRenamerOptions;
-    Object.assign(this.options, options);
+    this.options = {
+      ...defaultRenamerOptions,
+      ...options,
+    };
   }
 
   rename(trackPath: string, trackInfo: TrackInfo, outputDirectory?: string): string {
