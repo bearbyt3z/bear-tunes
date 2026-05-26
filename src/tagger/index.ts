@@ -117,8 +117,18 @@ export class BearTunesTagger {
   options: BearTunesTaggerOptions;
 
   constructor(options: Partial<BearTunesTaggerOptions> = {}) {
-    this.options = defaultTaggerOptions;
-    Object.assign(this.options, options);
+    this.options = {
+      ...defaultTaggerOptions,
+      ...options,
+    };
+
+    Object.defineProperty(this.options, 'searchURL', {
+      get(this: BearTunesTaggerOptions): string {
+        return `${this.domainURL}/search/tracks?per_page=150&q=`;
+      },
+      enumerable: true,
+      configurable: true,
+    });
   }
 
   async processTrack(trackPath: string): Promise<TrackInfo> {
