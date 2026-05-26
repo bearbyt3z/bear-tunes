@@ -97,11 +97,26 @@ export type {
   BeatportPublisherInfo,
 };
 
+/**
+ * Builds the Beatport track search URL from the current tagger options.
+ *
+ * Combines the configured `trackSearchPath` with `domainURL` and returns a new
+ * `URL` instance on each call, so callers can safely extend or modify the
+ * returned value without mutating the underlying options object.
+ *
+ * @this {BearTunesTaggerOptions} Tagger options providing the Beatport domain
+ * and track search path.
+ * @returns A new URL instance pointing to the Beatport track search endpoint.
+ */
+function getTrackSearchURL(this: BearTunesTaggerOptions): URL {
+  return new URL(this.trackSearchPath, this.domainURL);
+}
+
 const defaultTaggerOptions: BearTunesTaggerOptions = {
   domainURL: 'https://www.beatport.com',
   trackSearchPath: '/search/tracks?per_page=150&q=', // we want tracks only
   get searchURL() {
-    return new URL(this.trackSearchPath, this.domainURL);
+    return getTrackSearchURL.call(this);
   },
   eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
   lengthDifferenceAccepted: 3,
@@ -118,9 +133,7 @@ export class BearTunesTagger {
     };
 
     Object.defineProperty(this.options, 'searchURL', {
-      get(this: BearTunesTaggerOptions): URL {
-        return new URL(this.trackSearchPath, this.domainURL);
-      },
+      get: getTrackSearchURL,
       enumerable: true,
       configurable: true,
     });
