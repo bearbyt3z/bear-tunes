@@ -2,6 +2,7 @@ import type { TrackInfo } from '#shared-types';
 
 export interface BearTunesTaggerOptions {
   domainURL: string,
+  trackSearchPath: string,
   searchURL: string, // TODO: URL
   eyeD3DisplayPluginPatternFile: string,
   lengthDifferenceAccepted: number, // seconds

@@ -97,17 +97,12 @@ export type {
   BeatportPublisherInfo,
 };
 
-// const DOMAIN_URL = 'https://www.beatport.com';
-// const SEARCH_URL = `${DOMAIN_URL}/search/tracks?per-page=150&q=`; // we want tracks only
-// // const SEARCH_URL = `${DOMAIN_URL}/search/tracks?q=`; // we want tracks only
-// // const SEARCH_URL = `${DOMAIN_URL}/search?q=`;
-// const EYED3_DISPLAY_PLUGIN_PATTERN_FILE = 'eyed3-pattern.txt';
-
 const defaultTaggerOptions: BearTunesTaggerOptions = {
   domainURL: 'https://www.beatport.com',
-  get searchURL() { return `${this.domainURL}/search/tracks?per_page=150&q=`; }, // we want tracks only
-  // get searchURL() { return `${this.domainURL}/search/tracks?q=`; }, // we want tracks only
-  // get searchURL() { return `${this.domainURL}/search?q=`; }, // we want tracks only
+  trackSearchPath: '/search/tracks?per_page=150&q=', // we want tracks only
+  get searchURL() {
+    return new URL(this.trackSearchPath, this.domainURL).toString();
+  },
   eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
   lengthDifferenceAccepted: 3,
   verbose: true,
@@ -124,7 +119,7 @@ export class BearTunesTagger {
 
     Object.defineProperty(this.options, 'searchURL', {
       get(this: BearTunesTaggerOptions): string {
-        return `${this.domainURL}/search/tracks?per_page=150&q=`;
+        return new URL(this.trackSearchPath, this.domainURL).toString();
       },
       enumerable: true,
       configurable: true,
