@@ -101,7 +101,7 @@ const defaultTaggerOptions: BearTunesTaggerOptions = {
   domainURL: 'https://www.beatport.com',
   trackSearchPath: '/search/tracks?per_page=150&q=', // we want tracks only
   get searchURL() {
-    return new URL(this.trackSearchPath, this.domainURL).toString();
+    return new URL(this.trackSearchPath, this.domainURL);
   },
   eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
   lengthDifferenceAccepted: 3,
@@ -118,8 +118,8 @@ export class BearTunesTagger {
     };
 
     Object.defineProperty(this.options, 'searchURL', {
-      get(this: BearTunesTaggerOptions): string {
-        return new URL(this.trackSearchPath, this.domainURL).toString();
+      get(this: BearTunesTaggerOptions): URL {
+        return new URL(this.trackSearchPath, this.domainURL);
       },
       enumerable: true,
       configurable: true,

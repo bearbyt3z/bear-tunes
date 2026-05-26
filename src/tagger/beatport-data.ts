@@ -65,12 +65,13 @@ function getProblematicArrayItem<T extends object>(
 }
 
 export async function fetchBeatportSearchTrackPayload(
-  searchURL: string,
+  searchURL: URL,
   inputKeywords: string[],
 ): Promise<BeatportSearchResultTrackInfo[] | undefined> {
-  const rawTrackArray = await extractNextJSData(
-    new URL(searchURL + encodeURIComponent(inputKeywords.join('+'))),
-  );
+  const requestURL = new URL(searchURL);
+  requestURL.search += encodeURIComponent(inputKeywords.join('+'));
+
+  const rawTrackArray = await extractNextJSData(requestURL);
 
   const parsedTrackArray = beatportSearchResultTrackInfoArraySchema.safeParse(rawTrackArray, {
     reportInput: true,
