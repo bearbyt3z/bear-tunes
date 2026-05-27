@@ -45,6 +45,15 @@ const defaultProcessorConfig = Object.freeze({
   verbose: false,
 } as const satisfies BearTunesProcessorConfig);
 
+/**
+ * Creates the default processor dependencies using a shared verbosity setting.
+ *
+ * This helper is used when callers do not provide custom converter, tagger, or
+ * renamer instances and want the processor to construct its standard dependency set.
+ *
+ * @param verbose - The verbosity flag propagated to all default processor dependencies.
+ * @returns The default converter, tagger, and renamer instances for the processor.
+ */
 const createDefaultProcessorDependencies = (
   verbose: boolean,
 ): BearTunesProcessorDependencies => {
@@ -55,6 +64,16 @@ const createDefaultProcessorDependencies = (
   };
 };
 
+/**
+ * Builds the fully resolved processor options object.
+ *
+ * The function starts with immutable processor config defaults, derives the
+ * verbosity value used to construct default dependencies, and finally applies
+ * any caller-provided option overrides on top of the generated result.
+ *
+ * @param options - Partial processor options overriding config values and/or dependencies.
+ * @returns The complete processor options used to initialize a processor instance.
+ */
 const buildProcessorOptions = (
   options: Partial<BearTunesProcessorOptions> = {},
 ): BearTunesProcessorOptions => {
