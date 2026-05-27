@@ -45,20 +45,24 @@ const defaultProcessorConfig = Object.freeze({
   verbose: false,
 } as const satisfies BearTunesProcessorConfig);
 
-const createDefaultProcessorDependencies = (): BearTunesProcessorDependencies => {
+const createDefaultProcessorDependencies = (
+  verbose: boolean,
+): BearTunesProcessorDependencies => {
   return {
-    converter: new BearTunesConverter({ verbose: true }),
-    tagger: new BearTunesTagger({ verbose: false }),
-    renamer: new BearTunesRenamer({ verbose: true }),
+    converter: new BearTunesConverter({ verbose }),
+    tagger: new BearTunesTagger({ verbose }),
+    renamer: new BearTunesRenamer({ verbose }),
   };
 };
 
 const buildProcessorOptions = (
   options: Partial<BearTunesProcessorOptions> = {},
 ): BearTunesProcessorOptions => {
+  const verbose = options.verbose ?? defaultProcessorConfig.verbose;
+
   return {
     ...defaultProcessorConfig,
-    ...createDefaultProcessorDependencies(),
+    ...createDefaultProcessorDependencies(verbose),
     ...options,
   };
 };
