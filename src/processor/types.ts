@@ -30,15 +30,38 @@ export type ReadDirectoryEntriesResult =
   | DirectoryProcessingStatus.PathIsNotDirectory
   | DirectoryProcessingStatus.CannotReadDirectory;
 
+/**
+ * Runtime configuration flags controlling processor behavior.
+ */
 export interface BearTunesProcessorConfig {
+  /**
+   * Enables more detailed logging during directory traversal and file processing.
+   */
   verbose: boolean;
 }
 
+/**
+ * Service instances used by the processor to convert, tag, and rename audio files.
+ */
 export interface BearTunesProcessorDependencies {
+  /**
+   * Audio converter used for format transformations such as AIFF to FLAC and FLAC to MP3.
+   */
   converter: BearTunesConverter;
+
+  /**
+   * Metadata tagger used to read track info and write tags back to output files.
+   */
   tagger: BearTunesTagger;
+
+  /**
+   * File renamer used to build final output paths from resolved track metadata.
+   */
   renamer: BearTunesRenamer;
 }
 
+/**
+ * Fully resolved processor options combining config values with processing dependencies.
+ */
 export type BearTunesProcessorOptions =
   BearTunesProcessorConfig & BearTunesProcessorDependencies;
