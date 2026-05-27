@@ -12,11 +12,15 @@ import type { TrackInfo } from '#shared-types';
 // reexporting type, so it will be included in the renamer module import
 export type { BearTunesRenamerOptions };
 
-const defaultRenamerOptions: BearTunesRenamerOptions = {
+// Default options are intentionally defined as immutable:
+// - `as const` keeps exact literal types and readonly fields,
+// - `satisfies` checks compatibility with the public options type,
+// - `Object.freeze()` guards against accidental mutation at runtime.
+const defaultRenamerOptions = Object.freeze({
   filenamePattern: '%artists% - %title%', // title already contains remixers etc.
   directoryPattern: '%genre%/%artists%',
   verbose: true,
-} as const;
+} as const satisfies BearTunesRenamerOptions);
 
 export class BearTunesRenamer {
   options: BearTunesRenamerOptions;

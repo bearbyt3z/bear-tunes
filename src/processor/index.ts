@@ -37,9 +37,13 @@ export type {
   ReadDirectoryEntriesResult,
 };
 
-const defaultProcessorConfig: BearTunesProcessorConfig = {
+// Default options are intentionally defined as immutable:
+// - `as const` keeps exact literal types and readonly fields,
+// - `satisfies` checks compatibility with the public options type,
+// - `Object.freeze()` guards against accidental mutation at runtime.
+const defaultProcessorConfig = Object.freeze({
   verbose: false,
-};
+} as const satisfies BearTunesProcessorConfig);
 
 const createDefaultProcessorDependencies = (): BearTunesProcessorDependencies => {
   return {

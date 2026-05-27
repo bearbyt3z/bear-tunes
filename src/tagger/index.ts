@@ -112,7 +112,11 @@ function getTrackSearchURL(this: BearTunesTaggerOptions): URL {
   return new URL(this.trackSearchPath, this.domainURL);
 }
 
-const defaultTaggerOptions: BearTunesTaggerOptions = {
+// Default options are intentionally defined as immutable:
+// - `as const` keeps exact literal types and readonly fields,
+// - `satisfies` checks compatibility with the public options type,
+// - `Object.freeze()` guards against accidental mutation at runtime.
+const defaultTaggerOptions = Object.freeze({
   domainURL: 'https://www.beatport.com',
   trackSearchPath: '/search/tracks?per_page=150&q=', // we want tracks only
   get searchURL() {
@@ -121,7 +125,7 @@ const defaultTaggerOptions: BearTunesTaggerOptions = {
   eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
   lengthDifferenceAccepted: 3,
   verbose: true,
-} as const;
+} as const satisfies BearTunesTaggerOptions);
 
 export class BearTunesTagger {
   options: BearTunesTaggerOptions;
