@@ -6,7 +6,9 @@ export interface BearTunesTaggerOptions {
   searchURL: URL,
   eyeD3DisplayPluginPatternFile: string,
   lengthDifferenceAccepted: number, // seconds
-  verbose: boolean,
+  verbose: boolean, // tagger logs
+  eyed3Verbose?: boolean; // eyeD3 command logs
+  metaflacVerbose?: boolean; // metaflag command logs
 }
 
 export interface MatchingTrack extends TrackInfo {

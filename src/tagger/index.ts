@@ -125,6 +125,8 @@ const defaultTaggerOptions = Object.freeze({
   eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
   lengthDifferenceAccepted: 3,
   verbose: true,
+  eyed3Verbose: false,
+  metaflacVerbose: false,
 } as const satisfies BearTunesTaggerOptions);
 
 export class BearTunesTagger {
@@ -750,14 +752,14 @@ export class BearTunesTagger {
           '--remove-all-images',
         ],
         `All picture blocks of ID3v${ID3Version.ID3v2_4} MP3 tag removed in "${path.basename(trackPath)}"`,
-        this.options.verbose,
+        this.options.eyed3Verbose,
       );
 
       BearTunesTagger.executeEyeD3Tool(
         ID3Version.ID3v2_4,
         eyeD3Options,
         `MP3 ID3v${ID3Version.ID3v2_4} tag was saved to "${trackFilename}"`,
-        this.options.verbose,
+        this.options.eyed3Verbose,
       );
     }
 
@@ -766,7 +768,7 @@ export class BearTunesTagger {
         ID3Version.ID3v1_1,
         eyeD3Options,
         `MP3 ID3v${ID3Version.ID3v1_1} tag was saved to "${trackFilename}"`,
-        this.options.verbose,
+        this.options.eyed3Verbose,
       );
     }
 
@@ -932,7 +934,7 @@ export class BearTunesTagger {
           trackPath,
         ],
         `All picture blocks removed in "${path.basename(trackPath)}"`,
-        this.options.verbose,
+        this.options.metaflacVerbose,
       );
     }
 
@@ -948,7 +950,7 @@ export class BearTunesTagger {
 
     metaflacOptions.push(trackPath);
 
-    BearTunesTagger.executeMetaflacTool(metaflacOptions, `Flac ID3 tag was saved to "${path.basename(trackPath)}"`, this.options.verbose);
+    BearTunesTagger.executeMetaflacTool(metaflacOptions, `Flac ID3 tag was saved to "${path.basename(trackPath)}"`, this.options.metaflacVerbose);
 
     BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
   }
