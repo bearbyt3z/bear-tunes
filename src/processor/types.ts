@@ -33,9 +33,12 @@ export type ReadDirectoryEntriesResult =
 /**
  * Runtime configuration flags controlling processor behavior.
  */
-export interface BearTunesProcessorConfig {
+export interface BearTunesProcessorOptions {
   /**
-   * Enables more detailed logging during directory traversal and file processing.
+   * Enables verbose mode for the processor and its default dependencies.
+   *
+   * When custom dependencies are not provided, this flag is propagated to the
+   * default converter, tagger, and renamer instances created by the constructor.
    */
   verbose: boolean;
 }
@@ -59,9 +62,3 @@ export interface BearTunesProcessorDependencies {
    */
   renamer: BearTunesRenamer;
 }
-
-/**
- * Fully resolved processor options combining config values with processing dependencies.
- */
-export type BearTunesProcessorOptions =
-  BearTunesProcessorConfig & BearTunesProcessorDependencies;

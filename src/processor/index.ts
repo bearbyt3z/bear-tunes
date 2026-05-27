@@ -19,7 +19,6 @@ import {
 import type { BearTunesConverterResult } from '#converter';
 
 import type {
-  BearTunesProcessorConfig,
   BearTunesProcessorDependencies,
   BearTunesProcessorOptions,
   ReadDirectoryEntriesResult,
@@ -31,7 +30,6 @@ export {
 };
 
 export type {
-  BearTunesProcessorConfig,
   BearTunesProcessorDependencies,
   BearTunesProcessorOptions,
   ReadDirectoryEntriesResult,
@@ -41,9 +39,9 @@ export type {
 // - `as const` keeps exact literal types and readonly fields,
 // - `satisfies` checks compatibility with the public options type,
 // - `Object.freeze()` guards against accidental mutation at runtime.
-const defaultProcessorConfig = Object.freeze({
+const defaultProcessorOptions = Object.freeze({
   verbose: false,
-} as const satisfies BearTunesProcessorConfig);
+} as const satisfies BearTunesProcessorOptions);
 
 /**
  * Creates the default processor dependencies using a shared verbosity setting.
@@ -64,35 +62,27 @@ const createDefaultProcessorDependencies = (
   };
 };
 
-/**
- * Builds the fully resolved processor options object.
- *
- * The function starts with immutable processor config defaults, derives the
- * verbosity value used to construct default dependencies, and finally applies
- * any caller-provided option overrides on top of the generated result.
- *
- * @param options - Partial processor options overriding config values and/or dependencies.
- * @returns The complete processor options used to initialize a processor instance.
- */
-const buildProcessorOptions = (
-  options: Partial<BearTunesProcessorOptions> = {},
-): BearTunesProcessorOptions => {
-  const verbose = options.verbose ?? defaultProcessorConfig.verbose;
-
-  return {
-    ...defaultProcessorConfig,
-    ...createDefaultProcessorDependencies(verbose),
-    ...options,
-  };
-};
-
 export class BearTunesProcessor {
-  options: BearTunesProcessorOptions;
+  private readonly options: BearTunesProcessorOptions;
 
-  flacFiles: Set<string>;
+  private readonly dependencies: BearTunesProcessorDependencies;
 
-  constructor(options: Partial<BearTunesProcessorOptions> = {}) {
-    this.options = buildProcessorOptions(options);
+  private readonly flacFiles: Set<string>;
+
+  constructor(
+    options: Partial<BearTunesProcessorOptions> = {},
+    dependencies: Partial<BearTunesProcessorDependencies> = {},
+  ) {
+    this.options = {
+      ...defaultProcessorOptions,
+      ...options,
+    };
+
+    this.dependencies = {
+      ...createDefaultProcessorDependencies(this.options.verbose),
+      ...dependencies,
+    };
+
     this.flacFiles = new Set<string>();
   }
 
@@ -168,14 +158,14 @@ export class BearTunesProcessor {
       return false;
     }
 
-    const trackInfo = await this.options.tagger.processTrack(filePath);
+    const trackInfo = await this.dependencies.tagger.processTrack(filePath);
 
     if (isEmptyPlainObject(trackInfo)) {
       logger.warn(`No track info found for MP3 file: ${filePath}`);
       return false;
     }
 
-    const filePathRenamed = this.options.renamer.rename(filePath, trackInfo, outputDirectory);
+    const filePathRenamed = this.dependencies.renamer.rename(filePath, trackInfo, outputDirectory);
 
     await BearTunesProcessor.downloadArtworkForTrack(
       filePathRenamed,
@@ -202,7 +192,7 @@ export class BearTunesProcessor {
     logger.silly('########################################');
     logger.info(`Converting flac to mp3: ${filePath}`);
 
-    const result = this.options.converter.flacToMp3(filePath);
+    const result = this.dependencies.converter.flacToMp3(filePath);
 
     if (result.status !== 0 || !result.outputPath) {
       BearTunesProcessor.logConversionFailure(filePath, result, 'Lame stderr');
@@ -212,7 +202,7 @@ export class BearTunesProcessor {
     logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
     this.flacFiles.add(result.outputPath);
 
-    const trackInfo = await this.options.tagger.processTrack(result.outputPath);
+    const trackInfo = await this.dependencies.tagger.processTrack(result.outputPath);
 
     if (isEmptyPlainObject(trackInfo)) {
       this.flacFiles.delete(result.outputPath);
@@ -220,14 +210,14 @@ export class BearTunesProcessor {
       return false;
     }
 
-    const mp3FilePathRenamed = this.options.renamer.rename(result.outputPath, trackInfo, outputDirectory);
+    const mp3FilePathRenamed = this.dependencies.renamer.rename(result.outputPath, trackInfo, outputDirectory);
 
     this.flacFiles.delete(result.outputPath);
     this.flacFiles.add(mp3FilePathRenamed);
 
-    await this.options.tagger.saveId3TagToFlacFile(filePath, trackInfo);
+    await this.dependencies.tagger.saveId3TagToFlacFile(filePath, trackInfo);
 
-    const filePathRenamed = this.options.renamer.rename(filePath, trackInfo, outputDirectory);
+    const filePathRenamed = this.dependencies.renamer.rename(filePath, trackInfo, outputDirectory);
 
     await BearTunesProcessor.downloadArtworkForTrack(
       filePathRenamed,
@@ -255,7 +245,7 @@ export class BearTunesProcessor {
     logger.silly('########################################');
     logger.info(`Converting aiff to flac: ${filePath}`);
 
-    const result = this.options.converter.aiffToFlac(filePath, undefined, true);
+    const result = this.dependencies.converter.aiffToFlac(filePath, undefined, true);
 
     if (result.status !== 0 || !result.outputPath) {
       BearTunesProcessor.logConversionFailure(filePath, result, 'flac stderr');
