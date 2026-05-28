@@ -303,7 +303,7 @@ export class BearTunesProcessor {
    * @returns A promise resolving to directory entries when the path points to a readable
    * directory, or to a `DirectoryProcessingStatus` error value when validation or reading fails.
    */
-  private async readDirectoryEntries(
+  private static async readDirectoryEntries(
     directoryPath: string,
   ): Promise<ReadDirectoryEntriesResult> {
     let stats: fs.Stats;
@@ -377,7 +377,7 @@ export class BearTunesProcessor {
   ): Promise<DirectoryProcessingStatus> {
     let anyFilesWereProcessed = false;
 
-    const entries = await this.readDirectoryEntries(inputDirectory);
+    const entries = await BearTunesProcessor.readDirectoryEntries(inputDirectory);
     if (!Array.isArray(entries)) {
       return entries;
     }
