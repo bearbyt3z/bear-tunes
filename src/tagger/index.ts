@@ -168,7 +168,14 @@ export class BearTunesTagger {
 
       logger.info(`Using URL from file: ${trackUrl}`);
     } else {
-      const trackInfo = this.extractId3Tag(trackPath);
+      // eyeD3 display-plugin output is currently used only for MP3 source metadata.
+      // For FLAC inputs we skip this step for now to avoid noisy plugin errors.
+      const trackExtension = path.extname(trackPath).toLowerCase();
+
+      let trackInfo: TrackInfo = {};
+      if (trackExtension !== '.flac') {
+        trackInfo = this.extractId3Tag(trackPath);
+      }
 
       let bestMatchingTrack;
       try {
