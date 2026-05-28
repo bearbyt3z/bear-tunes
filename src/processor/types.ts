@@ -35,6 +35,14 @@ export type ReadDirectoryEntriesResult =
  */
 export interface BearTunesProcessorOptions {
   /**
+   * Controls whether FLAC inputs should be converted to MP3.
+   *
+   * When disabled, the processor keeps working on the FLAC file only
+   * and skips MP3 creation.
+   */
+  convertFlacToMp3: boolean;
+
+  /**
    * Enables verbose mode for the processor and its default dependencies.
    *
    * When custom dependencies are not provided, this flag is propagated to the

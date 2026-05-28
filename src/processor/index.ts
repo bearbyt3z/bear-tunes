@@ -40,6 +40,7 @@ export type {
 // - `satisfies` checks compatibility with the public options type,
 // - `Object.freeze()` guards against accidental mutation at runtime.
 const defaultProcessorOptions = Object.freeze({
+  convertFlacToMp3: true,
   verbose: false,
 } as const satisfies BearTunesProcessorOptions);
 
@@ -177,47 +178,75 @@ export class BearTunesProcessor {
   }
 
   /**
-   * Converts a FLAC file to MP3, extracts track metadata from the converted MP3,
-   * propagates tags back to the FLAC file, renames both outputs, and downloads artwork.
+   * Processes a FLAC file by optionally converting it to MP3 for metadata extraction,
+   * then saving refreshed tags back to the original FLAC file, renaming outputs,
+   * and downloading artwork.
    *
-   * The function also tracks the generated MP3 path so that the later directory traversal
-   * does not process that MP3 again as if it were an unrelated input file.
+   * When `convertFlacToMp3` is enabled, the function converts the FLAC file to MP3,
+   * extracts track metadata from the converted MP3, and tracks that generated MP3 path
+   * so later directory traversal does not process it again as an unrelated input file.
    *
-   * @param filePath - The FLAC file to convert and post-process.
+   * When `convertFlacToMp3` is disabled, the function extracts track metadata directly
+   * from the FLAC file instead and skips MP3 conversion entirely.
+   *
+   * @param filePath - The FLAC file to process.
    * @param outputDirectory - An optional destination directory for renamed output files.
-   * @returns A promise resolving to `true` when the FLAC file and its derived outputs
-   * were successfully processed, or to `false` when conversion or metadata extraction failed.
+   * @returns A promise resolving to `true` when the FLAC file was successfully processed,
+   * or to `false` when conversion, metadata extraction, or subsequent processing failed.
    */
   private async processFlacFile(filePath: string, outputDirectory?: string): Promise<boolean> {
-    logger.silly('########################################');
-    logger.info(`Converting flac to mp3: ${filePath}`);
+    let trackInfoSourcePath = filePath;
+    let convertedMp3Path: string | undefined;
 
-    const result = this.dependencies.converter.flacToMp3(filePath);
+    if (this.options.convertFlacToMp3) {
+      logger.silly('########################################');
+      logger.info(`Converting flac to mp3: ${filePath}`);
 
-    if (result.status !== 0 || !result.outputPath) {
-      BearTunesProcessor.logConversionFailure(filePath, result, 'Lame stderr');
-      return false;
+      const result = this.dependencies.converter.flacToMp3(filePath);
+
+      if (result.status !== 0 || !result.outputPath) {
+        BearTunesProcessor.logConversionFailure(filePath, result, 'Lame stderr');
+        return false;
+      }
+
+      logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
+
+      convertedMp3Path = result.outputPath;
+      trackInfoSourcePath = result.outputPath;
+      this.flacFiles.add(result.outputPath);
     }
 
-    logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
-    this.flacFiles.add(result.outputPath);
-
-    const trackInfo = await this.dependencies.tagger.processTrack(result.outputPath);
+    const trackInfo = await this.dependencies.tagger.processTrack(trackInfoSourcePath);
 
     if (isEmptyPlainObject(trackInfo)) {
-      this.flacFiles.delete(result.outputPath);
-      logger.warn(`No track info found for converted FLAC/MP3 pair: ${filePath}`);
+      if (convertedMp3Path) {
+        this.flacFiles.delete(convertedMp3Path);
+        logger.warn(`No track info found for converted FLAC/MP3 pair: ${filePath}`);
+      } else {
+        logger.warn(`No track info found for FLAC file: ${filePath}`);
+      }
+
       return false;
     }
 
-    const mp3FilePathRenamed = this.dependencies.renamer.rename(result.outputPath, trackInfo, outputDirectory);
+    if (convertedMp3Path) {
+      const mp3FilePathRenamed = this.dependencies.renamer.rename(
+        convertedMp3Path,
+        trackInfo,
+        outputDirectory,
+      );
 
-    this.flacFiles.delete(result.outputPath);
-    this.flacFiles.add(mp3FilePathRenamed);
+      this.flacFiles.delete(convertedMp3Path);
+      this.flacFiles.add(mp3FilePathRenamed);
+    }
 
     await this.dependencies.tagger.saveId3TagToFlacFile(filePath, trackInfo);
 
-    const filePathRenamed = this.dependencies.renamer.rename(filePath, trackInfo, outputDirectory);
+    const filePathRenamed = this.dependencies.renamer.rename(
+      filePath,
+      trackInfo,
+      outputDirectory,
+    );
 
     await BearTunesProcessor.downloadArtworkForTrack(
       filePathRenamed,
