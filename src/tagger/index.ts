@@ -21,6 +21,7 @@ import {
   normalizeTextCharacters,
 } from '#normalizer';
 import {
+  AudioFileType,
   arrayIntersection,
   arrayToLowerCase,
   buildGenreTag,
@@ -39,6 +40,7 @@ import {
   replacePathForbiddenCharsInArray,
   secondsToTimeFormat,
   tryGetUrlFromFile,
+  tryGetAudioFileTypeFromFile,
 } from '#tools';
 
 import {
@@ -168,7 +170,7 @@ export class BearTunesTagger {
 
       logger.info(`Using URL from file: ${trackUrl}`);
     } else {
-      const trackInfo = this.readTag(trackPath);
+      const trackInfo = await this.readTag(trackPath);
 
       let bestMatchingTrack;
       try {
@@ -234,18 +236,33 @@ export class BearTunesTagger {
     return trackInfo;
   }
 
-  readTag(trackPath: string): TrackInfo {
-    const trackExtension = path.extname(trackPath).toLowerCase();
+  /**
+  * Reads local audio tags from a supported file.
+  *
+  * The file type is detected by the shared audio tools layer and then mapped
+  * to the appropriate local tag reader. MP3 files are read via the ID3 reader,
+  * while FLAC files are read via the FLAC tag reader.
+  *
+  * AIFF files and unknown file types are currently not supported for local tag
+  * extraction in the tagger. In such cases the method logs a warning and
+  * returns an empty track info object.
+  *
+  * @param trackPath - Path to the local audio file whose embedded tags should be read.
+  * @returns Extracted track information for supported local audio formats, or an empty object when no local tag reader is available for the detected file type.
+  */
+  async readTag(trackPath: string): Promise<TrackInfo> {
+    const audioFileType = await tryGetAudioFileTypeFromFile(trackPath);
 
-    switch (trackExtension) {
-      case '.mp3':
+    switch (audioFileType) {
+      case AudioFileType.Mp3:
         return this.extractId3Tag(trackPath);
 
-      case '.flac':
+      case AudioFileType.Flac:
         return this.extractFlacTag(trackPath);
 
-      default:
-        logger.warn(`Unsupported tag read format: ${trackExtension} (${trackPath})`);
+      case AudioFileType.Aiff:
+      case undefined:
+        logger.warn(`No local tag reader available for audio type: ${audioFileType ?? 'unknown'} (${trackPath})`);
         return {};
     }
   }

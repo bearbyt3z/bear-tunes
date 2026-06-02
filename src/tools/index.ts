@@ -8,8 +8,16 @@
 
 export {
   isSupportedArtworkFile,
-  tryGetMimeTypeFromFile,
 } from './audio/artwork.js';
+
+export {
+  tryGetAudioFileTypeFromFile,
+  tryGetMimeTypeFromFile,
+} from './audio/file-type.js';
+
+export {
+  AudioFileType,
+} from './audio/file-type.types.js';
 
 export {
   buildGenreTag,
