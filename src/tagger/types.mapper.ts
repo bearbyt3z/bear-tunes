@@ -13,7 +13,6 @@ import {
 } from '#shared-types-normalizer';
 
 import {
-  roundToDecimalPlaces,
   slugify,
 } from '#tools';
 
@@ -61,9 +60,7 @@ export function mapBeatportSearchResultTrackToTrackInfo(
 
   const [genre, subgenre] = trackEntry.genre.map((genreEntry) => genreEntry.genre_name);
 
-  const details = trackEntry.length === undefined
-    ? undefined
-    : { duration: roundToDecimalPlaces(trackEntry.length / 1000, 2) };
+  const details = (trackEntry.length === undefined) ? undefined : { duration: trackEntry.length / 1000 };
 
   return normalizeTrackInfo({
     url: `${domainURL}/track/${slugify(trackEntry.track_name)}/${trackEntry.track_id}`,
@@ -178,7 +175,7 @@ export function mapBeatportTrackToTrackInfo(
     publisher,
     album,
     details: {
-      duration: roundToDecimalPlaces(trackData.length_ms / 1000.0, 2),
+      duration: trackData.length_ms / 1000.0,
     },
   });
 }
