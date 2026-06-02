@@ -320,6 +320,20 @@ export class BearTunesTagger {
     }
   }
 
+  /**
+   * Parses raw `metaflac` tag output into a normalized multivalue tag map.
+   *
+   * The command output is expected to contain one tag per line in the form
+   * `KEY=value`. Tag names are normalized to uppercase so later lookups can be
+   * performed case-insensitively, which matches FLAC/Vorbis comment semantics
+   * and avoids depending on the exact casing returned by `metaflac`.
+   *
+   * Repeated tag names are preserved by storing all values in an array under the
+   * same normalized key. Lines without a valid `=` separator are ignored.
+   *
+   * @param metaflacOutput Raw stdout returned by `metaflac --show-tag=...`.
+   * @returns A map of normalized tag names to one or more extracted values.
+   */
   private static parseMetaflacTags(metaflacOutput: string): Map<string, string[]> {
     const tags = new Map<string, string[]>();
 
@@ -341,6 +355,17 @@ export class BearTunesTagger {
     return tags;
   }
 
+  /**
+   * Returns the first available value for any of the requested FLAC tag names.
+   *
+   * Each requested tag name is normalized to uppercase before lookup, so callers
+   * may provide names in any casing. This helper is intended for fields that are
+   * expected to resolve to a single logical value in `TrackInfo`.
+   *
+   * @param tags Parsed and normalized FLAC tag map.
+   * @param tagNames Candidate tag names checked in order.
+   * @returns The first matching tag value, or `undefined` when none is found.
+   */
   private static getSingleMetaflacTag(
     tags: Map<string, string[]>,
     ...tagNames: string[]
@@ -356,6 +381,17 @@ export class BearTunesTagger {
     return undefined;
   }
 
+  /**
+   * Returns all values for the first matching FLAC tag name.
+   *
+   * Each requested tag name is normalized to uppercase before lookup, so callers
+   * may provide names in any casing. This helper is intended for multivalue
+   * fields such as artists or other tags that may occur more than once.
+   *
+   * @param tags Parsed and normalized FLAC tag map.
+   * @param tagNames Candidate tag names checked in order.
+   * @returns All values of the first matching tag, or `undefined` when none is found.
+   */
   private static getMultiMetaflacTag(
     tags: Map<string, string[]>,
     ...tagNames: string[]
@@ -371,6 +407,16 @@ export class BearTunesTagger {
     return undefined;
   }
 
+  /**
+   * Extracts FLAC track duration from STREAMINFO values reported by `metaflac`.
+   *
+   * The duration is computed from `total samples / sample rate` using a single
+   * `metaflac` invocation. The method returns `undefined` when the command fails,
+   * the output is incomplete, or the parsed numeric values are invalid.
+   *
+   * @param flacFilePath Path to the FLAC file.
+   * @returns Track duration in seconds, or `undefined` when it cannot be determined.
+   */
   private static extractFlacDuration(flacFilePath: string): number | undefined {
     const metaflacResult = childProcess.spawnSync('metaflac', [
       '--show-total-samples',
@@ -421,6 +467,20 @@ export class BearTunesTagger {
     return totalSamples / sampleRate;
   }
 
+  /**
+   * Reads selected metadata from a FLAC file and maps it to `TrackInfo`.
+   *
+   * The method retrieves textual FLAC tags through `metaflac`, parses them into a
+   * normalized tag map, supplements the result with duration extracted from
+   * STREAMINFO metadata, and then normalizes and validates the assembled data
+   * against the shared track schema.
+   *
+   * When `metaflac` fails or the normalized payload does not match the expected
+   * schema, the method logs a warning and returns an empty track object.
+   *
+   * @param flacFilePath Path to the FLAC file to inspect.
+   * @returns Parsed track metadata, or an empty object when extraction fails.
+   */
   extractFlacTag(flacFilePath: string): TrackInfo {
     const metaflacResult = childProcess.spawnSync('metaflac', [
       '--show-tag=artist',
