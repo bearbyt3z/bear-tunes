@@ -4,11 +4,8 @@ import * as path from 'node:path';
 
 import logger from '#logger';
 import {
-  normalizeTrackInfo,
-} from '#shared-types-normalizer';
-import {
-  trackInfoSchema,
-} from '#shared-types-schema';
+  BearTunesTagger,
+} from '#tagger';
 import {
   formatLocalDateToIsoDateString,
   generateRandomHexString,
@@ -22,9 +19,6 @@ import {
   FlacImageBlockType,
 } from './types.js';
 
-import type {
-  TrackInfo,
-} from '#shared-types';
 import type {
   BearTunesConverterOptions,
   BearTunesConverterResult,
@@ -246,7 +240,7 @@ export class BearTunesConverter {
     let flacImages : FlacImageBlockExport[] = [];
 
     if (this.options.transferTagEntries) {
-      const flacTrackInfo = this.extractTagsFromFlac(flacFilePath);
+      const flacTrackInfo = new BearTunesTagger({ verbose: this.options.verbose }).extractFlacTag(flacFilePath);
 
       const tagOptions = ['--add-id3v2'];
       if (flacTrackInfo.title) {
@@ -314,70 +308,6 @@ export class BearTunesConverter {
     result.lameStderr = childResult.stderr?.toString();
 
     return result;
-  }
-
-  extractTagsFromFlac(flacFilePath: string): TrackInfo {
-    const metaflacResult = childProcess.spawnSync('metaflac', [
-      '--show-tag=artist',
-      '--show-tag=title',
-      '--show-tag=album',
-      '--show-tag=albumartist',
-      '--show-tag=tracknumber',
-      '--show-tag=tracktotal',
-      '--show-tag=discnumber',
-      '--show-tag=disctotal',
-      '--show-tag=genre',
-      '--show-tag=date',
-      '--show-tag=composer',
-      '--show-tag=isrc',
-      flacFilePath,
-    ]);
-
-    if (metaflacResult.status !== 0) {
-      if (this.options.verbose) {
-        logger.warn(`metaflac process returned with ${metaflacResult.status} code and stderr: ${metaflacResult.stderr.toString()}`);
-      }
-      return {};
-    }
-
-    const metaflacOutput = metaflacResult.stdout.toString();
-
-    const rawTrackInfo = {
-      artists: BearTunesConverter.extractMultiTagFromMetaflacOutput(metaflacOutput, 'artist'),
-      title: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'title'),
-      genre: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'genre'),
-      released: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'date'),
-      album: {
-        artists: BearTunesConverter.extractMultiTagFromMetaflacOutput(metaflacOutput, 'albumartist'),
-        title: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'album'),
-        trackNumber: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracknumber'),
-        trackTotal: BearTunesConverter.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracktotal'),
-      },
-    };
-
-    const normalizedTrackInfo = normalizeTrackInfo(rawTrackInfo);
-    const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
-
-    if (!parsedTrackInfo.success) {
-      logger.warn('Cannot validate FLAC tag output from metaflac', { error: parsedTrackInfo.error, flacFilePath });
-      return {};
-    }
-
-    return parsedTrackInfo.data;
-  }
-
-  static extractSingleTagFromMetaflacOutput(metaflacOutput: string, tagName: string): string | undefined {
-    const matchArray = BearTunesConverter.getMetaflacTagEntries(metaflacOutput, tagName, false);
-    return (matchArray !== null && matchArray.length > 0) ? matchArray[0] : undefined;
-  }
-
-  static extractMultiTagFromMetaflacOutput(metaflacOutput: string, tagName: string): string[] | undefined {
-    const matchArray = BearTunesConverter.getMetaflacTagEntries(metaflacOutput, tagName, true);
-    return (matchArray !== null && matchArray.length > 0) ? matchArray : undefined;
-  }
-
-  static getMetaflacTagEntries(metaflacOutput: string, tagName: string, multi = false): string[] | null {
-    return metaflacOutput.match(new RegExp(`(?<=^${tagName}=).+$`, multi ? 'gm' : 'm'));
   }
 
   static extractArtworkFromFlac(flacFilePath: string, imageBlockTypes: FlacImageBlockType[]): FlacImageBlockExport[] {

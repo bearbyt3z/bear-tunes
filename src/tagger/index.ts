@@ -294,6 +294,70 @@ export class BearTunesTagger {
     }
   }
 
+  extractFlacTag(flacFilePath: string): TrackInfo {
+    const metaflacResult = childProcess.spawnSync('metaflac', [
+      '--show-tag=artist',
+      '--show-tag=title',
+      '--show-tag=album',
+      '--show-tag=albumartist',
+      '--show-tag=tracknumber',
+      '--show-tag=tracktotal',
+      '--show-tag=discnumber',
+      '--show-tag=disctotal',
+      '--show-tag=genre',
+      '--show-tag=date',
+      '--show-tag=composer',
+      '--show-tag=isrc',
+      flacFilePath,
+    ]);
+
+    if (metaflacResult.status !== 0) {
+      if (this.options.verbose) {
+        logger.warn(`metaflac process returned with ${metaflacResult.status} code and stderr: ${metaflacResult.stderr.toString()}`);
+      }
+      return {};
+    }
+
+    const metaflacOutput = metaflacResult.stdout.toString();
+
+    const rawTrackInfo = {
+      artists: BearTunesTagger.extractMultiTagFromMetaflacOutput(metaflacOutput, 'artist'),
+      title: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'title'),
+      genre: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'genre'),
+      released: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'date'),
+      album: {
+        artists: BearTunesTagger.extractMultiTagFromMetaflacOutput(metaflacOutput, 'albumartist'),
+        title: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'album'),
+        trackNumber: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracknumber'),
+        trackTotal: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracktotal'),
+      },
+    };
+
+    const normalizedTrackInfo = normalizeTrackInfo(rawTrackInfo);
+    const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
+
+    if (!parsedTrackInfo.success) {
+      logger.warn('Cannot validate FLAC tag output from metaflac', { error: parsedTrackInfo.error, flacFilePath });
+      return {};
+    }
+
+    return parsedTrackInfo.data;
+  }
+
+  private static extractSingleTagFromMetaflacOutput(metaflacOutput: string, tagName: string): string | undefined {
+    const matchArray = BearTunesTagger.getMetaflacTagEntries(metaflacOutput, tagName, false);
+    return (matchArray !== null && matchArray.length > 0) ? matchArray[0] : undefined;
+  }
+
+  private static extractMultiTagFromMetaflacOutput(metaflacOutput: string, tagName: string): string[] | undefined {
+    const matchArray = BearTunesTagger.getMetaflacTagEntries(metaflacOutput, tagName, true);
+    return (matchArray !== null && matchArray.length > 0) ? matchArray : undefined;
+  }
+
+  private static getMetaflacTagEntries(metaflacOutput: string, tagName: string, multi = false): string[] | null {
+    return metaflacOutput.match(new RegExp(`(?<=^${tagName}=).+$`, multi ? 'gm' : 'm'));
+  }
+
   private static isBetterMatchingTrack(
     inputTrackInfo: TrackInfo,
     winner: MatchingTrack | undefined,
