@@ -168,14 +168,7 @@ export class BearTunesTagger {
 
       logger.info(`Using URL from file: ${trackUrl}`);
     } else {
-      // eyeD3 display-plugin output is currently used only for MP3 source metadata.
-      // For FLAC inputs we skip this step for now to avoid noisy plugin errors.
-      const trackExtension = path.extname(trackPath).toLowerCase();
-
-      let trackInfo: TrackInfo = {};
-      if (trackExtension !== '.flac') {
-        trackInfo = this.extractId3Tag(trackPath);
-      }
+      const trackInfo = this.readTag(trackPath);
 
       let bestMatchingTrack;
       try {
@@ -239,6 +232,22 @@ export class BearTunesTagger {
     await this.saveId3TagToMp3File(trackPath, trackInfo);
 
     return trackInfo;
+  }
+
+  readTag(trackPath: string): TrackInfo {
+    const trackExtension = path.extname(trackPath).toLowerCase();
+
+    switch (trackExtension) {
+      case '.mp3':
+        return this.extractId3Tag(trackPath);
+
+      case '.flac':
+        return this.extractFlacTag(trackPath);
+
+      default:
+        logger.warn(`Unsupported tag read format: ${trackExtension} (${trackPath})`);
+        return {};
+    }
   }
 
   // Unfortunately display plugin is not available anymore in eyeD3 v0.9.7: https://github.com/nicfit/eyeD3/pull/585
