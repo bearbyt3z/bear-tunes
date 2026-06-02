@@ -371,6 +371,56 @@ export class BearTunesTagger {
     return undefined;
   }
 
+  private static extractFlacDuration(flacFilePath: string): number | undefined {
+    const metaflacResult = childProcess.spawnSync('metaflac', [
+      '--show-total-samples',
+      '--show-sample-rate',
+      flacFilePath,
+    ], {
+      encoding: 'utf-8',
+    });
+
+    if (metaflacResult.status !== 0 || metaflacResult.error) {
+      logger.warn('Cannot read FLAC stream info needed for duration', {
+        flacFilePath,
+        status: metaflacResult.status,
+        error: metaflacResult.error,
+        stderr: metaflacResult.stderr,
+      });
+
+      return undefined;
+    }
+
+    const lines = metaflacResult.stdout
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (lines.length < 2) {
+      logger.warn('Incomplete FLAC stream info output for duration extraction', {
+        flacFilePath,
+        output: metaflacResult.stdout,
+      });
+
+      return undefined;
+    }
+
+    const totalSamples = Number.parseInt(lines[0], 10);
+    const sampleRate = Number.parseInt(lines[1], 10);
+
+    if (!Number.isFinite(totalSamples) || !Number.isFinite(sampleRate) || sampleRate <= 0) {
+      logger.warn('Invalid FLAC stream info values for duration extraction', {
+        flacFilePath,
+        totalSamples: lines[0],
+        sampleRate: lines[1],
+      });
+
+      return undefined;
+    }
+
+    return totalSamples / sampleRate;
+  }
+
   extractFlacTag(flacFilePath: string): TrackInfo {
     const metaflacResult = childProcess.spawnSync('metaflac', [
       '--show-tag=artist',
@@ -399,11 +449,14 @@ export class BearTunesTagger {
 
     const tags = BearTunesTagger.parseMetaflacTags(metaflacOutput);
 
+    const duration = BearTunesTagger.extractFlacDuration(flacFilePath);
+
     const rawTrackInfo = {
       artists: BearTunesTagger.getMultiMetaflacTag(tags, 'ARTIST'),
       title: BearTunesTagger.getSingleMetaflacTag(tags, 'TITLE'),
       genre: BearTunesTagger.getSingleMetaflacTag(tags, 'GENRE'),
       released: BearTunesTagger.getSingleMetaflacTag(tags, 'DATE'),
+      details: (duration !== undefined) ? { duration } : undefined,
       album: {
         artists: BearTunesTagger.getMultiMetaflacTag(tags, 'ALBUMARTIST'),
         title: BearTunesTagger.getSingleMetaflacTag(tags, 'ALBUM'),
