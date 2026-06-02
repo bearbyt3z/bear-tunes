@@ -4,8 +4,10 @@ import * as path from 'node:path';
 import { USER_AGENT_CACHE_FILE } from '#config';
 import logger from '#logger';
 import {
+  AudioFileType,
   downloadAndSaveArtwork,
   isEmptyPlainObject,
+  tryGetAudioFileTypeFromFile,
 } from '#tools';
 
 import { BearTunesConverter } from '#converter';
@@ -287,34 +289,35 @@ export class BearTunesProcessor {
   }
 
   /**
-   * Dispatches a file to the appropriate processing pipeline based on its extension.
+   * Dispatches a file to the appropriate processing pipeline based on its detected audio type.
    *
-   * Supported formats are MP3, FLAC, AIF, and AIFF. Unsupported files are ignored.
+   * The audio type is resolved by the shared audio tools layer. Supported formats
+   * are MP3, FLAC, AIF, and AIFF. Files whose audio type cannot be detected are ignored.
    *
    * @param filePath - The file path to inspect and process.
    * @param outputDirectory - An optional destination directory for renamed output files.
    * @returns A promise resolving to `true` when a supported file was successfully processed,
-   * or to `false` when the file is unsupported or processing did not succeed.
+   * or to `false` when the file type is unsupported, cannot be detected, or processing did not succeed.
    */
   private async processSupportedFile(
     filePath: string,
     outputDirectory?: string,
   ): Promise<boolean> {
-    const extension = path.extname(filePath).toLowerCase();
+    const audioFileType = await tryGetAudioFileTypeFromFile(filePath);
 
-    if (extension === '.mp3') {
-      return await this.processMp3File(filePath, outputDirectory);
+    switch (audioFileType) {
+      case AudioFileType.Mp3:
+        return await this.processMp3File(filePath, outputDirectory);
+
+      case AudioFileType.Aiff:
+        return await this.processAiffFile(filePath, outputDirectory);
+
+      case AudioFileType.Flac:
+        return await this.processFlacFile(filePath, outputDirectory);
+
+      case undefined:
+        return false;
     }
-
-    if (extension === '.aif' || extension === '.aiff') {
-      return await this.processAiffFile(filePath, outputDirectory);
-    }
-
-    if (extension === '.flac') {
-      return await this.processFlacFile(filePath, outputDirectory);
-    }
-
-    return false;
   }
 
   /**
