@@ -320,6 +320,57 @@ export class BearTunesTagger {
     }
   }
 
+  private static parseMetaflacTags(metaflacOutput: string): Map<string, string[]> {
+    const tags = new Map<string, string[]>();
+
+    for (const line of metaflacOutput.split(/\r?\n/u)) {
+      const separatorIndex = line.indexOf('=');
+
+      if (separatorIndex <= 0) {
+        continue;
+      }
+
+      const tagName = line.slice(0, separatorIndex).trim().toUpperCase();
+      const tagValue = line.slice(separatorIndex + 1);
+
+      const existingValues = tags.get(tagName) ?? [];
+      existingValues.push(tagValue);
+      tags.set(tagName, existingValues);
+    }
+
+    return tags;
+  }
+
+  private static getSingleMetaflacTag(
+    tags: Map<string, string[]>,
+    ...tagNames: string[]
+  ): string | undefined {
+    for (const tagName of tagNames) {
+      const values = tags.get(tagName.toUpperCase());
+
+      if (values && values.length > 0) {
+        return values[0];
+      }
+    }
+
+    return undefined;
+  }
+
+  private static getMultiMetaflacTag(
+    tags: Map<string, string[]>,
+    ...tagNames: string[]
+  ): string[] | undefined {
+    for (const tagName of tagNames) {
+      const values = tags.get(tagName.toUpperCase());
+
+      if (values && values.length > 0) {
+        return values;
+      }
+    }
+
+    return undefined;
+  }
+
   extractFlacTag(flacFilePath: string): TrackInfo {
     const metaflacResult = childProcess.spawnSync('metaflac', [
       '--show-tag=artist',
@@ -346,16 +397,18 @@ export class BearTunesTagger {
 
     const metaflacOutput = metaflacResult.stdout.toString();
 
+    const tags = BearTunesTagger.parseMetaflacTags(metaflacOutput);
+
     const rawTrackInfo = {
-      artists: BearTunesTagger.extractMultiTagFromMetaflacOutput(metaflacOutput, 'artist'),
-      title: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'title'),
-      genre: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'genre'),
-      released: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'date'),
+      artists: BearTunesTagger.getMultiMetaflacTag(tags, 'ARTIST'),
+      title: BearTunesTagger.getSingleMetaflacTag(tags, 'TITLE'),
+      genre: BearTunesTagger.getSingleMetaflacTag(tags, 'GENRE'),
+      released: BearTunesTagger.getSingleMetaflacTag(tags, 'DATE'),
       album: {
-        artists: BearTunesTagger.extractMultiTagFromMetaflacOutput(metaflacOutput, 'albumartist'),
-        title: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'album'),
-        trackNumber: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracknumber'),
-        trackTotal: BearTunesTagger.extractSingleTagFromMetaflacOutput(metaflacOutput, 'tracktotal'),
+        artists: BearTunesTagger.getMultiMetaflacTag(tags, 'ALBUMARTIST'),
+        title: BearTunesTagger.getSingleMetaflacTag(tags, 'ALBUM'),
+        trackNumber: BearTunesTagger.getSingleMetaflacTag(tags, 'TRACKNUMBER'),
+        trackTotal: BearTunesTagger.getSingleMetaflacTag(tags, 'TRACKTOTAL'),
       },
     };
 
@@ -368,20 +421,6 @@ export class BearTunesTagger {
     }
 
     return parsedTrackInfo.data;
-  }
-
-  private static extractSingleTagFromMetaflacOutput(metaflacOutput: string, tagName: string): string | undefined {
-    const matchArray = BearTunesTagger.getMetaflacTagEntries(metaflacOutput, tagName, false);
-    return (matchArray !== null && matchArray.length > 0) ? matchArray[0] : undefined;
-  }
-
-  private static extractMultiTagFromMetaflacOutput(metaflacOutput: string, tagName: string): string[] | undefined {
-    const matchArray = BearTunesTagger.getMetaflacTagEntries(metaflacOutput, tagName, true);
-    return (matchArray !== null && matchArray.length > 0) ? matchArray : undefined;
-  }
-
-  private static getMetaflacTagEntries(metaflacOutput: string, tagName: string, multi = false): string[] | null {
-    return metaflacOutput.match(new RegExp(`(?<=^${tagName}=).+$`, multi ? 'gm' : 'm'));
   }
 
   private static isBetterMatchingTrack(
