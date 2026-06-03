@@ -192,7 +192,14 @@ export interface DownloadImageAssetOptions {
   verbose?: boolean;
 }
 
-// https://xiph.org/flac/format.html
+/**
+ * FLAC PICTURE block type values defined by the FLAC format specification.
+ *
+ * These numeric identifiers are used by `metaflac` when listing or exporting
+ * embedded picture blocks from a FLAC file.
+ *
+ * @see https://xiph.org/flac/format.html
+ */
 export enum FlacPictureBlockType {
   FileIcon = 1, // 32x32 PNG only
   CoverFront = 3,
@@ -201,11 +208,21 @@ export enum FlacPictureBlockType {
   PublisherLogotype = 20,
 }
 
+/**
+ * Basic metadata of a PICTURE block embedded in a FLAC file.
+ *
+ * Contains the FLAC picture block type and declared MIME type.
+ */
 export interface FlacPictureBlockInfo {
   blockType: FlacPictureBlockType,
   mimeType: string,
 }
 
+/**
+ * Metadata of an exported FLAC PICTURE block.
+ *
+ * Extends {@link FlacPictureBlockInfo} with the path to the exported image file.
+ */
 export interface ExportedFlacPictureBlock extends FlacPictureBlockInfo {
   imagePath: string;
 }
