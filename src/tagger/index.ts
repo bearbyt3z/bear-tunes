@@ -33,6 +33,7 @@ import {
   extractTrackNameKeywords,
   formatLocalDateToIsoDateString,
   formatZodErrorIssues,
+  generateRandomHexString,
   getFirstLine,
   isSupportedArtworkFile,
   prompt,
@@ -45,6 +46,7 @@ import {
 
 import {
   BeatportSearchResultArtistType,
+  FlacImageBlockType,
   ID3Version,
 } from './types.js';
 
@@ -70,6 +72,7 @@ import type {
   BeatportSearchResultTrackInfo,
   BeatportTrackInfo,
   DownloadImageAssetOptions, // @internal
+  FlacImageBlockExport,
   MatchingTrack,
   TrackArtworkFiles,
 } from './types.js';
@@ -83,6 +86,7 @@ import type {
 // exporting enums & types, so they will be included in the tagger import
 export {
   BeatportSearchResultArtistType,
+  FlacImageBlockType,
   ID3Version,
 };
 
@@ -97,6 +101,7 @@ export type {
   BeatportTrackInfo,
   BeatportAlbumInfo,
   BeatportPublisherInfo,
+  FlacImageBlockExport,
 };
 
 /**
@@ -534,6 +539,74 @@ export class BearTunesTagger {
     }
 
     return parsedTrackInfo.data;
+  }
+
+  static extractArtworkFromFlac(flacFilePath: string, imageBlockTypes: FlacImageBlockType[]): FlacImageBlockExport[] {
+    const result: FlacImageBlockExport[] = [];
+
+    const flacImageBlocks = BearTunesTagger.getFlacImageBlockExport(flacFilePath);
+    if (flacImageBlocks.length < 1) {
+      return result;
+    }
+
+    const matchingImageBlocks = flacImageBlocks.filter((info) => imageBlockTypes.includes(info.blockType));
+    if (matchingImageBlocks.length < 1) {
+      return result;
+    }
+
+    for (const imageBlockInfo of matchingImageBlocks) {
+      const imageFileExtension = imageBlockInfo.mimeType.replace('image/', '');
+      const imageFilePath = `${generateRandomHexString()}.${imageFileExtension}`;
+
+      const metaflacResult = childProcess.spawnSync('metaflac', [
+        `--block-number=${imageBlockInfo.blockType.toString()}`,
+        `--export-picture-to=${imageFilePath}`,
+        flacFilePath,
+      ]);
+
+      if (metaflacResult.status === 0) {
+        imageBlockInfo.imagePath = imageFilePath;
+        result.push(imageBlockInfo);
+      }
+    }
+
+    return result;
+  }
+
+  static getFlacImageBlockExport(flacFilePath: string): FlacImageBlockExport[] {
+    const result: FlacImageBlockExport[] = [];
+
+    const metaflacResult = childProcess.spawnSync(
+      `metaflac --list --block-type=PICTURE "${flacFilePath}" | grep -A8 -i metadata`,
+      { shell: true },
+    );
+
+    if (metaflacResult.status !== 0) {
+      return result;
+    }
+
+    const stdoutAsString = metaflacResult.stdout.toString();
+    const blockNumbers = stdoutAsString.match(/(?<=METADATA block #)\d/gi) ?? [];
+    const mimeTypes = stdoutAsString.match(/(?<=MIME type: )[a-z]*\/[a-z]*/gi) ?? [];
+
+    const minLength = Math.min(blockNumbers.length, mimeTypes.length);
+
+    if (minLength === 0) { // no images found
+      return result;
+    }
+
+    if (blockNumbers.length !== mimeTypes.length) {
+      logger.warn(`Amount of block numbers different than amount of mime types: only ${minLength} will be used`);
+    }
+
+    for (let i = 0; i < minLength; i += 1) {
+      result.push({
+        blockType: Number(blockNumbers[i]) as FlacImageBlockType,
+        mimeType: mimeTypes[i],
+      });
+    }
+
+    return result;
   }
 
   private static isBetterMatchingTrack(

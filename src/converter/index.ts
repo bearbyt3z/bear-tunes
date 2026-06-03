@@ -5,10 +5,10 @@ import * as path from 'node:path';
 import logger from '#logger';
 import {
   BearTunesTagger,
+  FlacImageBlockType,
 } from '#tagger';
 import {
   formatLocalDateToIsoDateString,
-  generateRandomHexString,
 } from '#tools';
 
 import {
@@ -16,13 +16,15 @@ import {
   Quality,
   ChannelMode,
   ReplayGain,
-  FlacImageBlockType,
 } from './types.js';
+
+import type {
+  FlacImageBlockExport,
+} from '#tagger';
 
 import type {
   BearTunesConverterOptions,
   BearTunesConverterResult,
-  FlacImageBlockExport,
 } from './types.js';
 
 // reexporting enums & types, so they will be included in the converter import
@@ -31,13 +33,11 @@ export {
   Quality,
   ChannelMode,
   ReplayGain,
-  FlacImageBlockType,
 };
 
 export type {
   BearTunesConverterOptions,
   BearTunesConverterResult,
-  FlacImageBlockExport,
 };
 
 // Default options are intentionally defined as immutable:
@@ -273,7 +273,7 @@ export class BearTunesConverter {
       }
 
       // lame codec supports only front cover option:
-      flacImages = BearTunesConverter.extractArtworkFromFlac(flacFilePath, [FlacImageBlockType.CoverFront]);
+      flacImages = BearTunesTagger.extractArtworkFromFlac(flacFilePath, [FlacImageBlockType.CoverFront]);
       if (flacImages.length > 0) {
         tagOptions.push(`--ti "${flacImages[0].imagePath}"`);
       }
@@ -306,74 +306,6 @@ export class BearTunesConverter {
     result.error = childResult.error;
     result.lameStdout = childResult.stdout?.toString();
     result.lameStderr = childResult.stderr?.toString();
-
-    return result;
-  }
-
-  static extractArtworkFromFlac(flacFilePath: string, imageBlockTypes: FlacImageBlockType[]): FlacImageBlockExport[] {
-    const result: FlacImageBlockExport[] = [];
-
-    const flacImageBlocks = BearTunesConverter.getFlacImageBlockExport(flacFilePath);
-    if (flacImageBlocks.length < 1) {
-      return result;
-    }
-
-    const matchingImageBlocks = flacImageBlocks.filter((info) => imageBlockTypes.includes(info.blockType));
-    if (matchingImageBlocks.length < 1) {
-      return result;
-    }
-
-    for (const imageBlockInfo of matchingImageBlocks) {
-      const imageFileExtension = imageBlockInfo.mimeType.replace('image/', '');
-      const imageFilePath = `${generateRandomHexString()}.${imageFileExtension}`;
-
-      const metaflacResult = childProcess.spawnSync('metaflac', [
-        `--block-number=${imageBlockInfo.blockType.toString()}`,
-        `--export-picture-to=${imageFilePath}`,
-        flacFilePath,
-      ]);
-
-      if (metaflacResult.status === 0) {
-        imageBlockInfo.imagePath = imageFilePath;
-        result.push(imageBlockInfo);
-      }
-    }
-
-    return result;
-  }
-
-  static getFlacImageBlockExport(flacFilePath: string): FlacImageBlockExport[] {
-    const result: FlacImageBlockExport[] = [];
-
-    const metaflacResult = childProcess.spawnSync(
-      `metaflac --list --block-type=PICTURE "${flacFilePath}" | grep -A8 -i metadata`,
-      { shell: true },
-    );
-
-    if (metaflacResult.status !== 0) {
-      return result;
-    }
-
-    const stdoutAsString = metaflacResult.stdout.toString();
-    const blockNumbers = stdoutAsString.match(/(?<=METADATA block #)\d/gi) ?? [];
-    const mimeTypes = stdoutAsString.match(/(?<=MIME type: )[a-z]*\/[a-z]*/gi) ?? [];
-
-    const minLength = Math.min(blockNumbers.length, mimeTypes.length);
-
-    if (minLength === 0) { // no images found
-      return result;
-    }
-
-    if (blockNumbers.length !== mimeTypes.length) {
-      logger.warn(`Amount of block numbers different than amount of mime types: only ${minLength} will be used`);
-    }
-
-    for (let i = 0; i < minLength; i += 1) {
-      result.push({
-        blockType: Number(blockNumbers[i]) as FlacImageBlockType,
-        mimeType: mimeTypes[i],
-      });
-    }
 
     return result;
   }

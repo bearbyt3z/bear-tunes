@@ -48,18 +48,3 @@ export enum ReplayGain {
   Fast = '--replaygain-fast',
   None = '--noreplaygain',
 }
-
-export interface FlacImageBlockExport {
-  blockType: FlacImageBlockType,
-  mimeType: string,
-  imagePath?: string,
-}
-
-// https://xiph.org/flac/format.html
-export enum FlacImageBlockType {
-  FileIcon = 1, // 32x32 PNG only
-  CoverFront = 3,
-  CoverBack = 4,
-  BrightColouredFish = 17,
-  PublisherLogotype = 20,
-}
