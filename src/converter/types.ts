@@ -1,21 +1,21 @@
 export interface BearTunesConverterResult {
-  status: number | null,
-  error: Error | undefined,
-  lameStdout: string | undefined,
-  lameStderr: string | undefined,
-  outputPath: string | undefined,
+  status: number | null;
+  error: Error | undefined;
+  lameStdout: string | undefined;
+  lameStderr: string | undefined;
+  outputPath: string | undefined;
 }
 
 export interface BearTunesConverterOptions {
-  bitrateMethod: BitrateMethod,
-  bitrateValue: number, // for CBR & ABR
-  bitrateValueMinimum: number, // for VBR
-  bitrateValueMaximum: number, // for VBR
-  quality: Quality,
-  channelMode: ChannelMode,
-  replayGain: ReplayGain,
-  transferTagEntries: boolean,
-  verbose: boolean,
+  bitrateMethod: BitrateMethod;
+  bitrateValue: number; // for CBR & ABR
+  bitrateValueMinimum: number; // for VBR
+  bitrateValueMaximum: number; // for VBR
+  quality: Quality;
+  channelMode: ChannelMode;
+  replayGain: ReplayGain;
+  transferTagEntries: boolean;
+  verbose: boolean;
 }
 
 export enum BitrateMethod {

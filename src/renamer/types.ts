@@ -1,5 +1,5 @@
 export interface BearTunesRenamerOptions {
-  filenamePattern: string,
-  directoryPattern: string,
-  verbose: boolean,
+  filenamePattern: string;
+  directoryPattern: string;
+  verbose: boolean;
 }

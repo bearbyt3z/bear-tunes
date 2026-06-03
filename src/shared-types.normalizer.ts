@@ -107,7 +107,7 @@ function normalizeArtistArray(value: unknown, title?: string): string[] | undefi
 function normalizeGenreInfo(
   genreValue: unknown,
   subgenreValue: unknown,
-): { genre?: string, subgenre?: string } {
+): { genre?: string; subgenre?: string } {
   const normalizedGenreValue = normalizeString(genreValue);
 
   if (!normalizedGenreValue) {

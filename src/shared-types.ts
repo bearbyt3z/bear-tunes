@@ -34,22 +34,22 @@
  * This type is intended to represent already-normalized metadata, not raw source payloads.
  */
 export interface TrackInfo {
-  url?: URL,
-  artists?: string[],
-  title?: string,
-  remixers?: string[],
-  released?: Date,
-  year?: number,
-  genre?: string,
-  subgenre?: string,
-  bpm?: number,
-  key?: string,
-  isrc?: string,
-  ufid?: string,
-  waveform?: URL,
-  album?: AlbumInfo,
-  publisher?: PublisherInfo,
-  details?: TrackDetails,
+  url?: URL;
+  artists?: string[];
+  title?: string;
+  remixers?: string[];
+  released?: Date;
+  year?: number;
+  genre?: string;
+  subgenre?: string;
+  bpm?: number;
+  key?: string;
+  isrc?: string;
+  ufid?: string;
+  waveform?: URL;
+  album?: AlbumInfo;
+  publisher?: PublisherInfo;
+  details?: TrackDetails;
 }
 
 /**
@@ -68,13 +68,13 @@ export interface TrackInfo {
  * - The whole object is omitted from canonical `TrackInfo` when `title` cannot be normalized.
  */
 export interface AlbumInfo {
-  title: string,
-  artists?: string[],
-  catalogNumber?: string,
-  trackNumber?: number,
-  trackTotal?: number,
-  url?: URL,
-  artwork?: URL,
+  title: string;
+  artists?: string[];
+  catalogNumber?: string;
+  trackNumber?: number;
+  trackTotal?: number;
+  url?: URL;
+  artwork?: URL;
 }
 
 /**
@@ -88,9 +88,9 @@ export interface AlbumInfo {
  * - The whole object is omitted from canonical `TrackInfo` when `name` cannot be normalized.
  */
 export interface PublisherInfo {
-  name: string,
-  url?: URL,
-  logotype?: URL,
+  name: string;
+  url?: URL;
+  logotype?: URL;
 }
 
 /**
@@ -103,5 +103,5 @@ export interface PublisherInfo {
  * - The whole object is omitted from canonical `TrackInfo` when `duration` cannot be normalized.
  */
 export interface TrackDetails {
-  duration: number,
+  duration: number;
 }
