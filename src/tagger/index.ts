@@ -543,6 +543,15 @@ export class BearTunesTagger {
     return parsedTrackInfo.data;
   }
 
+  /**
+   * Exports selected PICTURE blocks from a FLAC file to image files.
+   *
+   * Only blocks whose type is included in `blockTypes` are exported.
+   *
+   * @param flacFilePath - Path to the source FLAC file.
+   * @param blockTypes - FLAC PICTURE block types to export.
+   * @returns Metadata of successfully exported picture blocks, including image file paths.
+   */
   static exportFlacPictureBlocks(
     flacFilePath: string,
     blockTypes: FlacPictureBlockType[],
@@ -580,6 +589,15 @@ export class BearTunesTagger {
     return result;
   }
 
+  /**
+   * Lists PICTURE blocks embedded in a FLAC file.
+   *
+   * The returned metadata contains the FLAC picture block type and declared MIME type
+   * for each block that could be parsed from `metaflac` output.
+   *
+   * @param flacFilePath - Path to the FLAC file.
+   * @returns Metadata of embedded FLAC PICTURE blocks.
+   */
   static listFlacPictureBlocks(flacFilePath: string): FlacPictureBlockInfo[] {
     const result: FlacPictureBlockInfo[] = [];
 
