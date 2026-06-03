@@ -118,6 +118,17 @@ export default defineConfig(
         catch: 'always',
       }],
 
+      '@stylistic/member-delimiter-style': ['error', {
+        multiline: {
+          delimiter: 'semi',
+          requireLast: true,
+        },
+        singleline: {
+          delimiter: 'semi',
+          requireLast: false,
+        },
+      }],
+
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 
       // Import ordering is intentionally not enforced for now.
