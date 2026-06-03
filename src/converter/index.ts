@@ -5,7 +5,7 @@ import * as path from 'node:path';
 import logger from '#logger';
 import {
   BearTunesTagger,
-  FlacImageBlockType,
+  FlacPictureBlockType,
 } from '#tagger';
 import {
   formatLocalDateToIsoDateString,
@@ -19,7 +19,7 @@ import {
 } from './types.js';
 
 import type {
-  FlacImageBlockExport,
+  ExportedFlacPictureBlock,
 } from '#tagger';
 
 import type {
@@ -237,7 +237,7 @@ export class BearTunesConverter {
     }
 
     let tagOptionsJoined = '';
-    let flacImages : FlacImageBlockExport[] = [];
+    let exportedFlacPictures: ExportedFlacPictureBlock[] = [];
 
     if (this.options.transferTagEntries) {
       const flacTrackInfo = new BearTunesTagger({ verbose: this.options.verbose }).extractFlacTag(flacFilePath);
@@ -273,9 +273,9 @@ export class BearTunesConverter {
       }
 
       // lame codec supports only front cover option:
-      flacImages = BearTunesTagger.extractArtworkFromFlac(flacFilePath, [FlacImageBlockType.CoverFront]);
-      if (flacImages.length > 0) {
-        tagOptions.push(`--ti "${flacImages[0].imagePath}"`);
+      exportedFlacPictures = BearTunesTagger.exportFlacPictureBlocks(flacFilePath, [FlacPictureBlockType.CoverFront]);
+      if (exportedFlacPictures.length > 0) {
+        tagOptions.push(`--ti "${exportedFlacPictures[0].imagePath}"`);
       }
 
       tagOptionsJoined = (tagOptions.length > 1) ? tagOptions.join(' ') : ''; // length > 1 means there is at least one tag entry to set (the fist one is --add-id3v2)
@@ -290,7 +290,7 @@ export class BearTunesConverter {
       { shell: true, stdio: 'inherit' },
     );
 
-    flacImages.forEach((imageInfo) => imageInfo.imagePath && fs.unlinkSync(imageInfo.imagePath));
+    exportedFlacPictures.forEach((imageInfo) => fs.unlinkSync(imageInfo.imagePath));
 
     if (childResult.status === null) {
       result.status = 106;

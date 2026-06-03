@@ -46,7 +46,7 @@ import {
 
 import {
   BeatportSearchResultArtistType,
-  FlacImageBlockType,
+  FlacPictureBlockType,
   ID3Version,
 } from './types.js';
 
@@ -72,7 +72,8 @@ import type {
   BeatportSearchResultTrackInfo,
   BeatportTrackInfo,
   DownloadImageAssetOptions, // @internal
-  FlacImageBlockExport,
+  ExportedFlacPictureBlock,
+  FlacPictureBlockInfo,
   MatchingTrack,
   TrackArtworkFiles,
 } from './types.js';
@@ -86,7 +87,7 @@ import type {
 // exporting enums & types, so they will be included in the tagger import
 export {
   BeatportSearchResultArtistType,
-  FlacImageBlockType,
+  FlacPictureBlockType,
   ID3Version,
 };
 
@@ -101,7 +102,8 @@ export type {
   BeatportTrackInfo,
   BeatportAlbumInfo,
   BeatportPublisherInfo,
-  FlacImageBlockExport,
+  ExportedFlacPictureBlock,
+  FlacPictureBlockInfo,
 };
 
 /**
@@ -541,40 +543,45 @@ export class BearTunesTagger {
     return parsedTrackInfo.data;
   }
 
-  static extractArtworkFromFlac(flacFilePath: string, imageBlockTypes: FlacImageBlockType[]): FlacImageBlockExport[] {
-    const result: FlacImageBlockExport[] = [];
+  static exportFlacPictureBlocks(
+    flacFilePath: string,
+    blockTypes: FlacPictureBlockType[],
+  ): ExportedFlacPictureBlock[] {
+    const result: ExportedFlacPictureBlock[] = [];
 
-    const flacImageBlocks = BearTunesTagger.getFlacImageBlockExport(flacFilePath);
-    if (flacImageBlocks.length < 1) {
+    const flacPictureBlocks = BearTunesTagger.listFlacPictureBlocks(flacFilePath);
+    if (flacPictureBlocks.length < 1) {
       return result;
     }
 
-    const matchingImageBlocks = flacImageBlocks.filter((info) => imageBlockTypes.includes(info.blockType));
-    if (matchingImageBlocks.length < 1) {
+    const matchingPictureBlocks = flacPictureBlocks.filter((info) => blockTypes.includes(info.blockType));
+    if (matchingPictureBlocks.length < 1) {
       return result;
     }
 
-    for (const imageBlockInfo of matchingImageBlocks) {
-      const imageFileExtension = imageBlockInfo.mimeType.replace('image/', '');
-      const imageFilePath = `${generateRandomHexString()}.${imageFileExtension}`;
+    for (const pictureBlockInfo of matchingPictureBlocks) {
+      const imageFileExtension = pictureBlockInfo.mimeType.replace('image/', '');
+      const imagePath = `${generateRandomHexString()}.${imageFileExtension}`;
 
       const metaflacResult = childProcess.spawnSync('metaflac', [
-        `--block-number=${imageBlockInfo.blockType.toString()}`,
-        `--export-picture-to=${imageFilePath}`,
+        `--block-number=${pictureBlockInfo.blockType.toString()}`,
+        `--export-picture-to=${imagePath}`,
         flacFilePath,
       ]);
 
       if (metaflacResult.status === 0) {
-        imageBlockInfo.imagePath = imageFilePath;
-        result.push(imageBlockInfo);
+        result.push({
+          ...pictureBlockInfo,
+          imagePath,
+        });
       }
     }
 
     return result;
   }
 
-  static getFlacImageBlockExport(flacFilePath: string): FlacImageBlockExport[] {
-    const result: FlacImageBlockExport[] = [];
+  static listFlacPictureBlocks(flacFilePath: string): FlacPictureBlockInfo[] {
+    const result: FlacPictureBlockInfo[] = [];
 
     const metaflacResult = childProcess.spawnSync(
       `metaflac --list --block-type=PICTURE "${flacFilePath}" | grep -A8 -i metadata`,
@@ -601,7 +608,7 @@ export class BearTunesTagger {
 
     for (let i = 0; i < minLength; i += 1) {
       result.push({
-        blockType: Number(blockNumbers[i]) as FlacImageBlockType,
+        blockType: Number(blockNumbers[i]) as FlacPictureBlockType,
         mimeType: mimeTypes[i],
       });
     }

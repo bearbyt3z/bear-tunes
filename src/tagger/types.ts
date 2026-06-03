@@ -193,7 +193,7 @@ export interface DownloadImageAssetOptions {
 }
 
 // https://xiph.org/flac/format.html
-export enum FlacImageBlockType {
+export enum FlacPictureBlockType {
   FileIcon = 1, // 32x32 PNG only
   CoverFront = 3,
   CoverBack = 4,
@@ -201,8 +201,11 @@ export enum FlacImageBlockType {
   PublisherLogotype = 20,
 }
 
-export interface FlacImageBlockExport {
-  blockType: FlacImageBlockType,
+export interface FlacPictureBlockInfo {
+  blockType: FlacPictureBlockType,
   mimeType: string,
-  imagePath?: string,
+}
+
+export interface ExportedFlacPictureBlock extends FlacPictureBlockInfo {
+  imagePath: string;
 }
