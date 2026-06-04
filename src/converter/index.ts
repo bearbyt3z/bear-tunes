@@ -239,28 +239,30 @@ export class BearTunesConverter {
       tagOptionsJoined = preparedTagTransfer.lameTagOptions.join(' ');
     }
 
-    const childResult = childProcess.spawnSync(
-      `flac --decode --stdout "${flacFilePath}" | lame ${lameOptionsJoined} ${tagOptionsJoined} - "${outputPathComputed}"`,
-      { shell: true, stdio: 'inherit' },
-    );
+    try {
+      const childResult = childProcess.spawnSync(
+        `flac --decode --stdout "${flacFilePath}" | lame ${lameOptionsJoined} ${tagOptionsJoined} - "${outputPathComputed}"`,
+        { shell: true, stdio: 'inherit' },
+      );
 
-    temporaryFiles.forEach((filePath) => fs.unlinkSync(filePath));
+      if (childResult.status === null) {
+        result.status = 106;
+        result.error = new Error(`Convertion failed due to a signal: ${childResult.signal ?? 'signal is null'}`);
+        return result;
+      }
 
-    if (childResult.status === null) {
-      result.status = 106;
-      result.error = new Error(`Convertion failed due to a signal: ${childResult.signal ?? 'signal is null'}`);
+      if (deleteFlacAfterConvertion) {
+        fs.unlinkSync(flacFilePath);
+      }
+
+      result.status = childResult.status;
+      result.error = childResult.error;
+      result.lameStdout = childResult.stdout?.toString();
+      result.lameStderr = childResult.stderr?.toString();
+
       return result;
+    } finally {
+      temporaryFiles.forEach((filePath) => fs.unlinkSync(filePath));
     }
-
-    if (deleteFlacAfterConvertion) {
-      fs.unlinkSync(flacFilePath);
-    }
-
-    result.status = childResult.status;
-    result.error = childResult.error;
-    result.lameStdout = childResult.stdout?.toString();
-    result.lameStderr = childResult.stderr?.toString();
-
-    return result;
   }
 }
