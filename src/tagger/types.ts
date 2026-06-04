@@ -227,6 +227,14 @@ export interface ExportedFlacPictureBlock extends FlacPictureBlockInfo {
   imagePath: string;
 }
 
+/**
+ * Prepared metadata transfer payload for FLAC-to-MP3 conversion.
+ *
+ * @property lameTagOptions - `lame` CLI options used to write MP3 tag fields
+ * derived from the source FLAC metadata.
+ * @property temporaryFiles - Paths of temporary files created during transfer
+ * preparation, intended to be removed after conversion completes.
+ */
 export interface PreparedMp3TagTransfer {
   lameTagOptions: string[];
   temporaryFiles: string[];
