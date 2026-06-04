@@ -157,7 +157,7 @@ export class BearTunesConverter {
     };
 
     try {
-      if (!fs.lstatSync(flacFilePath).isFile() || !flacFilePath.match(/\.flac$/)) {
+      if (!fs.lstatSync(flacFilePath).isFile() || !flacFilePath.match(/\.flac$/i)) {
         result.status = 101;
         result.error = new TypeError(`${this.constructor.name}: Specified path ${flacFilePath} is not a file or does not have *.flac extension`);
       }
@@ -173,9 +173,9 @@ export class BearTunesConverter {
 
     try {
       if (outputPath === undefined) {
-        outputPathComputed = flacFilePath.replace(/\.flac$/, '.mp3');
+        outputPathComputed = flacFilePath.replace(/\.flac$/i, '.mp3');
       } else if (fs.lstatSync(outputPath).isDirectory()) {
-        outputPathComputed = outputPath.replace(/\/+$/, path.sep) + path.basename(flacFilePath).replace(/\.flac$/, '.mp3');
+        outputPathComputed = outputPath.replace(/\/+$/, path.sep) + path.basename(flacFilePath).replace(/\.flac$/i, '.mp3');
       } else if (fs.lstatSync(outputPath).isFile()) {
         if (outputPath.match(/\.mp3$/)) {
           outputPathComputed = outputPath;
