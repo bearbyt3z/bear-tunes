@@ -636,6 +636,20 @@ export class BearTunesTagger {
     return result;
   }
 
+  /**
+   * Prepares MP3 tag transfer data from a FLAC file.
+   *
+   * Reads selected metadata from the source FLAC file, maps it to `lame` CLI
+   * tag options used during MP3 conversion, and exports supported embedded
+   * artwork needed for that transfer.
+   *
+   * The returned payload contains both the prepared `lame` options and paths
+   * to temporary files created while exporting artwork. The caller is
+   * responsible for removing those temporary files after conversion completes.
+   *
+   * @param flacFilePath - Path to the source FLAC file.
+   * @returns Prepared MP3 tag transfer payload for use during FLAC-to-MP3 conversion.
+   */
   prepareMp3TagTransferFromFlac(flacFilePath: string): PreparedMp3TagTransfer {
     const result: PreparedMp3TagTransfer = {
       lameTagOptions: [],
