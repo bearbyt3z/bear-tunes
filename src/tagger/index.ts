@@ -75,6 +75,7 @@ import type {
   ExportedFlacPictureBlock,
   FlacPictureBlockInfo,
   MatchingTrack,
+  PreparedMp3TagTransfer,
   TrackArtworkFiles,
 } from './types.js';
 
@@ -104,6 +105,7 @@ export type {
   BeatportPublisherInfo,
   ExportedFlacPictureBlock,
   FlacPictureBlockInfo,
+  PreparedMp3TagTransfer,
 };
 
 /**
@@ -629,6 +631,73 @@ export class BearTunesTagger {
         blockType: Number(blockNumbers[i]) as FlacPictureBlockType,
         mimeType: mimeTypes[i],
       });
+    }
+
+    return result;
+  }
+
+  prepareMp3TagTransferFromFlac(flacFilePath: string): PreparedMp3TagTransfer {
+    const result: PreparedMp3TagTransfer = {
+      lameTagOptions: [],
+      temporaryFiles: [],
+    };
+
+    const flacTrackInfo = this.extractFlacTag(flacFilePath);
+
+    const tagOptions = ['--add-id3v2'];
+
+    if (flacTrackInfo.title) {
+      tagOptions.push(`--tt "${flacTrackInfo.title}"`);
+    }
+
+    if (flacTrackInfo.artists && flacTrackInfo.artists.length > 0) {
+      tagOptions.push(`--ta "${flacTrackInfo.artists.join(', ')}"`);
+    }
+
+    if (flacTrackInfo.genre) {
+      tagOptions.push(`--tg "${flacTrackInfo.genre}"`);
+    }
+
+    if (flacTrackInfo.year) {
+      tagOptions.push(`--ty "${flacTrackInfo.year}"`);
+    }
+
+    if (flacTrackInfo.released) {
+      tagOptions.push(`--tv TORY=${formatLocalDateToIsoDateString(flacTrackInfo.released)}`);
+    }
+
+    if (flacTrackInfo.album) {
+      if (flacTrackInfo.album.title) {
+        tagOptions.push(`--tl "${flacTrackInfo.album.title}"`);
+      }
+
+      if (flacTrackInfo.album.trackNumber) {
+        let albumNumbers = flacTrackInfo.album.trackNumber.toString();
+
+        if (flacTrackInfo.album.trackTotal) {
+          albumNumbers += `/${flacTrackInfo.album.trackTotal.toString()}`;
+        }
+
+        tagOptions.push(`--tn "${albumNumbers}"`);
+      }
+    }
+
+    // lame codec supports only front cover option:
+    const exportedFlacPictures = BearTunesTagger.exportFlacPictureBlocks(
+      flacFilePath,
+      [FlacPictureBlockType.CoverFront],
+    );
+
+    if (exportedFlacPictures.length > 0) {
+      tagOptions.push(`--ti "${exportedFlacPictures[0].imagePath}"`);
+      result.temporaryFiles.push(...exportedFlacPictures.map((imageInfo) => imageInfo.imagePath));
+    }
+
+    // length > 1 means there is at least one tag entry to set (the fist one is --add-id3v2)
+    result.lameTagOptions = (tagOptions.length > 1) ? tagOptions : [];
+
+    if (this.options.verbose) {
+      logger.info(`Using following tag options: ${result.lameTagOptions.join(' ')}`);
     }
 
     return result;

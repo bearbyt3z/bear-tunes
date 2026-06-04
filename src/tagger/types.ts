@@ -226,3 +226,8 @@ export interface FlacPictureBlockInfo {
 export interface ExportedFlacPictureBlock extends FlacPictureBlockInfo {
   imagePath: string;
 }
+
+export interface PreparedMp3TagTransfer {
+  lameTagOptions: string[];
+  temporaryFiles: string[];
+}
