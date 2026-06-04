@@ -58,18 +58,22 @@ export class BearTunesConverter {
     };
   }
 
-  aiffToFlac(
-    aiffFilePath: string,
-    outputPath: string | undefined = undefined,
-    deleteAiffAfterConvertion = false,
-  ): BearTunesConverterResult {
-    const result: BearTunesConverterResult = {
+  private static createEmptyConverterResult(): BearTunesConverterResult {
+    return {
       status: 0,
       error: undefined,
       lameStdout: undefined,
       lameStderr: undefined,
       outputPath: undefined,
     };
+  }
+
+  aiffToFlac(
+    aiffFilePath: string,
+    outputPath: string | undefined = undefined,
+    deleteAiffAfterConvertion = false,
+  ): BearTunesConverterResult {
+    const result = BearTunesConverter.createEmptyConverterResult();
 
     try {
       if (!fs.lstatSync(aiffFilePath).isFile() || !aiffFilePath.match(/\.(aif|aiff)$/i)) {
@@ -148,13 +152,7 @@ export class BearTunesConverter {
   }
 
   flacToMp3(flacFilePath: string, outputPath: string | undefined = undefined, deleteFlacAfterConvertion = false): BearTunesConverterResult {
-    const result: BearTunesConverterResult = {
-      status: 0,
-      error: undefined,
-      lameStdout: undefined,
-      lameStderr: undefined,
-      outputPath: undefined,
-    };
+    const result = BearTunesConverter.createEmptyConverterResult();
 
     try {
       if (!fs.lstatSync(flacFilePath).isFile() || !flacFilePath.match(/\.flac$/i)) {
