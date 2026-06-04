@@ -68,6 +68,73 @@ export class BearTunesConverter {
     };
   }
 
+  private static resolveOutputPath(
+    inputFilePath: string,
+    outputPath: string | undefined,
+    inputExtensionPattern: RegExp,
+    outputExtension: string,
+    expectedOutputExtensionPattern: RegExp,
+    className: string,
+  ): {
+    outputPathComputed: string | undefined;
+    status: number;
+    error: Error | undefined;
+  } {
+    try {
+      if (outputPath === undefined) {
+        return {
+          outputPathComputed: inputFilePath.replace(inputExtensionPattern, outputExtension),
+          status: 0,
+          error: undefined,
+        };
+      }
+
+      if (fs.lstatSync(outputPath).isDirectory()) {
+        return {
+          outputPathComputed: outputPath.replace(/\/+$/, path.sep)
+            + path.basename(inputFilePath).replace(inputExtensionPattern, outputExtension),
+          status: 0,
+          error: undefined,
+        };
+      }
+
+      if (fs.lstatSync(outputPath).isFile()) {
+        if (outputPath.match(expectedOutputExtensionPattern)) {
+          return {
+            outputPathComputed: outputPath,
+            status: 0,
+            error: undefined,
+          };
+        }
+
+        return {
+          outputPathComputed: undefined,
+          status: 103,
+          error: new TypeError(
+            `${className}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
+          ),
+        };
+      }
+
+      return {
+        outputPathComputed: undefined,
+        status: 104,
+        error: new TypeError(
+          `${className}: Specified output path ${outputPath} is neither a file nor directory`,
+        ),
+      };
+    } catch (error) {
+      return {
+        outputPathComputed: undefined,
+        status: 105,
+        error: new ReferenceError(
+          `${className}: Cannot access file ${outputPath} (incorrect path?)`,
+          { cause: error },
+        ),
+      };
+    }
+  }
+
   aiffToFlac(
     aiffFilePath: string,
     outputPath: string | undefined = undefined,
@@ -90,36 +157,18 @@ export class BearTunesConverter {
       );
     }
 
-    let outputPathComputed: string | undefined;
+    const resolvedOutputPath = BearTunesConverter.resolveOutputPath(
+      aiffFilePath,
+      outputPath,
+      /\.(aif|aiff)$/i,
+      '.flac',
+      /\.flac$/i,
+      this.constructor.name,
+    );
 
-    try {
-      if (outputPath === undefined) {
-        outputPathComputed = aiffFilePath.replace(/\.(aif|aiff)$/i, '.flac');
-      } else if (fs.lstatSync(outputPath).isDirectory()) {
-        outputPathComputed = outputPath.replace(/\/+$/, path.sep)
-          + path.basename(aiffFilePath).replace(/\.(aif|aiff)$/i, '.flac');
-      } else if (fs.lstatSync(outputPath).isFile()) {
-        if (outputPath.match(/\.flac$/i)) {
-          outputPathComputed = outputPath;
-        } else {
-          result.status = 103;
-          result.error = new TypeError(
-            `${this.constructor.name}: Specified output path ${outputPath} is a file but does not have *.flac extension`,
-          );
-        }
-      } else {
-        result.status = 104;
-        result.error = new TypeError(
-          `${this.constructor.name}: Specified output path ${outputPath} is neither a file nor directory`,
-        );
-      }
-    } catch (error) {
-      result.status = 105;
-      result.error = new ReferenceError(
-        `${this.constructor.name}: Cannot access file ${outputPath} (incorrect path?)`,
-        { cause: error },
-      );
-    }
+    const outputPathComputed = resolvedOutputPath.outputPathComputed;
+    result.status = resolvedOutputPath.status;
+    result.error = resolvedOutputPath.error;
 
     if (result.status !== 0 || outputPathComputed === undefined) {
       return result;
@@ -167,31 +216,18 @@ export class BearTunesConverter {
       );
     }
 
-    let outputPathComputed: string | undefined;
+    const resolvedOutputPath = BearTunesConverter.resolveOutputPath(
+      flacFilePath,
+      outputPath,
+      /\.flac$/i,
+      '.mp3',
+      /\.mp3$/i,
+      this.constructor.name,
+    );
 
-    try {
-      if (outputPath === undefined) {
-        outputPathComputed = flacFilePath.replace(/\.flac$/i, '.mp3');
-      } else if (fs.lstatSync(outputPath).isDirectory()) {
-        outputPathComputed = outputPath.replace(/\/+$/, path.sep) + path.basename(flacFilePath).replace(/\.flac$/i, '.mp3');
-      } else if (fs.lstatSync(outputPath).isFile()) {
-        if (outputPath.match(/\.mp3$/)) {
-          outputPathComputed = outputPath;
-        } else {
-          result.status = 103;
-          result.error = new TypeError(`${this.constructor.name}: Specified output path ${outputPath} is a file but does not have *.mp3 extension`);
-        }
-      } else {
-        result.status = 104;
-        result.error = new TypeError(`${this.constructor.name}: Specified output path ${outputPath} is neither a file nor directory`);
-      }
-    } catch (error) {
-      result.status = 105;
-      result.error = new ReferenceError(
-        `${this.constructor.name}: Cannot access file ${outputPath} (incorrect path?)`,
-        { cause: error },
-      );
-    }
+    const outputPathComputed = resolvedOutputPath.outputPathComputed;
+    result.status = resolvedOutputPath.status;
+    result.error = resolvedOutputPath.error;
 
     if (result.status !== 0 || outputPathComputed === undefined) {
       return result;
