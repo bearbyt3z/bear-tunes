@@ -135,6 +135,40 @@ export class BearTunesConverter {
     }
   }
 
+  private static validateInputFile(
+    inputFilePath: string,
+    expectedExtensionPattern: RegExp,
+    expectedExtensionDescription: string,
+    className: string,
+  ): {
+    status: number;
+    error: Error | undefined;
+  } {
+    try {
+      if (!fs.lstatSync(inputFilePath).isFile() || !inputFilePath.match(expectedExtensionPattern)) {
+        return {
+          status: 101,
+          error: new TypeError(
+            `${className}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
+          ),
+        };
+      }
+
+      return {
+        status: 0,
+        error: undefined,
+      };
+    } catch (error) {
+      return {
+        status: 102,
+        error: new ReferenceError(
+          `${className}: Cannot access file ${inputFilePath} (incorrect path?)`,
+          { cause: error },
+        ),
+      };
+    }
+  }
+
   aiffToFlac(
     aiffFilePath: string,
     outputPath: string | undefined = undefined,
@@ -142,19 +176,18 @@ export class BearTunesConverter {
   ): BearTunesConverterResult {
     const result = BearTunesConverter.createEmptyConverterResult();
 
-    try {
-      if (!fs.lstatSync(aiffFilePath).isFile() || !aiffFilePath.match(/\.(aif|aiff)$/i)) {
-        result.status = 101;
-        result.error = new TypeError(
-          `${this.constructor.name}: Specified path ${aiffFilePath} is not a file or does not have *.aif or *.aiff extension`,
-        );
-      }
-    } catch (error) {
-      result.status = 102;
-      result.error = new ReferenceError(
-        `${this.constructor.name}: Cannot access file ${aiffFilePath} (incorrect path?)`,
-        { cause: error },
-      );
+    const validatedInputFile = BearTunesConverter.validateInputFile(
+      aiffFilePath,
+      /\.(aif|aiff)$/i,
+      '*.aif or *.aiff',
+      this.constructor.name,
+    );
+
+    result.status = validatedInputFile.status;
+    result.error = validatedInputFile.error;
+
+    if (result.status !== 0) {
+      return result;
     }
 
     const resolvedOutputPath = BearTunesConverter.resolveOutputPath(
@@ -203,17 +236,18 @@ export class BearTunesConverter {
   flacToMp3(flacFilePath: string, outputPath: string | undefined = undefined, deleteFlacAfterConvertion = false): BearTunesConverterResult {
     const result = BearTunesConverter.createEmptyConverterResult();
 
-    try {
-      if (!fs.lstatSync(flacFilePath).isFile() || !flacFilePath.match(/\.flac$/i)) {
-        result.status = 101;
-        result.error = new TypeError(`${this.constructor.name}: Specified path ${flacFilePath} is not a file or does not have *.flac extension`);
-      }
-    } catch (error) {
-      result.status = 102;
-      result.error = new ReferenceError(
-        `${this.constructor.name}: Cannot access file ${flacFilePath} (incorrect path?)`,
-        { cause: error },
-      );
+    const validatedInputFile = BearTunesConverter.validateInputFile(
+      flacFilePath,
+      /\.flac$/i,
+      '*.flac',
+      this.constructor.name,
+    );
+
+    result.status = validatedInputFile.status;
+    result.error = validatedInputFile.error;
+
+    if (result.status !== 0) {
+      return result;
     }
 
     const resolvedOutputPath = BearTunesConverter.resolveOutputPath(
