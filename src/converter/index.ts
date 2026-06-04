@@ -169,6 +169,30 @@ export class BearTunesConverter {
     }
   }
 
+  private static finalizeChildProcessResult(
+    result: BearTunesConverterResult,
+    childResult: childProcess.SpawnSyncReturns<Buffer>,
+    sourceFilePath: string,
+    deleteSourceAfterConvertion: boolean,
+  ): BearTunesConverterResult {
+    if (childResult.status === null) {
+      result.status = 106;
+      result.error = new Error(`Convertion failed due to a signal: ${childResult.signal ?? 'signal is null'}`);
+      return result;
+    }
+
+    if (childResult.status === 0 && deleteSourceAfterConvertion) {
+      fs.unlinkSync(sourceFilePath);
+    }
+
+    result.status = childResult.status;
+    result.error = childResult.error;
+    result.lameStdout = childResult.stdout?.toString();
+    result.lameStderr = childResult.stderr?.toString();
+
+    return result;
+  }
+
   aiffToFlac(
     aiffFilePath: string,
     outputPath: string | undefined = undefined,
@@ -215,22 +239,12 @@ export class BearTunesConverter {
       { stdio: 'inherit' },
     );
 
-    if (childResult.status === null) {
-      result.status = 106;
-      result.error = new Error(`Convertion failed due to a signal: ${childResult.signal ?? 'signal is null'}`);
-      return result;
-    }
-
-    if (childResult.status === 0 && deleteAiffAfterConvertion) {
-      fs.unlinkSync(aiffFilePath);
-    }
-
-    result.status = childResult.status;
-    result.error = childResult.error;
-    result.lameStdout = childResult.stdout?.toString();
-    result.lameStderr = childResult.stderr?.toString();
-
-    return result;
+    return BearTunesConverter.finalizeChildProcessResult(
+      result,
+      childResult,
+      aiffFilePath,
+      deleteAiffAfterConvertion,
+    );
   }
 
   flacToMp3(flacFilePath: string, outputPath: string | undefined = undefined, deleteFlacAfterConvertion = false): BearTunesConverterResult {
@@ -313,22 +327,12 @@ export class BearTunesConverter {
         { shell: true, stdio: 'inherit' },
       );
 
-      if (childResult.status === null) {
-        result.status = 106;
-        result.error = new Error(`Convertion failed due to a signal: ${childResult.signal ?? 'signal is null'}`);
-        return result;
-      }
-
-      if (deleteFlacAfterConvertion) {
-        fs.unlinkSync(flacFilePath);
-      }
-
-      result.status = childResult.status;
-      result.error = childResult.error;
-      result.lameStdout = childResult.stdout?.toString();
-      result.lameStderr = childResult.stderr?.toString();
-
-      return result;
+      return BearTunesConverter.finalizeChildProcessResult(
+        result,
+        childResult,
+        flacFilePath,
+        deleteFlacAfterConvertion,
+      );
     } finally {
       temporaryFiles.forEach((filePath) => fs.unlinkSync(filePath));
     }
