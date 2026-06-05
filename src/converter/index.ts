@@ -201,6 +201,43 @@ export class BearTunesConverter {
     return result;
   }
 
+  private buildLameArguments(): string[] {
+    const result: string[] = [];
+
+    switch (this.options.bitrateMethod) {
+      default:
+      case BitrateMethod.CBR:
+        result.push(
+          this.options.bitrateMethod.toString(),
+          `-b${this.options.bitrateValue.toString()}`,
+        );
+        break;
+
+      case BitrateMethod.VBR:
+        result.push(
+          this.options.bitrateMethod.toString(),
+          `-b${this.options.bitrateValueMinimum.toString()}`,
+          `-B${this.options.bitrateValueMaximum.toString()}`,
+        );
+        break;
+
+      case BitrateMethod.ABR:
+        result.push(
+          this.options.bitrateMethod.toString(),
+          this.options.bitrateValue.toString(),
+        );
+        break;
+    }
+
+    result.push(
+      `-m ${this.options.channelMode.toString()}`,
+      this.options.quality.toString(),
+      this.options.replayGain.toString(),
+    );
+
+    return result;
+  }
+
   aiffToFlac(
     aiffFilePath: string,
     outputPath: string | undefined = undefined,
@@ -291,28 +328,8 @@ export class BearTunesConverter {
 
     result.outputPath = outputPathComputed;
 
-    let bitrateOption = this.options.bitrateMethod.toString();
-    switch (this.options.bitrateMethod) {
-      default:
-      case BitrateMethod.CBR:
-        bitrateOption += ` -b${this.options.bitrateValue.toString()}`;
-        break;
-      case BitrateMethod.VBR:
-        bitrateOption += ` -b${this.options.bitrateValueMinimum.toString()} -B${this.options.bitrateValueMaximum.toString()}`;
-        break;
-      case BitrateMethod.ABR:
-        bitrateOption += ` ${this.options.bitrateValue.toString()}`;
-        break;
-    }
-
-    const lameOptions = [
-      bitrateOption,
-      `-m ${this.options.channelMode.toString()}`,
-      this.options.quality.toString(),
-      this.options.replayGain.toString(),
-    ];
-
-    const lameOptionsJoined = lameOptions.join(' ');
+    const lameArguments = this.buildLameArguments();
+    const lameOptionsJoined = lameArguments.join(' ');
 
     if (this.options.verbose) {
       logger.info(`Using following lame options: ${lameOptionsJoined}`);
