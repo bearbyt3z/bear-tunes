@@ -169,6 +169,14 @@ export class BearTunesConverter {
     }
   }
 
+  private static tryDeleteFile(filePath: string, context: string): void {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (error) {
+      logger.warn(`${this.name}: Failed to delete ${context}: ${filePath}`, { error });
+    }
+  }
+
   private static finalizeChildProcessResult(
     result: BearTunesConverterResult,
     childResult: childProcess.SpawnSyncReturns<Buffer>,
@@ -182,7 +190,7 @@ export class BearTunesConverter {
     }
 
     if (childResult.status === 0 && deleteSourceAfterConvertion) {
-      fs.unlinkSync(sourceFilePath);
+      BearTunesConverter.tryDeleteFile(sourceFilePath, 'source file');
     }
 
     result.status = childResult.status;
@@ -334,7 +342,9 @@ export class BearTunesConverter {
         deleteFlacAfterConvertion,
       );
     } finally {
-      temporaryFiles.forEach((filePath) => fs.unlinkSync(filePath));
+      temporaryFiles.forEach((filePath) => {
+        BearTunesConverter.tryDeleteFile(filePath, 'temporary tag transfer file');
+      });
     }
   }
 }
