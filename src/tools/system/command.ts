@@ -3,15 +3,48 @@ import * as childProcess from 'node:child_process';
 import { getFirstLine } from '../utils/format.js';
 
 /**
- * Result of a successfully executed system command.
+ * Result of a completed child process.
  *
  * Contains the captured standard output and standard error streams together
- * with the numeric exit status reported by the child process.
+ * with the numeric exit status and optional termination signal.
  */
-export interface ExecutedCommand {
+export interface ExecutedProcess {
   stdout: string;
   stderr: string;
   status: number;
+  signal: NodeJS.Signals | null;
+}
+
+/**
+ * Creates an error describing an unsuccessful child process termination.
+ *
+ * If the child process terminated due to a signal, the returned error describes
+ * the signal. Otherwise, the returned error describes the numeric exit status
+ * together with the first line of the standard error output.
+ *
+ * @param commandName - Name or path of the executable that was run.
+ * @param status - Exit status returned by the child process, or `null` when the
+ * process terminated due to a signal.
+ * @param signal - Signal that terminated the child process, or `null` when the
+ * process exited normally.
+ * @param stderr - Standard error output captured from the child process.
+ * @returns Error describing why the child process did not complete successfully.
+ */
+function buildProcessExitError(
+  commandName: string,
+  status: number | null,
+  signal: NodeJS.Signals | null,
+  stderr: string,
+): Error {
+  if (status === null) {
+    return new Error(
+      `Child process "${commandName}" terminated due to signal ${signal ?? 'unknown'}.`,
+    );
+  }
+
+  return new Error(
+    `Child process "${commandName}" exited with code ${status}: ${getFirstLine(stderr)}`,
+  );
 }
 
 /**
@@ -28,26 +61,21 @@ export interface ExecutedCommand {
  * @throws Error when the process cannot be started, terminates without an exit
  * code, or exits with a non-zero status.
  */
-export function executeCommandSync(commandName: string, args: readonly string[]): ExecutedCommand {
+export function executeCommandSync(commandName: string, args: readonly string[]): ExecutedProcess {
   const child = childProcess.spawnSync(commandName, [...args], { encoding: 'utf8' });
 
   if (child.error) {
     throw child.error;
   }
 
-  if (child.status === null) {
-    throw new Error(`Child process "${commandName}" terminated without an exit code.`);
-  }
-
   if (child.status !== 0) {
-    throw new Error(
-      `Child process "${commandName}" exited with code ${child.status}: ${getFirstLine(child.stderr)}`,
-    );
+    throw buildProcessExitError(commandName, child.status, child.signal, child.stderr);
   }
 
   return {
     stdout: child.stdout,
     stderr: child.stderr,
     status: child.status,
+    signal: child.signal,
   };
 }
