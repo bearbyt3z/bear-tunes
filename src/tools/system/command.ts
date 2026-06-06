@@ -2,18 +2,7 @@ import * as childProcess from 'node:child_process';
 
 import { getFirstLine } from '../utils/format.js';
 
-/**
- * Result of a completed child process.
- *
- * Contains the captured standard output and standard error streams together
- * with the numeric exit status and optional termination signal.
- */
-export interface ExecutedProcess {
-  stdout: string;
-  stderr: string;
-  status: number;
-  signal: NodeJS.Signals | null;
-}
+import type { ExecutedProcess } from './command.types.js';
 
 /**
  * Creates an error describing an unsuccessful child process termination.
