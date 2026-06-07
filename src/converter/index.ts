@@ -6,6 +6,9 @@ import logger from '#logger';
 import {
   BearTunesTagger,
 } from '#tagger';
+import {
+  executeCommandPipeline,
+} from '#tools';
 
 import {
   BitrateMethod,
@@ -230,7 +233,8 @@ export class BearTunesConverter {
     }
 
     result.push(
-      `-m ${this.options.channelMode.toString()}`,
+      '-m',
+      this.options.channelMode.toString(),
       this.options.quality.toString(),
       this.options.replayGain.toString(),
     );
@@ -292,7 +296,11 @@ export class BearTunesConverter {
     );
   }
 
-  flacToMp3(flacFilePath: string, outputPath: string | undefined = undefined, deleteFlacAfterConvertion = false): BearTunesConverterResult {
+  async flacToMp3(
+    flacFilePath: string,
+    outputPath: string | undefined = undefined,
+    deleteFlacAfterConvertion = false,
+  ): Promise<BearTunesConverterResult> {
     const result = BearTunesConverter.createEmptyConverterResult();
 
     const validatedInputFile = BearTunesConverter.validateInputFile(
@@ -335,7 +343,7 @@ export class BearTunesConverter {
       logger.info(`Using following lame options: ${lameOptionsJoined}`);
     }
 
-    let tagOptionsJoined = '';
+    let tagArguments: string[] = [];
     let temporaryFiles: string[] = [];
 
     if (this.options.transferTagEntries) {
@@ -343,21 +351,44 @@ export class BearTunesConverter {
       const preparedTagTransfer = tagger.prepareMp3TagTransferFromFlac(flacFilePath);
 
       temporaryFiles = preparedTagTransfer.temporaryFiles;
-      tagOptionsJoined = preparedTagTransfer.lameTagOptions.join(' ');
+      tagArguments = preparedTagTransfer.lameTagOptions;
     }
 
     try {
-      const childResult = childProcess.spawnSync(
-        `flac --decode --stdout "${flacFilePath}" | lame ${lameOptionsJoined} ${tagOptionsJoined} - "${outputPathComputed}"`,
-        { shell: true, stdio: 'inherit' },
+      const childResult = await executeCommandPipeline(
+        {
+          commandName: 'flac',
+          args: ['--decode', '--stdout', flacFilePath],
+        },
+        {
+          commandName: 'lame',
+          args: [...lameArguments, ...tagArguments, '-', outputPathComputed],
+        },
+        {
+          firstStdout: false,
+          firstStderr: true,
+          secondStdout: true,
+          secondStderr: true,
+        },
       );
 
-      return BearTunesConverter.finalizeChildProcessResult(
-        result,
-        childResult,
-        flacFilePath,
-        deleteFlacAfterConvertion,
-      );
+      result.status = childResult.second.status;
+      result.error = undefined;
+      result.lameStdout = childResult.second.stdout?.toString('utf8');
+      result.lameStderr = childResult.second.stderr?.toString('utf8');
+
+      if (deleteFlacAfterConvertion) {
+        BearTunesConverter.tryDeleteFile(flacFilePath, 'source file');
+      }
+
+      return result;
+    } catch (error) {
+      result.status = 106;
+      result.error = error instanceof Error ? error : new Error(String(error));
+      result.lameStdout = undefined;
+      result.lameStderr = undefined;
+
+      return result;
     } finally {
       temporaryFiles.forEach((filePath) => {
         BearTunesConverter.tryDeleteFile(filePath, 'temporary tag transfer file');

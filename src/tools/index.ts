@@ -34,6 +34,7 @@ export {
 } from './files/url-file.js';
 
 export {
+  executeCommandPipeline,
   executeCommandSync,
 } from './system/command.js';
 

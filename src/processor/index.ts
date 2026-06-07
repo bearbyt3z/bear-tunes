@@ -204,7 +204,7 @@ export class BearTunesProcessor {
       logger.silly('########################################');
       logger.info(`Converting flac to mp3: ${filePath}`);
 
-      const result = this.dependencies.converter.flacToMp3(filePath);
+      const result = await this.dependencies.converter.flacToMp3(filePath);
 
       if (result.status !== 0 || !result.outputPath) {
         BearTunesProcessor.logConversionFailure(filePath, result, 'Lame stderr');
