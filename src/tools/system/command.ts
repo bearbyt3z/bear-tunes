@@ -2,6 +2,7 @@ import * as childProcess from 'node:child_process';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
+import { normalizeUnknownError } from '../utils/error.js';
 import { getFirstLine } from '../utils/format.js';
 
 import type {
@@ -42,16 +43,6 @@ function buildProcessExitError(
   return new Error(
     `Child process "${commandName}" exited with code ${status}: ${getFirstLine(stderr)}`,
   );
-}
-
-/**
- * Normalizes an unknown thrown value to an `Error` instance.
- *
- * @param error - Value thrown by a Promise or event handler.
- * @returns Normalized `Error` instance.
- */
-function normalizeUnknownError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
 }
 
 /**

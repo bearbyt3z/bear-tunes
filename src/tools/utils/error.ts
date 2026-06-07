@@ -44,3 +44,16 @@ export function formatZodErrorIssues(error: ZodError): {
  * wherever an error should be silently ignored.
  */
 export function ignoreError(): void { /* intentionally empty */ }
+
+/**
+ * Converts an unknown thrown value into an `Error` instance.
+ *
+ * Non-`Error` values are wrapped with `new Error(String(error))`
+ * so callers can safely work with a consistent error type.
+ *
+ * @param error - Unknown value that was thrown.
+ * @returns `Error` instance representing the thrown value.
+ */
+export function normalizeUnknownError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
