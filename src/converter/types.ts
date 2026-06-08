@@ -43,9 +43,9 @@ export interface BearTunesConverterResult {
  */
 export interface BearTunesConverterOptions {
   bitrateMethod: BitrateMethod;
-  bitrateValue: number; // for CBR & ABR
-  bitrateValueMinimum: number; // for VBR
-  bitrateValueMaximum: number; // for VBR
+  bitrateValue: number;
+  bitrateValueMinimum: number;
+  bitrateValueMaximum: number;
   quality: Quality;
   channelMode: ChannelMode;
   replayGain: ReplayGain;
