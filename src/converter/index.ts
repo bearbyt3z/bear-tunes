@@ -64,10 +64,10 @@ export class BearTunesConverter {
   options: BearTunesConverterOptions;
 
   /**
-  * Creates a converter instance with merged default and custom options.
-  *
-  * @param options - Partial converter configuration overriding default values.
-  */
+   * Creates a converter instance with merged default and custom options.
+   *
+   * @param options - Partial converter configuration overriding default values.
+   */
   constructor(options: Partial<BearTunesConverterOptions> = {}) {
     this.options = {
       ...defaultConverterOptions,
