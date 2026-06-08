@@ -59,9 +59,9 @@ const defaultConverterOptions = Object.freeze({
  */
 export class BearTunesConverter {
   /**
-   * Effective converter configuration.
+   * Effective converter configuration for this instance.
    */
-  options: BearTunesConverterOptions;
+  private readonly options: BearTunesConverterOptions;
 
   /**
    * Creates a converter instance with merged default and custom options.
