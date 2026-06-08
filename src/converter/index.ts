@@ -13,6 +13,7 @@ import {
 
 import {
   BitrateMethod,
+  ConverterStatus,
   Quality,
   ChannelMode,
   ReplayGain,
@@ -26,6 +27,7 @@ import type {
 // reexporting enums & types, so they will be included in the converter import
 export {
   BitrateMethod,
+  ConverterStatus,
   Quality,
   ChannelMode,
   ReplayGain,
@@ -64,7 +66,7 @@ export class BearTunesConverter {
 
   private static createEmptyConverterResult(): BearTunesConverterResult {
     return {
-      status: 0,
+      status: ConverterStatus.Success,
       error: undefined,
       encoderStdout: undefined,
       encoderStderr: undefined,
@@ -81,14 +83,14 @@ export class BearTunesConverter {
     className: string,
   ): {
     outputPathComputed: string | undefined;
-    status: number;
+    status: ConverterStatus;
     error: Error | undefined;
   } {
     try {
       if (outputPath === undefined) {
         return {
           outputPathComputed: inputFilePath.replace(inputExtensionPattern, outputExtension),
-          status: 0,
+          status: ConverterStatus.Success,
           error: undefined,
         };
       }
@@ -97,7 +99,7 @@ export class BearTunesConverter {
         return {
           outputPathComputed: outputPath.replace(/\/+$/, path.sep)
             + path.basename(inputFilePath).replace(inputExtensionPattern, outputExtension),
-          status: 0,
+          status: ConverterStatus.Success,
           error: undefined,
         };
       }
@@ -106,14 +108,14 @@ export class BearTunesConverter {
         if (outputPath.match(expectedOutputExtensionPattern)) {
           return {
             outputPathComputed: outputPath,
-            status: 0,
+            status: ConverterStatus.Success,
             error: undefined,
           };
         }
 
         return {
           outputPathComputed: undefined,
-          status: 103,
+          status: ConverterStatus.InvalidOutputFileExtension,
           error: new TypeError(
             `${className}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
           ),
@@ -122,7 +124,7 @@ export class BearTunesConverter {
 
       return {
         outputPathComputed: undefined,
-        status: 104,
+        status: ConverterStatus.InvalidOutputPath,
         error: new TypeError(
           `${className}: Specified output path ${outputPath} is neither a file nor directory`,
         ),
@@ -130,7 +132,7 @@ export class BearTunesConverter {
     } catch (error) {
       return {
         outputPathComputed: undefined,
-        status: 105,
+        status: ConverterStatus.OutputPathAccessError,
         error: new ReferenceError(
           `${className}: Cannot access file ${outputPath} (incorrect path?)`,
           { cause: error },
@@ -145,13 +147,13 @@ export class BearTunesConverter {
     expectedExtensionDescription: string,
     className: string,
   ): {
-    status: number;
+    status: ConverterStatus;
     error: Error | undefined;
   } {
     try {
       if (!fs.lstatSync(inputFilePath).isFile() || !inputFilePath.match(expectedExtensionPattern)) {
         return {
-          status: 101,
+          status: ConverterStatus.InvalidInputFile,
           error: new TypeError(
             `${className}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
           ),
@@ -159,12 +161,12 @@ export class BearTunesConverter {
       }
 
       return {
-        status: 0,
+        status: ConverterStatus.Success,
         error: undefined,
       };
     } catch (error) {
       return {
-        status: 102,
+        status: ConverterStatus.InputFileAccessError,
         error: new ReferenceError(
           `${className}: Cannot access file ${inputFilePath} (incorrect path?)`,
           { cause: error },
@@ -187,20 +189,30 @@ export class BearTunesConverter {
     sourceFilePath: string,
     deleteSourceAfterConvertion: boolean,
   ): BearTunesConverterResult {
+    result.encoderStdout = childResult.stdout?.toString();
+    result.encoderStderr = childResult.stderr?.toString();
+
     if (childResult.status === null) {
-      result.status = 106;
-      result.error = new Error(`Convertion failed due to a signal: ${childResult.signal ?? 'signal is null'}`);
+      result.status = ConverterStatus.ConversionFailed;
+      result.error = new Error(
+        `Convertion failed due to a signal: ${childResult.signal ?? 'signal is null'}`,
+      );
       return result;
     }
 
-    if (childResult.status === 0 && deleteSourceAfterConvertion) {
+    if (childResult.status !== 0) {
+      result.status = ConverterStatus.ConversionFailed;
+      result.error = childResult.error
+        ?? new Error(`Convertion failed with exit code: ${childResult.status.toString()}`);
+      return result;
+    }
+
+    if (deleteSourceAfterConvertion) {
       BearTunesConverter.tryDeleteFile(sourceFilePath, 'source file');
     }
 
-    result.status = childResult.status;
-    result.error = childResult.error;
-    result.encoderStdout = childResult.stdout?.toString();
-    result.encoderStderr = childResult.stderr?.toString();
+    result.status = ConverterStatus.Success;
+    result.error = undefined;
 
     return result;
   }
@@ -260,7 +272,7 @@ export class BearTunesConverter {
     result.status = validatedInputFile.status;
     result.error = validatedInputFile.error;
 
-    if (result.status !== 0) {
+    if (result.status !== ConverterStatus.Success) {
       return result;
     }
 
@@ -277,7 +289,7 @@ export class BearTunesConverter {
     result.status = resolvedOutputPath.status;
     result.error = resolvedOutputPath.error;
 
-    if (result.status !== 0 || outputPathComputed === undefined) {
+    if (result.status !== ConverterStatus.Success || outputPathComputed === undefined) {
       return result;
     }
 
@@ -314,7 +326,7 @@ export class BearTunesConverter {
     result.status = validatedInputFile.status;
     result.error = validatedInputFile.error;
 
-    if (result.status !== 0) {
+    if (result.status !== ConverterStatus.Success) {
       return result;
     }
 
@@ -331,7 +343,7 @@ export class BearTunesConverter {
     result.status = resolvedOutputPath.status;
     result.error = resolvedOutputPath.error;
 
-    if (result.status !== 0 || outputPathComputed === undefined) {
+    if (result.status !== ConverterStatus.Success || outputPathComputed === undefined) {
       return result;
     }
 
@@ -373,7 +385,7 @@ export class BearTunesConverter {
         },
       );
 
-      result.status = childResult.second.status;
+      result.status = ConverterStatus.Success;
       result.error = undefined;
       result.encoderStdout = childResult.second.stdout?.toString('utf8');
       result.encoderStderr = childResult.second.stderr?.toString('utf8');
@@ -384,7 +396,7 @@ export class BearTunesConverter {
 
       return result;
     } catch (error) {
-      result.status = 106;
+      result.status = ConverterStatus.ConversionFailed;
       result.error = normalizeUnknownError(error);
       result.encoderStdout = undefined;
       result.encoderStderr = undefined;

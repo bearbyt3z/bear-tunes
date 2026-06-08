@@ -1,5 +1,15 @@
+export enum ConverterStatus {
+  Success = 0,
+  InvalidInputFile = 101,
+  InputFileAccessError = 102,
+  InvalidOutputFileExtension = 103,
+  InvalidOutputPath = 104,
+  OutputPathAccessError = 105,
+  ConversionFailed = 106,
+}
+
 export interface BearTunesConverterResult {
-  status: number | null;
+  status: ConverterStatus | null;
   error: Error | undefined;
   encoderStdout: string | undefined;
   encoderStderr: string | undefined;

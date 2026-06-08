@@ -10,7 +10,7 @@ import {
   tryGetAudioFileTypeFromFile,
 } from '#tools';
 
-import { BearTunesConverter } from '#converter';
+import { BearTunesConverter, ConverterStatus } from '#converter';
 import { BearTunesRenamer } from '#renamer';
 import { BearTunesTagger } from '#tagger';
 
@@ -206,7 +206,7 @@ export class BearTunesProcessor {
 
       const result = await this.dependencies.converter.flacToMp3(filePath);
 
-      if (result.status !== 0 || !result.outputPath) {
+      if (result.status !== ConverterStatus.Success || !result.outputPath) {
         BearTunesProcessor.logConversionFailure(filePath, result, 'lame stderr');
         return false;
       }
@@ -278,7 +278,7 @@ export class BearTunesProcessor {
 
     const result = this.dependencies.converter.aiffToFlac(filePath, undefined, true);
 
-    if (result.status !== 0 || !result.outputPath) {
+    if (result.status !== ConverterStatus.Success || !result.outputPath) {
       BearTunesProcessor.logConversionFailure(filePath, result, 'flac stderr');
       return false;
     }
