@@ -9,7 +9,7 @@ export enum ConverterStatus {
 }
 
 export interface BearTunesConverterResult {
-  status: ConverterStatus | null;
+  status: ConverterStatus;
   error: Error | undefined;
   encoderStdout: string | undefined;
   encoderStderr: string | undefined;
