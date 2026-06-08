@@ -1,4 +1,4 @@
-export enum ConverterStatus {
+export enum BearTunesConverterStatus {
   Success = 0,
   InvalidInputFile = 101,
   InputFileAccessError = 102,
@@ -9,7 +9,7 @@ export enum ConverterStatus {
 }
 
 export interface BearTunesConverterResult {
-  status: ConverterStatus;
+  status: BearTunesConverterStatus;
   error: Error | undefined;
   encoderStdout: string | undefined;
   encoderStderr: string | undefined;
