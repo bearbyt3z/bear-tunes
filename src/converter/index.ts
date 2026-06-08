@@ -187,7 +187,7 @@ export class BearTunesConverter {
     result: BearTunesConverterResult,
     childResult: childProcess.SpawnSyncReturns<Buffer>,
     sourceFilePath: string,
-    deleteSourceAfterConvertion: boolean,
+    deleteSourceAfterConversion: boolean,
   ): BearTunesConverterResult {
     result.encoderStdout = childResult.stdout?.toString();
     result.encoderStderr = childResult.stderr?.toString();
@@ -195,7 +195,7 @@ export class BearTunesConverter {
     if (childResult.status === null) {
       result.status = ConverterStatus.ConversionFailed;
       result.error = new Error(
-        `Convertion failed due to a signal: ${childResult.signal ?? 'signal is null'}`,
+        `Conversion failed due to a signal: ${childResult.signal ?? 'signal is null'}`,
       );
       return result;
     }
@@ -203,11 +203,11 @@ export class BearTunesConverter {
     if (childResult.status !== 0) {
       result.status = ConverterStatus.ConversionFailed;
       result.error = childResult.error
-        ?? new Error(`Convertion failed with exit code: ${childResult.status.toString()}`);
+        ?? new Error(`Conversion failed with exit code: ${childResult.status.toString()}`);
       return result;
     }
 
-    if (deleteSourceAfterConvertion) {
+    if (deleteSourceAfterConversion) {
       BearTunesConverter.tryDeleteFile(sourceFilePath, 'source file');
     }
 
@@ -258,7 +258,7 @@ export class BearTunesConverter {
   aiffToFlac(
     aiffFilePath: string,
     outputPath: string | undefined = undefined,
-    deleteAiffAfterConvertion = false,
+    deleteAiffAfterConversion = false,
   ): BearTunesConverterResult {
     const result = BearTunesConverter.createEmptyConverterResult();
 
@@ -305,14 +305,14 @@ export class BearTunesConverter {
       result,
       childResult,
       aiffFilePath,
-      deleteAiffAfterConvertion,
+      deleteAiffAfterConversion,
     );
   }
 
   async flacToMp3(
     flacFilePath: string,
     outputPath: string | undefined = undefined,
-    deleteFlacAfterConvertion = false,
+    deleteFlacAfterConversion = false,
   ): Promise<BearTunesConverterResult> {
     const result = BearTunesConverter.createEmptyConverterResult();
 
@@ -390,7 +390,7 @@ export class BearTunesConverter {
       result.encoderStdout = childResult.second.stdout?.toString('utf8');
       result.encoderStderr = childResult.second.stderr?.toString('utf8');
 
-      if (deleteFlacAfterConvertion) {
+      if (deleteFlacAfterConversion) {
         BearTunesConverter.tryDeleteFile(flacFilePath, 'source file');
       }
 
