@@ -202,16 +202,16 @@ export class BearTunesProcessor {
 
     if (this.options.convertFlacToMp3) {
       logger.silly('########################################');
-      logger.info(`Converting flac to mp3: ${filePath}`);
+      logger.info(`Converting FLAC to MP3: ${filePath}`);
 
       const result = await this.dependencies.converter.flacToMp3(filePath);
 
       if (result.status !== 0 || !result.outputPath) {
-        BearTunesProcessor.logConversionFailure(filePath, result, 'Lame stderr');
+        BearTunesProcessor.logConversionFailure(filePath, result, 'lame stderr');
         return false;
       }
 
-      logger.info(`flac file: ${filePath}\nwas converted to mp3: ${result.outputPath}`);
+      logger.info(`FLAC file was converted to MP3: ${result.outputPath}`);
 
       convertedMp3Path = result.outputPath;
       trackInfoSourcePath = result.outputPath;
@@ -274,7 +274,7 @@ export class BearTunesProcessor {
    */
   private async processAiffFile(filePath: string, outputDirectory?: string): Promise<boolean> {
     logger.silly('########################################');
-    logger.info(`Converting aiff to flac: ${filePath}`);
+    logger.info(`Converting AIFF to FLAC: ${filePath}`);
 
     const result = this.dependencies.converter.aiffToFlac(filePath, undefined, true);
 
@@ -283,7 +283,7 @@ export class BearTunesProcessor {
       return false;
     }
 
-    logger.info(`aiff file: ${filePath}\nwas converted to flac: ${result.outputPath}`);
+    logger.info(`AIFF file was converted to FLAC: ${result.outputPath}`);
 
     return await this.processFlacFile(result.outputPath, outputDirectory);
   }

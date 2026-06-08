@@ -1380,7 +1380,7 @@ export class BearTunesTagger {
 
     metaflacOptions.push(trackPath);
 
-    BearTunesTagger.executeMetaflacTool(metaflacOptions, `Flac ID3 tag was saved to "${path.basename(trackPath)}"`, this.options.metaflacVerbose);
+    BearTunesTagger.executeMetaflacTool(metaflacOptions, `FLAC tag was saved to "${path.basename(trackPath)}"`, this.options.metaflacVerbose);
 
     BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
   }
@@ -1408,7 +1408,7 @@ export class BearTunesTagger {
       logger.info(verbose ? result.stdout : successMessage);
       return true;
     } catch (error: unknown) {
-      logger.error('Failed to save FLAC ID3 tag', {
+      logger.error('Failed to save FLAC tag', {
         tool: 'metaflac',
         error,
       });
