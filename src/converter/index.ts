@@ -122,7 +122,9 @@ export class BearTunesConverter {
         };
       }
 
-      if (fs.lstatSync(outputPath).isDirectory()) {
+      const outputPathStats = fs.lstatSync(outputPath);
+
+      if (outputPathStats.isDirectory()) {
         return {
           resolvedOutputPath: outputPath.replace(/\/+$/, path.sep)
             + path.basename(inputFilePath).replace(inputExtensionPattern, outputExtension),
@@ -131,7 +133,7 @@ export class BearTunesConverter {
         };
       }
 
-      if (fs.lstatSync(outputPath).isFile()) {
+      if (outputPathStats.isFile()) {
         if (outputPath.match(expectedOutputExtensionPattern)) {
           return {
             resolvedOutputPath: outputPath,
@@ -187,7 +189,9 @@ export class BearTunesConverter {
     error: Error | undefined;
   } {
     try {
-      if (!fs.lstatSync(inputFilePath).isFile() || !inputFilePath.match(expectedExtensionPattern)) {
+      const inputFilePathStats = fs.lstatSync(inputFilePath);
+
+      if (!inputFilePathStats.isFile() || !inputFilePath.match(expectedExtensionPattern)) {
         return {
           status: BearTunesConverterStatus.InvalidInputFile,
           error: new TypeError(
