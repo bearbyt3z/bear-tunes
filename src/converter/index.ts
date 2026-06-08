@@ -80,7 +80,7 @@ export class BearTunesConverter {
    *
    * @returns Empty converter result object.
    */
-  private static createEmptyConverterResult(): BearTunesConverterResult {
+  private static createInitialConverterResult(): BearTunesConverterResult {
     return {
       status: BearTunesConverterStatus.Success,
       error: undefined,
@@ -324,7 +324,7 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteAiffAfterConversion = false,
   ): BearTunesConverterResult {
-    const result = BearTunesConverter.createEmptyConverterResult();
+    const result = BearTunesConverter.createInitialConverterResult();
 
     const validatedInputFile = BearTunesConverter.validateInputFile(
       aiffFilePath,
@@ -386,7 +386,7 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteFlacAfterConversion = false,
   ): Promise<BearTunesConverterResult> {
-    const result = BearTunesConverter.createEmptyConverterResult();
+    const result = BearTunesConverter.createInitialConverterResult();
 
     const validatedInputFile = BearTunesConverter.validateInputFile(
       flacFilePath,
