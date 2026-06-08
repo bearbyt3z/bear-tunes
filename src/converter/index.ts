@@ -8,6 +8,7 @@ import {
 } from '#tagger';
 import {
   executeCommandPipeline,
+  normalizeUnknownError,
 } from '#tools';
 
 import {
@@ -384,7 +385,7 @@ export class BearTunesConverter {
       return result;
     } catch (error) {
       result.status = 106;
-      result.error = error instanceof Error ? error : new Error(String(error));
+      result.error = normalizeUnknownError(error);
       result.lameStdout = undefined;
       result.lameStderr = undefined;
 
