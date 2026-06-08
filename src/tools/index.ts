@@ -46,6 +46,7 @@ export {
 
 export {
   formatZodErrorIssues,
+  normalizeUnknownError,
 } from './utils/error.js';
 
 export {
