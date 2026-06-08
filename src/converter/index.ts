@@ -54,9 +54,20 @@ const defaultConverterOptions = Object.freeze({
   verbose: false,
 } as const satisfies BearTunesConverterOptions);
 
+/**
+ * Converts supported audio files between formats used by BearTunes.
+ */
 export class BearTunesConverter {
+  /**
+   * Effective converter configuration.
+   */
   options: BearTunesConverterOptions;
 
+  /**
+  * Creates a converter instance with merged default and custom options.
+  *
+  * @param options - Partial converter configuration overriding default values.
+  */
   constructor(options: Partial<BearTunesConverterOptions> = {}) {
     this.options = {
       ...defaultConverterOptions,
@@ -64,6 +75,11 @@ export class BearTunesConverter {
     };
   }
 
+  /**
+   * Creates an empty conversion result initialized with default success state.
+   *
+   * @returns Empty converter result object.
+   */
   private static createEmptyConverterResult(): BearTunesConverterResult {
     return {
       status: BearTunesConverterStatus.Success,
@@ -74,6 +90,17 @@ export class BearTunesConverter {
     };
   }
 
+  /**
+   * Resolves the final output path for a conversion operation.
+   *
+   * @param inputFilePath - Source file path used as the default output path base.
+   * @param outputPath - Optional output file or directory path provided by the caller.
+   * @param inputExtensionPattern - Pattern matching the source file extension.
+   * @param outputExtension - Expected output file extension.
+   * @param expectedOutputExtensionPattern - Pattern matching the allowed output file extension.
+   * @param className - Class name used in generated error messages.
+   * @returns Resolved output path together with status and optional error details.
+   */
   private static resolveOutputPath(
     inputFilePath: string,
     outputPath: string | undefined,
@@ -141,6 +168,15 @@ export class BearTunesConverter {
     }
   }
 
+  /**
+   * Validates that the input path points to an accessible file with the expected extension.
+   *
+   * @param inputFilePath - Path to the source file.
+   * @param expectedExtensionPattern - Pattern matching the required input extension.
+   * @param expectedExtensionDescription - Human-readable description of accepted extensions.
+   * @param className - Class name used in generated error messages.
+   * @returns Validation status together with optional error details.
+   */
   private static validateInputFile(
     inputFilePath: string,
     expectedExtensionPattern: RegExp,
@@ -175,6 +211,12 @@ export class BearTunesConverter {
     }
   }
 
+  /**
+   * Tries to delete a file and logs a warning when the operation fails.
+   *
+   * @param filePath - Path to the file that should be removed.
+   * @param context - Short label describing the file purpose in log messages.
+   */
   private static tryDeleteFile(filePath: string, context: string): void {
     try {
       fs.unlinkSync(filePath);
@@ -183,6 +225,15 @@ export class BearTunesConverter {
     }
   }
 
+  /**
+   * Finalizes a synchronous child process result and maps it to converter result fields.
+   *
+   * @param result - Converter result object to update.
+   * @param childResult - Raw result returned by the child process execution.
+   * @param sourceFilePath - Source file path that may be deleted after successful conversion.
+   * @param deleteSourceAfterConversion - Whether the source file should be removed on success.
+   * @returns Updated converter result object.
+   */
   private static finalizeChildProcessResult(
     result: BearTunesConverterResult,
     childResult: childProcess.SpawnSyncReturns<Buffer>,
@@ -217,6 +268,11 @@ export class BearTunesConverter {
     return result;
   }
 
+  /**
+   * Builds command-line arguments for the MP3 encoder from current converter options.
+   *
+   * @returns Encoder arguments ready to be passed to the LAME process.
+   */
   private buildLameArguments(): string[] {
     const result: string[] = [];
 
@@ -255,6 +311,14 @@ export class BearTunesConverter {
     return result;
   }
 
+  /**
+   * Converts an AIFF file to FLAC.
+   *
+   * @param aiffFilePath - Path to the source AIFF file.
+   * @param outputPath - Optional target FLAC file path or output directory.
+   * @param deleteAiffAfterConversion - Whether the source AIFF file should be deleted after successful conversion.
+   * @returns Result describing the conversion outcome.
+   */
   aiffToFlac(
     aiffFilePath: string,
     outputPath: string | undefined = undefined,
@@ -309,6 +373,14 @@ export class BearTunesConverter {
     );
   }
 
+  /**
+   * Converts a FLAC file to MP3.
+   *
+   * @param flacFilePath - Path to the source FLAC file.
+   * @param outputPath - Optional target MP3 file path or output directory.
+   * @param deleteFlacAfterConversion - Whether the source FLAC file should be deleted after successful conversion.
+   * @returns Promise resolved with the conversion result.
+   */
   async flacToMp3(
     flacFilePath: string,
     outputPath: string | undefined = undefined,
