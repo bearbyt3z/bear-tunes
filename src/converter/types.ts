@@ -1,8 +1,8 @@
 export interface BearTunesConverterResult {
   status: number | null;
   error: Error | undefined;
-  lameStdout: string | undefined;
-  lameStderr: string | undefined;
+  encoderStdout: string | undefined;
+  encoderStderr: string | undefined;
   outputPath: string | undefined;
 }
 

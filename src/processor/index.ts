@@ -139,7 +139,7 @@ export class BearTunesProcessor {
     stderrLabel: string,
   ): void {
     let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
-    warnMessage += `${result.error?.message}:\n${stderrLabel}: ${result.lameStderr}`;
+    warnMessage += `${result.error?.message}:\n${stderrLabel}: ${result.encoderStderr}`;
     logger.warn(warnMessage);
   }
 

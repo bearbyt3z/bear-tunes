@@ -66,8 +66,8 @@ export class BearTunesConverter {
     return {
       status: 0,
       error: undefined,
-      lameStdout: undefined,
-      lameStderr: undefined,
+      encoderStdout: undefined,
+      encoderStderr: undefined,
       outputPath: undefined,
     };
   }
@@ -199,8 +199,8 @@ export class BearTunesConverter {
 
     result.status = childResult.status;
     result.error = childResult.error;
-    result.lameStdout = childResult.stdout?.toString();
-    result.lameStderr = childResult.stderr?.toString();
+    result.encoderStdout = childResult.stdout?.toString();
+    result.encoderStderr = childResult.stderr?.toString();
 
     return result;
   }
@@ -375,8 +375,8 @@ export class BearTunesConverter {
 
       result.status = childResult.second.status;
       result.error = undefined;
-      result.lameStdout = childResult.second.stdout?.toString('utf8');
-      result.lameStderr = childResult.second.stderr?.toString('utf8');
+      result.encoderStdout = childResult.second.stdout?.toString('utf8');
+      result.encoderStderr = childResult.second.stderr?.toString('utf8');
 
       if (deleteFlacAfterConvertion) {
         BearTunesConverter.tryDeleteFile(flacFilePath, 'source file');
@@ -386,8 +386,8 @@ export class BearTunesConverter {
     } catch (error) {
       result.status = 106;
       result.error = normalizeUnknownError(error);
-      result.lameStdout = undefined;
-      result.lameStderr = undefined;
+      result.encoderStdout = undefined;
+      result.encoderStderr = undefined;
 
       return result;
     } finally {
