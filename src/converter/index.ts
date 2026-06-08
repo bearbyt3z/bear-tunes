@@ -109,14 +109,14 @@ export class BearTunesConverter {
     expectedOutputExtensionPattern: RegExp,
     className: string,
   ): {
-    outputPathComputed: string | undefined;
+    resolvedOutputPath: string | undefined;
     status: BearTunesConverterStatus;
     error: Error | undefined;
   } {
     try {
       if (outputPath === undefined) {
         return {
-          outputPathComputed: inputFilePath.replace(inputExtensionPattern, outputExtension),
+          resolvedOutputPath: inputFilePath.replace(inputExtensionPattern, outputExtension),
           status: BearTunesConverterStatus.Success,
           error: undefined,
         };
@@ -124,7 +124,7 @@ export class BearTunesConverter {
 
       if (fs.lstatSync(outputPath).isDirectory()) {
         return {
-          outputPathComputed: outputPath.replace(/\/+$/, path.sep)
+          resolvedOutputPath: outputPath.replace(/\/+$/, path.sep)
             + path.basename(inputFilePath).replace(inputExtensionPattern, outputExtension),
           status: BearTunesConverterStatus.Success,
           error: undefined,
@@ -134,14 +134,14 @@ export class BearTunesConverter {
       if (fs.lstatSync(outputPath).isFile()) {
         if (outputPath.match(expectedOutputExtensionPattern)) {
           return {
-            outputPathComputed: outputPath,
+            resolvedOutputPath: outputPath,
             status: BearTunesConverterStatus.Success,
             error: undefined,
           };
         }
 
         return {
-          outputPathComputed: undefined,
+          resolvedOutputPath: undefined,
           status: BearTunesConverterStatus.InvalidOutputFileExtension,
           error: new TypeError(
             `${className}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
@@ -150,7 +150,7 @@ export class BearTunesConverter {
       }
 
       return {
-        outputPathComputed: undefined,
+        resolvedOutputPath: undefined,
         status: BearTunesConverterStatus.InvalidOutputPath,
         error: new TypeError(
           `${className}: Specified output path ${outputPath} is neither a file nor directory`,
@@ -158,7 +158,7 @@ export class BearTunesConverter {
       };
     } catch (error) {
       return {
-        outputPathComputed: undefined,
+        resolvedOutputPath: undefined,
         status: BearTunesConverterStatus.OutputPathAccessError,
         error: new ReferenceError(
           `${className}: Cannot access file ${outputPath} (incorrect path?)`,
@@ -340,7 +340,7 @@ export class BearTunesConverter {
       return result;
     }
 
-    const resolvedOutputPath = BearTunesConverter.resolveOutputPath(
+    const outputPathResolution = BearTunesConverter.resolveOutputPath(
       aiffFilePath,
       outputPath,
       /\.(aif|aiff)$/i,
@@ -349,19 +349,19 @@ export class BearTunesConverter {
       this.constructor.name,
     );
 
-    const outputPathComputed = resolvedOutputPath.outputPathComputed;
-    result.status = resolvedOutputPath.status;
-    result.error = resolvedOutputPath.error;
+    const resolvedOutputPath = outputPathResolution.resolvedOutputPath;
+    result.status = outputPathResolution.status;
+    result.error = outputPathResolution.error;
 
-    if (result.status !== BearTunesConverterStatus.Success || outputPathComputed === undefined) {
+    if (result.status !== BearTunesConverterStatus.Success || resolvedOutputPath === undefined) {
       return result;
     }
 
-    result.outputPath = outputPathComputed;
+    result.outputPath = resolvedOutputPath;
 
     const childResult = childProcess.spawnSync(
       'flac',
-      ['--verify', '-8', '--force', '--output-name', outputPathComputed, aiffFilePath],
+      ['--verify', '-8', '--force', '--output-name', resolvedOutputPath, aiffFilePath],
       { stdio: 'inherit' },
     );
 
@@ -402,7 +402,7 @@ export class BearTunesConverter {
       return result;
     }
 
-    const resolvedOutputPath = BearTunesConverter.resolveOutputPath(
+    const outputPathResolution = BearTunesConverter.resolveOutputPath(
       flacFilePath,
       outputPath,
       /\.flac$/i,
@@ -411,15 +411,15 @@ export class BearTunesConverter {
       this.constructor.name,
     );
 
-    const outputPathComputed = resolvedOutputPath.outputPathComputed;
-    result.status = resolvedOutputPath.status;
-    result.error = resolvedOutputPath.error;
+    const resolvedOutputPath = outputPathResolution.resolvedOutputPath;
+    result.status = outputPathResolution.status;
+    result.error = outputPathResolution.error;
 
-    if (result.status !== BearTunesConverterStatus.Success || outputPathComputed === undefined) {
+    if (result.status !== BearTunesConverterStatus.Success || resolvedOutputPath === undefined) {
       return result;
     }
 
-    result.outputPath = outputPathComputed;
+    result.outputPath = resolvedOutputPath;
 
     const lameArguments = this.buildLameArguments();
     const lameOptionsJoined = lameArguments.join(' ');
@@ -447,7 +447,7 @@ export class BearTunesConverter {
         },
         {
           commandName: 'lame',
-          args: [...lameArguments, ...tagArguments, '-', outputPathComputed],
+          args: [...lameArguments, ...tagArguments, '-', resolvedOutputPath],
         },
         {
           firstStdout: false,
