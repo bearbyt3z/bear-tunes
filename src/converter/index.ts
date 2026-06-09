@@ -38,6 +38,9 @@ export type {
   BearTunesConverterResult,
 };
 
+/**
+ * Default converter options applied when custom options are not provided.
+ */
 // Default options are intentionally defined as immutable:
 // - `as const` keeps exact literal types and readonly fields,
 // - `satisfies` checks compatibility with the public options type,
@@ -76,9 +79,9 @@ export class BearTunesConverter {
   }
 
   /**
-   * Creates an empty conversion result initialized with default success state.
+   * Creates the initial conversion result with the default success state.
    *
-   * @returns Empty converter result object.
+   * @returns Initial converter result object.
    */
   private static createInitialConverterResult(): BearTunesConverterResult {
     return {
