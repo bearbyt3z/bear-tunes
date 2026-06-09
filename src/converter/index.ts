@@ -429,7 +429,7 @@ export class BearTunesConverter {
     const lameOptionsJoined = lameArguments.join(' ');
 
     if (this.options.verbose) {
-      logger.info(`Using following lame options: ${lameOptionsJoined}`);
+      logger.info(`Using LAME options: ${lameOptionsJoined}`);
     }
 
     let tagArguments: string[] = [];
