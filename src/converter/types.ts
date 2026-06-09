@@ -2,54 +2,77 @@
  * Status codes describing the outcome of a converter operation.
  */
 export enum BearTunesConverterStatus {
+  /** The conversion operation completed successfully. */
   Success = 0,
+
+  /** The input path does not point to a supported input file. */
   InvalidInputFile = 101,
+
+  /** The input file could not be accessed. */
   InputFileAccessError = 102,
+
+  /** The provided output file path does not use the expected extension. */
   InvalidOutputFileExtension = 103,
+
+  /** The provided output path is neither a valid file path nor a directory path. */
   InvalidOutputPath = 104,
+
+  /** The output path could not be accessed. */
   OutputPathAccessError = 105,
+
+  /** The conversion process failed. */
   ConversionFailed = 106,
 }
 
 /**
  * Result returned by a BearTunes converter operation.
- *
- * @property status - Final status of the conversion attempt.
- * @property error - Error describing why the operation failed.
- * @property encoderStdout - Standard output captured from the encoder process.
- * @property encoderStderr - Standard error output captured from the encoder process.
- * @property outputPath - Resolved output file path.
  */
 export interface BearTunesConverterResult {
+  /** Final status of the conversion attempt. */
   status: BearTunesConverterStatus;
+
+  /** Error describing why the operation failed. */
   error: Error | undefined;
+
+  /** Standard output captured from the encoder process. */
   encoderStdout: string | undefined;
+
+  /** Standard error output captured from the encoder process. */
   encoderStderr: string | undefined;
+
+  /** Resolved output file path. */
   outputPath: string | undefined;
 }
 
 /**
  * Configuration options controlling BearTunes audio conversion.
- *
- * @property bitrateMethod - Bitrate control mode used for MP3 encoding.
- * @property bitrateValue - Bitrate value used by CBR and ABR modes.
- * @property bitrateValueMinimum - Minimum bitrate value used by VBR mode.
- * @property bitrateValueMaximum - Maximum bitrate value used by VBR mode.
- * @property quality - Encoder quality preset.
- * @property channelMode - Output channel mode.
- * @property replayGain - ReplayGain mode passed to the encoder.
- * @property transferTagEntries - Whether metadata should be transferred from the source file.
- * @property verbose - Whether verbose logging is enabled.
  */
 export interface BearTunesConverterOptions {
+  /** Bitrate control mode used for MP3 encoding. */
   bitrateMethod: BitrateMethod;
+
+  /** Bitrate value used by CBR and ABR modes. */
   bitrateValue: number;
+
+  /** Minimum bitrate value used by VBR mode. */
   bitrateValueMinimum: number;
+
+  /** Maximum bitrate value used by VBR mode. */
   bitrateValueMaximum: number;
+
+  /** LAME algorithm quality setting passed via the `-q` switch. */
   quality: Quality;
+
+  /** Channel mode passed to the encoder. */
   channelMode: ChannelMode;
+
+  /** ReplayGain mode passed to the encoder. */
   replayGain: ReplayGain;
+
+  /** Whether metadata should be transferred from the source file. */
   transferTagEntries: boolean;
+
+  /** Whether verbose logging is enabled. */
   verbose: boolean;
 }
 
@@ -57,24 +80,51 @@ export interface BearTunesConverterOptions {
  * Bitrate control modes supported by the MP3 encoder.
  */
 export enum BitrateMethod {
+  /** Uses constant bitrate encoding. */
   CBR = '--cbr',
+
+  /** Uses variable bitrate encoding. */
   VBR = '--vbr-new',
+
+  /** Uses average bitrate encoding. */
   ABR = '--abr',
 }
 
 /**
- * Encoder quality presets supported by LAME.
+ * LAME `-q` algorithm quality settings supported by the encoder.
+ *
+ * @see {@link https://lame.sourceforge.io/using.php | Official LAME documentation}
+ * @see {@link https://wiki.hydrogenaudio.org/index.php?title=LAME_-q_switch | Hydrogenaudio: LAME -q switch}
  */
 export enum Quality {
+  /** Uses LAME quality setting `-q0` (slowest). */
   Q0 = '-q0',
+
+  /** Uses LAME quality setting `-q1`. */
   Q1 = '-q1',
+
+  /** Uses LAME quality setting `-q2`. */
   Q2 = '-q2',
+
+  /** Uses LAME quality setting `-q3`. */
   Q3 = '-q3',
+
+  /** Uses LAME quality setting `-q4`. */
   Q4 = '-q4',
+
+  /** Uses LAME quality setting `-q5`. */
   Q5 = '-q5',
+
+  /** Uses LAME quality setting `-q6`. */
   Q6 = '-q6',
+
+  /** Uses LAME quality setting `-q7`. */
   Q7 = '-q7',
+
+  /** Uses LAME quality setting `-q8`. */
   Q8 = '-q8',
+
+  /** Uses LAME quality setting `-q9` (fastest). */
   Q9 = '-q9',
 }
 
@@ -82,8 +132,13 @@ export enum Quality {
  * Stereo channel modes supported by the encoder.
  */
 export enum ChannelMode {
+  /** Uses joint stereo output. */
   JointStereo = 'j',
+
+  /** Uses stereo output. */
   Stereo = 's',
+
+  /** Uses mono output. */
   Mono = 'm',
 }
 
@@ -91,7 +146,12 @@ export enum ChannelMode {
  * ReplayGain modes supported by the encoder.
  */
 export enum ReplayGain {
+  /** Calculates ReplayGain using the accurate mode. */
   Accurate = '--replaygain-accurate',
+
+  /** Calculates ReplayGain using the fast mode. */
   Fast = '--replaygain-fast',
+
+  /** Disables ReplayGain processing. */
   None = '--noreplaygain',
 }

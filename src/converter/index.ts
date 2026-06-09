@@ -50,6 +50,9 @@ const defaultConverterOptions = Object.freeze({
   bitrateValue: 320,
   bitrateValueMinimum: 256,
   bitrateValueMaximum: 320,
+  // `Quality.Q1` is used as the default because it offers a conservative
+  // high-quality setting and has produced more consistent high-frequency
+  // spectrum results in practical testing than `Quality.Q0`.
   quality: Quality.Q1,
   channelMode: ChannelMode.JointStereo,
   replayGain: ReplayGain.Accurate,
