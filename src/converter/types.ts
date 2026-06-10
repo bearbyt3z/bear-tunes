@@ -61,7 +61,7 @@ export interface BearTunesConverterOptions {
   bitrateValueMaximum: number;
 
   /** LAME algorithm quality setting passed via the `-q` switch. */
-  quality: Quality;
+  lameQuality: LameQuality;
 
   /** Channel mode passed to the encoder. */
   channelMode: ChannelMode;
@@ -96,7 +96,7 @@ export enum BitrateMethod {
  * @see {@link https://lame.sourceforge.io/using.php | Official LAME documentation}
  * @see {@link https://wiki.hydrogenaudio.org/index.php?title=LAME_-q_switch | Hydrogenaudio: LAME -q switch}
  */
-export enum Quality {
+export enum LameQuality {
   /** Uses LAME quality setting `-q0` (slowest). */
   Q0 = '-q0',
 
