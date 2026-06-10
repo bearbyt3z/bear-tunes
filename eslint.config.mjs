@@ -60,10 +60,13 @@ export default defineConfig(
     rules: {
       '@typescript-eslint/prefer-regexp-exec': 'off',
 
-      // Google TypeScript Style Guide: do not require explicit `public` on
-      // class members. Keep `public` implicit and only spell out non-public
-      // visibility when needed.
-      '@typescript-eslint/explicit-member-accessibility': 'off',
+      // Google TypeScript Style Guide: TypeScript symbols are public by default.
+      // Forbid explicit `public` on class members and keep non-public visibility
+      // explicit only when needed.
+      '@typescript-eslint/explicit-member-accessibility': [
+        'error',
+        { accessibility: 'no-public' },
+      ],
 
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'error',
