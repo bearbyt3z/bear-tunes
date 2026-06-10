@@ -403,7 +403,7 @@ export class BearTunesProcessor {
    * @returns A promise resolving to a `DirectoryProcessingStatus` that describes
    * the outcome for the entire current directory subtree.
    */
-  public async processAllFilesInDirectory(
+  async processAllFilesInDirectory(
     inputDirectory: string,
     outputDirectory?: string,
   ): Promise<DirectoryProcessingStatus> {
