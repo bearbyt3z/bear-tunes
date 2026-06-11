@@ -254,17 +254,17 @@ export class BearTunesConverter {
     result.encoderStderr = childResult.stderr?.toString();
 
     if (childResult.status === null) {
-      result.status = BearTunesConverterStatus.ConversionFailed;
+      result.status = BearTunesConverterStatus.EncoderProcessSignaled;
       result.error = new Error(
-        `Conversion failed due to a signal: ${childResult.signal ?? 'signal is null'}`,
+        `Encoder process terminated by signal: ${childResult.signal ?? 'signal is null'}`,
       );
       return result;
     }
 
     if (childResult.status !== 0) {
-      result.status = BearTunesConverterStatus.ConversionFailed;
+      result.status = BearTunesConverterStatus.EncoderProcessFailed;
       result.error = childResult.error
-        ?? new Error(`Conversion failed with exit code: ${childResult.status.toString()}`);
+        ?? new Error(`Encoder process failed with exit code: ${childResult.status.toString()}`);
       return result;
     }
 
@@ -478,7 +478,7 @@ export class BearTunesConverter {
 
       return result;
     } catch (error) {
-      result.status = BearTunesConverterStatus.ConversionFailed;
+      result.status = BearTunesConverterStatus.ConversionPipelineFailed;
       result.error = normalizeUnknownError(error);
       result.encoderStdout = undefined;
       result.encoderStderr = undefined;

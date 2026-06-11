@@ -20,8 +20,14 @@ export enum BearTunesConverterStatus {
   /** The output path could not be accessed. */
   OutputPathAccessError = 105,
 
-  /** The conversion process failed. */
-  ConversionFailed = 106,
+  /** The encoder process was terminated by a signal. */
+  EncoderProcessSignaled = 106,
+
+  /** The encoder process failed or exited with a non-zero status code. */
+  EncoderProcessFailed = 107,
+
+  /** The FLAC-to-MP3 conversion pipeline failed. */
+  ConversionPipelineFailed = 108,
 }
 
 /**
@@ -31,7 +37,7 @@ export interface BearTunesConverterResult {
   /** Final status of the conversion attempt. */
   status: BearTunesConverterStatus;
 
-  /** Error describing why the operation failed. */
+  /** Error describing the failure cause, if any. */
   error: Error | undefined;
 
   /** Standard output captured from the encoder process. */
