@@ -64,7 +64,7 @@ export interface BearTunesConverterOptions {
   lameQuality: LameQuality;
 
   /** Channel mode passed to the encoder. */
-  channelMode: ChannelMode;
+  mp3ChannelMode: Mp3ChannelMode;
 
   /** ReplayGain mode passed to the encoder. */
   replayGain: ReplayGain;
@@ -131,7 +131,7 @@ export enum LameQuality {
 /**
  * Stereo channel modes supported by the encoder.
  */
-export enum ChannelMode {
+export enum Mp3ChannelMode {
   /** Uses joint stereo output. */
   JointStereo = 'j',
 

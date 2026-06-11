@@ -15,7 +15,7 @@ import {
   Mp3BitrateMode,
   BearTunesConverterStatus,
   LameQuality,
-  ChannelMode,
+  Mp3ChannelMode,
   ReplayGain,
 } from './types.js';
 
@@ -29,7 +29,7 @@ export {
   Mp3BitrateMode,
   BearTunesConverterStatus,
   LameQuality,
-  ChannelMode,
+  Mp3ChannelMode,
   ReplayGain,
 };
 
@@ -54,7 +54,7 @@ const defaultConverterOptions = Object.freeze({
   // high-quality setting and has produced more consistent high-frequency
   // spectrum results in practical testing than `LameQuality.Q0`.
   lameQuality: LameQuality.Q1,
-  channelMode: ChannelMode.JointStereo,
+  mp3ChannelMode: Mp3ChannelMode.JointStereo,
   replayGain: ReplayGain.Accurate,
   transferTagEntries: false,
   verbose: false,
@@ -313,7 +313,7 @@ export class BearTunesConverter {
 
     result.push(
       '-m',
-      this.options.channelMode.toString(),
+      this.options.mp3ChannelMode.toString(),
       this.options.lameQuality.toString(),
       this.options.replayGain.toString(),
     );
