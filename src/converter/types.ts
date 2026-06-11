@@ -67,7 +67,7 @@ export interface BearTunesConverterOptions {
   mp3ChannelMode: Mp3ChannelMode;
 
   /** ReplayGain mode passed to the encoder. */
-  replayGain: ReplayGain;
+  replayGainMode: ReplayGainMode;
 
   /** Whether metadata should be transferred from the source file. */
   transferTagEntries: boolean;
@@ -145,7 +145,7 @@ export enum Mp3ChannelMode {
 /**
  * ReplayGain modes supported by the encoder.
  */
-export enum ReplayGain {
+export enum ReplayGainMode {
   /** Calculates ReplayGain using the accurate mode. */
   Accurate = '--replaygain-accurate',
 
