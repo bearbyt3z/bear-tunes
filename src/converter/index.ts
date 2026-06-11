@@ -12,7 +12,7 @@ import {
 } from '#tools';
 
 import {
-  BitrateMethod,
+  Mp3BitrateMode,
   BearTunesConverterStatus,
   LameQuality,
   ChannelMode,
@@ -26,7 +26,7 @@ import type {
 
 // reexporting enums & types, so they will be included in the converter import
 export {
-  BitrateMethod,
+  Mp3BitrateMode,
   BearTunesConverterStatus,
   LameQuality,
   ChannelMode,
@@ -46,10 +46,10 @@ export type {
 // - `satisfies` checks compatibility with the public options type,
 // - `Object.freeze()` guards against accidental mutation at runtime.
 const defaultConverterOptions = Object.freeze({
-  bitrateMethod: BitrateMethod.CBR,
-  bitrateValue: 320,
-  bitrateValueMinimum: 256,
-  bitrateValueMaximum: 320,
+  mp3BitrateMode: Mp3BitrateMode.CBR,
+  mp3BitrateKbps: 320,
+  mp3VbrMinBitrateKbps: 256,
+  mp3VbrMaxBitrateKbps: 320,
   // `LameQuality.Q1` is used as the default because it offers a conservative
   // high-quality setting and has produced more consistent high-frequency
   // spectrum results in practical testing than `LameQuality.Q0`.
@@ -286,27 +286,27 @@ export class BearTunesConverter {
   private buildLameArguments(): string[] {
     const result: string[] = [];
 
-    switch (this.options.bitrateMethod) {
+    switch (this.options.mp3BitrateMode) {
       default:
-      case BitrateMethod.CBR:
+      case Mp3BitrateMode.CBR:
         result.push(
-          this.options.bitrateMethod.toString(),
-          `-b${this.options.bitrateValue.toString()}`,
+          this.options.mp3BitrateMode.toString(),
+          `-b${this.options.mp3BitrateKbps.toString()}`,
         );
         break;
 
-      case BitrateMethod.VBR:
+      case Mp3BitrateMode.VBR:
         result.push(
-          this.options.bitrateMethod.toString(),
-          `-b${this.options.bitrateValueMinimum.toString()}`,
-          `-B${this.options.bitrateValueMaximum.toString()}`,
+          this.options.mp3BitrateMode.toString(),
+          `-b${this.options.mp3VbrMinBitrateKbps.toString()}`,
+          `-B${this.options.mp3VbrMaxBitrateKbps.toString()}`,
         );
         break;
 
-      case BitrateMethod.ABR:
+      case Mp3BitrateMode.ABR:
         result.push(
-          this.options.bitrateMethod.toString(),
-          this.options.bitrateValue.toString(),
+          this.options.mp3BitrateMode.toString(),
+          this.options.mp3BitrateKbps.toString(),
         );
         break;
     }

@@ -49,16 +49,16 @@ export interface BearTunesConverterResult {
  */
 export interface BearTunesConverterOptions {
   /** Bitrate control mode used for MP3 encoding. */
-  bitrateMethod: BitrateMethod;
+  mp3BitrateMode: Mp3BitrateMode;
 
   /** Bitrate value used by CBR and ABR modes. */
-  bitrateValue: number;
+  mp3BitrateKbps: number;
 
   /** Minimum bitrate value used by VBR mode. */
-  bitrateValueMinimum: number;
+  mp3VbrMinBitrateKbps: number;
 
   /** Maximum bitrate value used by VBR mode. */
-  bitrateValueMaximum: number;
+  mp3VbrMaxBitrateKbps: number;
 
   /** LAME algorithm quality setting passed via the `-q` switch. */
   lameQuality: LameQuality;
@@ -79,7 +79,7 @@ export interface BearTunesConverterOptions {
 /**
  * Bitrate control modes supported by the MP3 encoder.
  */
-export enum BitrateMethod {
+export enum Mp3BitrateMode {
   /** Uses constant bitrate encoding. */
   CBR = '--cbr',
 
