@@ -51,22 +51,22 @@ export interface BearTunesConverterOptions {
   /** Bitrate control mode used for MP3 encoding. */
   mp3BitrateMode: Mp3BitrateMode;
 
-  /** Bitrate value used by CBR and ABR modes. */
+  /** Bitrate value used by CBR and ABR modes, in kbps. */
   mp3BitrateKbps: number;
 
-  /** Minimum bitrate value used by VBR mode. */
+  /** Minimum bitrate value used by VBR mode, in kbps. */
   mp3VbrMinBitrateKbps: number;
 
-  /** Maximum bitrate value used by VBR mode. */
+  /** Maximum bitrate value used by VBR mode, in kbps. */
   mp3VbrMaxBitrateKbps: number;
 
-  /** LAME algorithm quality setting passed via the `-q` switch. */
+  /** LAME MP3 encoder algorithm quality setting passed via the `-q` switch. */
   lameQuality: LameQuality;
 
-  /** Channel mode passed to the encoder. */
+  /** MP3 channel mode passed to the LAME encoder. */
   mp3ChannelMode: Mp3ChannelMode;
 
-  /** ReplayGain mode passed to the encoder. */
+  /** ReplayGain mode passed to the LAME encoder. */
   replayGainMode: ReplayGainMode;
 
   /** Whether metadata should be transferred from the source file. */
@@ -77,7 +77,7 @@ export interface BearTunesConverterOptions {
 }
 
 /**
- * Bitrate control modes supported by the MP3 encoder.
+ * Bitrate control modes supported by the LAME MP3 encoder.
  */
 export enum Mp3BitrateMode {
   /** Uses constant bitrate encoding. */
@@ -129,7 +129,7 @@ export enum LameQuality {
 }
 
 /**
- * Stereo channel modes supported by the encoder.
+ * Stereo channel modes supported by the LAME MP3 encoder.
  */
 export enum Mp3ChannelMode {
   /** Uses joint stereo output. */
@@ -143,7 +143,7 @@ export enum Mp3ChannelMode {
 }
 
 /**
- * ReplayGain modes supported by the encoder.
+ * ReplayGain modes supported by the LAME MP3 encoder.
  */
 export enum ReplayGainMode {
   /** Calculates ReplayGain using the accurate mode. */
