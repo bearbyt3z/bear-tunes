@@ -384,12 +384,13 @@ export class BearTunesConverter {
   }
 
   /**
-   * Converts a FLAC file to MP3.
+   * Converts a FLAC file to MP3, optionally preparing and transferring tag metadata.
    *
    * @param flacFilePath - Path to the source FLAC file.
    * @param outputPath - Optional target MP3 file path or output directory.
    * @param deleteFlacAfterConversion - Whether the source FLAC file should be deleted after successful conversion.
-   * @returns Promise resolved with the conversion result.
+   * @returns Promise resolved with a conversion result that may report input/output validation
+   *   failures, MP3 tag transfer preparation failure, or FLAC-to-MP3 pipeline failure.
    */
   async flacToMp3(
     flacFilePath: string,
@@ -442,11 +443,20 @@ export class BearTunesConverter {
     let temporaryFiles: string[] = [];
 
     if (this.options.transferTagEntries) {
-      const tagger = new BearTunesTagger({ verbose: this.options.verbose });
-      const preparedTagTransfer = tagger.prepareMp3TagTransferFromFlac(flacFilePath);
+      try {
+        const tagger = new BearTunesTagger({ verbose: this.options.verbose });
+        const preparedTagTransfer = tagger.prepareMp3TagTransferFromFlac(flacFilePath);
 
-      temporaryFiles = preparedTagTransfer.temporaryFiles;
-      tagArguments = preparedTagTransfer.lameTagOptions;
+        temporaryFiles = preparedTagTransfer.temporaryFiles;
+        tagArguments = preparedTagTransfer.lameTagOptions;
+      } catch (error) {
+        result.status = BearTunesConverterStatus.TagTransferPreparationFailed;
+        result.error = normalizeUnknownError(error);
+        result.encoderStdout = undefined;
+        result.encoderStderr = undefined;
+
+        return result;
+      }
     }
 
     try {

@@ -28,6 +28,9 @@ export enum BearTunesConverterStatus {
 
   /** The FLAC-to-MP3 conversion pipeline failed. */
   ConversionPipelineFailed = 108,
+
+  /** Preparing MP3 tag transfer metadata failed. */
+  TagTransferPreparationFailed = 109,
 }
 
 /**
