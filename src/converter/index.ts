@@ -391,8 +391,9 @@ export class BearTunesConverter {
    * @param flacFilePath - Path to the source FLAC file.
    * @param outputPath - Optional target MP3 file path or output directory.
    * @param deleteFlacAfterConversion - Whether the source FLAC file should be deleted after successful conversion.
-   * @returns Promise resolved with a conversion result that may report input/output validation
-   *   failures, MP3 tag transfer preparation failure, or FLAC-to-MP3 pipeline failure.
+   * @returns Promise resolved with a conversion result that may report input or output validation
+   *   failures, tag transfer preparation failure, FLAC decode process failure, LAME encode process
+   *   failure, or a general pipeline failure.
    */
   async flacToMp3(
     flacFilePath: string,
