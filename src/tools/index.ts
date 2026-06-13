@@ -39,6 +39,11 @@ export {
 } from './system/command.js';
 
 export {
+  FirstPipelineCommandFailedError,
+  SecondPipelineCommandFailedError,
+} from './system/command.errors.js';
+
+export {
   arrayDifference,
   arrayIntersection,
   arrayToLowerCase,

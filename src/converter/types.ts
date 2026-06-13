@@ -31,6 +31,12 @@ export enum BearTunesConverterStatus {
 
   /** Preparing MP3 tag transfer metadata failed. */
   TagTransferPreparationFailed = 109,
+
+  /** The FLAC decoder process failed. */
+  FlacDecodeProcessFailed = 110,
+
+  /** The LAME encoder process failed. */
+  LameEncodeProcessFailed = 111,
 }
 
 /**

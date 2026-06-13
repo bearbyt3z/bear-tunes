@@ -9,6 +9,8 @@ import {
 import {
   executeCommandPipeline,
   normalizeUnknownError,
+  FirstPipelineCommandFailedError,
+  SecondPipelineCommandFailedError,
 } from '#tools';
 
 import {
@@ -488,8 +490,17 @@ export class BearTunesConverter {
 
       return result;
     } catch (error) {
-      result.status = BearTunesConverterStatus.ConversionPipelineFailed;
-      result.error = normalizeUnknownError(error);
+      if (error instanceof FirstPipelineCommandFailedError) {
+        result.status = BearTunesConverterStatus.FlacDecodeProcessFailed;
+        result.error = error;
+      } else if (error instanceof SecondPipelineCommandFailedError) {
+        result.status = BearTunesConverterStatus.LameEncodeProcessFailed;
+        result.error = error;
+      } else {
+        result.status = BearTunesConverterStatus.ConversionPipelineFailed;
+        result.error = normalizeUnknownError(error);
+      }
+
       result.encoderStdout = undefined;
       result.encoderStderr = undefined;
 

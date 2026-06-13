@@ -4,6 +4,10 @@ import { pipeline } from 'node:stream/promises';
 
 import { normalizeUnknownError } from '../utils/error.js';
 import { getFirstLine } from '../utils/format.js';
+import {
+  FirstPipelineCommandFailedError,
+  SecondPipelineCommandFailedError,
+} from './command.errors.js';
 
 import type {
   ClosedChildProcess,
@@ -279,20 +283,36 @@ export async function executeCommandPipeline(
   }
 
   if (firstProcessResult.status !== 0) {
-    throw buildProcessExitError(
+    const stderr = firstStderr?.toString('utf8') ?? '';
+
+    throw new FirstPipelineCommandFailedError(
+      buildProcessExitError(
+        firstCommand.commandName,
+        firstProcessResult.status,
+        firstProcessResult.signal,
+        stderr,
+      ).message,
       firstCommand.commandName,
       firstProcessResult.status,
       firstProcessResult.signal,
-      firstStderr?.toString('utf8') ?? '',
+      stderr,
     );
   }
 
   if (secondProcessResult.status !== 0) {
-    throw buildProcessExitError(
+    const stderr = secondStderr?.toString('utf8') ?? '';
+
+    throw new SecondPipelineCommandFailedError(
+      buildProcessExitError(
+        secondCommand.commandName,
+        secondProcessResult.status,
+        secondProcessResult.signal,
+        stderr,
+      ).message,
       secondCommand.commandName,
       secondProcessResult.status,
       secondProcessResult.signal,
-      secondStderr?.toString('utf8') ?? '',
+      stderr,
     );
   }
 
