@@ -201,14 +201,16 @@ export function executeCommandSync(
  * Executes two system commands connected with a pipe and returns both process results.
  *
  * The standard output of the first command is piped into the standard input of
- * the second command. Streams may be captured selectively. On success, the
- * function returns separate results for both commands so the caller can inspect
- * outputs, errors and exit statuses independently.
+ * the second command. Standard output and standard error streams for both
+ * commands may be captured selectively. On success, the function returns
+ * separate results for both commands so the caller can inspect captured outputs,
+ * errors and exit statuses independently.
  *
  * @param firstCommand - The first command in the pipeline.
  * @param secondCommand - The second command in the pipeline.
  * @param captureOptions - Configuration describing which streams should be captured.
- * @returns Captured output of both commands in the successful pipeline.
+ * @returns Execution results for both commands in the successful pipeline, with
+ *   non-captured streams returned as `undefined`.
  * @throws Error when the pipe itself fails or a child process cannot be started.
  * @throws FirstPipelineCommandFailedError when the first command exits unsuccessfully.
  * @throws SecondPipelineCommandFailedError when the second command exits unsuccessfully.
