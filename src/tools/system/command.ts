@@ -209,7 +209,9 @@ export function executeCommandSync(
  * @param secondCommand - The second command in the pipeline.
  * @param captureOptions - Configuration describing which streams should be captured.
  * @returns Captured output of both commands in the successful pipeline.
- * @throws Error when the pipeline fails or any child process exits unsuccessfully.
+ * @throws Error when the pipe itself fails or a child process cannot be started.
+ * @throws FirstPipelineCommandFailedError when the first command exits unsuccessfully.
+ * @throws SecondPipelineCommandFailedError when the second command exits unsuccessfully.
  */
 export async function executeCommandPipeline(
   firstCommand: CommandToExecute,
