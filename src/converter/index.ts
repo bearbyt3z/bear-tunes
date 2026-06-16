@@ -501,16 +501,16 @@ export class BearTunesConverter {
       logger.info(`Using LAME options: ${lameOptionsJoined}`);
     }
 
-    let tagArguments: string[] = [];
-    let temporaryFiles: string[] = [];
+    let lameTagArguments: string[] = [];
+    let tagTransferTemporaryFiles: string[] = [];
 
     if (this.options.transferTagEntries) {
       try {
         const tagger = new BearTunesTagger({ verbose: this.options.verbose });
-        const preparedTagTransfer = tagger.prepareMp3TagTransferFromFlac(flacFilePath);
+        const preparedTagTransferResult = tagger.prepareMp3TagTransferFromFlac(flacFilePath);
 
-        temporaryFiles = preparedTagTransfer.temporaryFiles;
-        tagArguments = preparedTagTransfer.lameTagOptions;
+        tagTransferTemporaryFiles = preparedTagTransferResult.temporaryFiles;
+        lameTagArguments = preparedTagTransferResult.lameTagOptions;
       } catch (error) {
         return BearTunesConverter.createFailureResult(
           BearTunesConverterFailureCode.TagTransferPreparationFailed,
@@ -527,7 +527,7 @@ export class BearTunesConverter {
         },
         {
           commandName: 'lame',
-          args: [...lameArguments, ...tagArguments, '-', resolvedOutputPath],
+          args: [...lameArguments, ...lameTagArguments, '-', resolvedOutputPath],
         },
         {
           firstStdout: false,
@@ -564,7 +564,7 @@ export class BearTunesConverter {
         normalizeUnknownError(error),
       );
     } finally {
-      temporaryFiles.forEach((filePath) => {
+      tagTransferTemporaryFiles.forEach((filePath) => {
         BearTunesConverter.tryDeleteFile(filePath, 'temporary tag transfer file');
       });
     }
