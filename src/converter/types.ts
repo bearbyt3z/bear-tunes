@@ -40,7 +40,7 @@ export enum BearTunesConverterFailureCode {
  * Fields shared by all converter results, regardless of success or failure.
  */
 export interface BearTunesConverterResultBase {
-  /** Standard error output captured from the encoder process, when available. */
+  /** Standard output captured from the encoder process, when available. */
   encoderStdout?: string;
 
   /** Standard error output captured from the encoder process, when available. */
