@@ -222,7 +222,7 @@ export class BearTunesConverter {
    * @returns An object with `ok` set to `true` when the input file is valid, or `ok` set to `false`
    * with a converter failure result describing why validation failed.
    */
-  private static validateInputFile(
+  private static validateInputFilePath(
     inputFilePath: string,
     expectedExtensionPattern: RegExp,
     expectedExtensionDescription: string,
@@ -410,7 +410,7 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteAiffAfterConversion = false,
   ): BearTunesConverterResult {
-    const inputValidationResult = BearTunesConverter.validateInputFile(
+    const inputValidationResult = BearTunesConverter.validateInputFilePath(
       aiffFilePath,
       /\.(aif|aiff)$/i,
       '*.aif or *.aiff',
@@ -469,7 +469,7 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteFlacAfterConversion = false,
   ): Promise<BearTunesConverterResult> {
-    const inputValidationResult = BearTunesConverter.validateInputFile(
+    const inputValidationResult = BearTunesConverter.validateInputFilePath(
       flacFilePath,
       /\.flac$/i,
       '*.flac',
