@@ -15,29 +15,33 @@ import {
 
 import {
   Mp3BitrateMode,
-  BearTunesConverterStatus,
+  BearTunesConverterFailureCode,
   LameQuality,
   Mp3ChannelMode,
   ReplayGainMode,
 } from './types.js';
 
 import type {
+  BearTunesConverterFailureResult,
   BearTunesConverterOptions,
   BearTunesConverterResult,
+  BearTunesConverterSuccessResult,
 } from './types.js';
 
 // reexporting enums & types, so they will be included in the converter import
 export {
   Mp3BitrateMode,
-  BearTunesConverterStatus,
+  BearTunesConverterFailureCode,
   LameQuality,
   Mp3ChannelMode,
   ReplayGainMode,
 };
 
 export type {
+  BearTunesConverterFailureResult,
   BearTunesConverterOptions,
   BearTunesConverterResult,
+  BearTunesConverterSuccessResult,
 };
 
 /**
@@ -84,30 +88,57 @@ export class BearTunesConverter {
   }
 
   /**
-   * Creates the initial conversion result with the default success state.
+   * Creates a success result describing a completed conversion.
    *
-   * @returns Initial converter result object.
+   * @param outputPath - Resolved path of the successfully produced output file.
+   * @param encoderStdout - Standard output captured from the encoder process, when available.
+   * @param encoderStderr - Standard error captured from the encoder process, when available.
+   * @returns A converter success result with `ok` set to `true`.
    */
-  private static createInitialConverterResult(): BearTunesConverterResult {
-    return {
-      status: BearTunesConverterStatus.Success,
-      error: undefined,
-      encoderStdout: undefined,
-      encoderStderr: undefined,
-      outputPath: undefined,
-    };
+  private static createSuccessResult(
+    outputPath: string,
+    encoderStdout?: string,
+    encoderStderr?: string,
+  ): BearTunesConverterSuccessResult {
+    return { ok: true, outputPath, encoderStdout, encoderStderr };
   }
 
   /**
-   * Resolves the final output path for a conversion operation.
+   * Creates a failure result describing an unsuccessful conversion.
    *
-   * @param inputFilePath - Source file path used as the default output path base.
-   * @param outputPath - Optional output file or directory path provided by the caller.
-   * @param inputExtensionPattern - Pattern matching the source file extension.
-   * @param outputExtension - Expected output file extension.
-   * @param expectedOutputExtensionPattern - Pattern matching the allowed output file extension.
+   * @param failureCode - Domain-specific code classifying the conversion failure.
+   * @param error - Error object describing the failure cause.
+   * @param encoderStdout - Standard output captured from the encoder process, when available.
+   * @param encoderStderr - Standard error captured from the encoder process, when available.
+   * @returns A converter failure result with `ok` set to `false`.
+   */
+  private static createFailureResult(
+    failureCode: BearTunesConverterFailureCode,
+    error: Error,
+    encoderStdout?: string,
+    encoderStderr?: string,
+  ): BearTunesConverterFailureResult {
+    return { ok: false, failureCode, error, encoderStdout, encoderStderr };
+  }
+
+  /**
+   * Resolves the output file path to use for a conversion operation.
+   *
+   * If `outputPath` is not provided, the method derives the output path from
+   * `inputFilePath` by replacing the input extension with `outputExtension`.
+   *
+   * If `outputPath` points to a directory, the method appends the converted input
+   * file name to that directory. If it points to a file, the method validates that
+   * the file path uses the expected output extension.
+   *
+   * @param inputFilePath - Source file path used to derive the default output file path and file name.
+   * @param outputPath - Optional output file path or output directory path provided by the caller.
+   * @param inputExtensionPattern - Pattern matching the source file extension that should be replaced.
+   * @param outputExtension - Output file extension to use when deriving the final output path.
+   * @param expectedOutputExtensionPattern - Pattern matching valid output file paths for the target format.
    * @param className - Class name used in generated error messages.
-   * @returns Resolved output path together with status and optional error details.
+   * @returns An object with `ok` set to `true` and the resolved output path, or `ok` set to `false`
+   * with a converter failure result describing why output path resolution failed.
    */
   private static resolveOutputPath(
     inputFilePath: string,
@@ -116,17 +147,12 @@ export class BearTunesConverter {
     outputExtension: string,
     expectedOutputExtensionPattern: RegExp,
     className: string,
-  ): {
-    resolvedOutputPath: string | undefined;
-    status: BearTunesConverterStatus;
-    error: Error | undefined;
-  } {
+  ): { ok: true; resolvedOutputPath: string } | { ok: false; error: BearTunesConverterFailureResult } {
     try {
       if (outputPath === undefined) {
         return {
+          ok: true,
           resolvedOutputPath: inputFilePath.replace(inputExtensionPattern, outputExtension),
-          status: BearTunesConverterStatus.Success,
-          error: undefined,
         };
       }
 
@@ -134,45 +160,50 @@ export class BearTunesConverter {
 
       if (outputPathStats.isDirectory()) {
         return {
-          resolvedOutputPath: outputPath.replace(/\/+$/, path.sep)
+          ok: true,
+          resolvedOutputPath:
+            outputPath.replace(/\/+$/, path.sep)
             + path.basename(inputFilePath).replace(inputExtensionPattern, outputExtension),
-          status: BearTunesConverterStatus.Success,
-          error: undefined,
         };
       }
 
       if (outputPathStats.isFile()) {
         if (outputPath.match(expectedOutputExtensionPattern)) {
           return {
+            ok: true,
             resolvedOutputPath: outputPath,
-            status: BearTunesConverterStatus.Success,
-            error: undefined,
           };
         }
 
         return {
-          resolvedOutputPath: undefined,
-          status: BearTunesConverterStatus.InvalidOutputFileExtension,
-          error: new TypeError(
-            `${className}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
+          ok: false,
+          error: BearTunesConverter.createFailureResult(
+            BearTunesConverterFailureCode.InvalidOutputFileExtension,
+            new TypeError(
+              `${className}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
+            ),
           ),
         };
       }
 
       return {
-        resolvedOutputPath: undefined,
-        status: BearTunesConverterStatus.InvalidOutputPath,
-        error: new TypeError(
-          `${className}: Specified output path ${outputPath} is neither a file nor directory`,
+        ok: false,
+        error: BearTunesConverter.createFailureResult(
+          BearTunesConverterFailureCode.InvalidOutputPath,
+          new TypeError(
+            `${className}: Specified output path ${outputPath} is neither a file nor directory`,
+          ),
         ),
       };
     } catch (error) {
       return {
-        resolvedOutputPath: undefined,
-        status: BearTunesConverterStatus.OutputPathAccessError,
-        error: new ReferenceError(
-          `${className}: Cannot access file ${outputPath} (incorrect path?)`,
-          { cause: error },
+        ok: false,
+        error: BearTunesConverter.createFailureResult(
+          BearTunesConverterFailureCode.OutputPathAccessError,
+          new ReferenceError(
+            `${className}: Cannot access file ${outputPath} (incorrect path?)`,
+            { cause: error },
+          ),
         ),
       };
     }
@@ -181,43 +212,47 @@ export class BearTunesConverter {
   /**
    * Validates that the input path points to an accessible file with the expected extension.
    *
-   * @param inputFilePath - Path to the source file.
-   * @param expectedExtensionPattern - Pattern matching the required input extension.
-   * @param expectedExtensionDescription - Human-readable description of accepted extensions.
+   * The method checks both filesystem accessibility and whether the referenced path
+   * is a file whose name matches the expected input extension pattern.
+   *
+   * @param inputFilePath - Path to the source file to validate.
+   * @param expectedExtensionPattern - Pattern matching the required input file extension.
+   * @param expectedExtensionDescription - Human-readable description of accepted input extensions used in error messages.
    * @param className - Class name used in generated error messages.
-   * @returns Validation status together with optional error details.
+   * @returns An object with `ok` set to `true` when the input file is valid, or `ok` set to `false`
+   * with a converter failure result describing why validation failed.
    */
   private static validateInputFile(
     inputFilePath: string,
     expectedExtensionPattern: RegExp,
     expectedExtensionDescription: string,
     className: string,
-  ): {
-    status: BearTunesConverterStatus;
-    error: Error | undefined;
-  } {
+  ): { ok: true } | { ok: false; error: BearTunesConverterFailureResult } {
     try {
       const inputFilePathStats = fs.lstatSync(inputFilePath);
 
       if (!inputFilePathStats.isFile() || !inputFilePath.match(expectedExtensionPattern)) {
         return {
-          status: BearTunesConverterStatus.InvalidInputFile,
-          error: new TypeError(
-            `${className}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
+          ok: false,
+          error: BearTunesConverter.createFailureResult(
+            BearTunesConverterFailureCode.InvalidInputFile,
+            new TypeError(
+              `${className}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
+            ),
           ),
         };
       }
 
-      return {
-        status: BearTunesConverterStatus.Success,
-        error: undefined,
-      };
+      return { ok: true };
     } catch (error) {
       return {
-        status: BearTunesConverterStatus.InputFileAccessError,
-        error: new ReferenceError(
-          `${className}: Cannot access file ${inputFilePath} (incorrect path?)`,
-          { cause: error },
+        ok: false,
+        error: BearTunesConverter.createFailureResult(
+          BearTunesConverterFailureCode.InputFileAccessError,
+          new ReferenceError(
+            `${className}: Cannot access file ${inputFilePath} (incorrect path?)`,
+            { cause: error },
+          ),
         ),
       };
     }
@@ -238,46 +273,55 @@ export class BearTunesConverter {
   }
 
   /**
-   * Finalizes a synchronous child process result and maps it to converter result fields.
+   * Converts a synchronous encoder process result into a converter result.
    *
-   * @param result - Converter result object to update.
-   * @param childResult - Raw result returned by the child process execution.
+   * The method maps process termination details and captured output streams to either
+   * a success result or a failure result. On success, it may also delete the source
+   * file when requested.
+   *
+   * @param childResult - Raw result returned by the synchronous child process execution.
    * @param sourceFilePath - Source file path that may be deleted after successful conversion.
-   * @param deleteSourceAfterConversion - Whether the source file should be removed on success.
-   * @returns Updated converter result object.
+   * @param deleteSourceAfterConversion - Whether the source file should be removed after a successful conversion.
+   * @param resolvedOutputPath - Resolved output file path to include in the success result.
+   * @returns A converter result describing whether the encoder process succeeded, failed with
+   * a non-zero exit status, or was terminated by a signal.
    */
   private static finalizeChildProcessResult(
-    result: BearTunesConverterResult,
     childResult: childProcess.SpawnSyncReturns<Buffer>,
     sourceFilePath: string,
     deleteSourceAfterConversion: boolean,
+    resolvedOutputPath: string,
   ): BearTunesConverterResult {
-    result.encoderStdout = childResult.stdout?.toString();
-    result.encoderStderr = childResult.stderr?.toString();
+    const encoderStdout = childResult.stdout?.toString();
+    const encoderStderr = childResult.stderr?.toString();
 
     if (childResult.status === null) {
-      result.status = BearTunesConverterStatus.EncoderProcessSignaled;
-      result.error = new Error(
-        `Encoder process terminated by signal: ${childResult.signal ?? 'signal is null'}`,
+      return BearTunesConverter.createFailureResult(
+        BearTunesConverterFailureCode.EncoderProcessSignaled,
+        new Error(`Encoder process terminated by signal: ${childResult.signal ?? 'signal is null'}`),
+        encoderStdout,
+        encoderStderr,
       );
-      return result;
     }
 
     if (childResult.status !== 0) {
-      result.status = BearTunesConverterStatus.EncoderProcessFailed;
-      result.error = childResult.error
-        ?? new Error(`Encoder process failed with exit code: ${childResult.status.toString()}`);
-      return result;
+      return BearTunesConverter.createFailureResult(
+        BearTunesConverterFailureCode.EncoderProcessFailed,
+        childResult.error ?? new Error(`Encoder process failed with exit code: ${childResult.status.toString()}`),
+        encoderStdout,
+        encoderStderr,
+      );
     }
 
     if (deleteSourceAfterConversion) {
       BearTunesConverter.tryDeleteFile(sourceFilePath, 'source file');
     }
 
-    result.status = BearTunesConverterStatus.Success;
-    result.error = undefined;
-
-    return result;
+    return BearTunesConverter.createSuccessResult(
+      resolvedOutputPath,
+      encoderStdout,
+      encoderStderr,
+    );
   }
 
   /**
@@ -324,35 +368,34 @@ export class BearTunesConverter {
   }
 
   /**
-   * Converts an AIFF file to FLAC.
+   * Converts an AIFF file to a FLAC file.
    *
-   * @param aiffFilePath - Path to the source AIFF file.
-   * @param outputPath - Optional target FLAC file path or output directory.
-   * @param deleteAiffAfterConversion - Whether the source AIFF file should be deleted after successful conversion.
-   * @returns Result describing the conversion outcome.
+   * The method validates the input file, resolves the output file path, runs the
+   * `flac` encoder synchronously, and maps the encoder result to a converter result.
+   * On successful conversion, it may also delete the source AIFF file when requested.
+   *
+   * @param aiffFilePath - Path to the source AIFF file to convert.
+   * @param outputPath - Optional target FLAC file path or output directory path.
+   * @param deleteAiffAfterConversion - Whether the source AIFF file should be deleted after a successful conversion.
+   * @returns A converter result describing whether the conversion succeeded or why it failed.
    */
   aiffToFlac(
     aiffFilePath: string,
     outputPath: string | undefined = undefined,
     deleteAiffAfterConversion = false,
   ): BearTunesConverterResult {
-    const result = BearTunesConverter.createInitialConverterResult();
-
-    const validatedInputFile = BearTunesConverter.validateInputFile(
+    const inputValidationResult = BearTunesConverter.validateInputFile(
       aiffFilePath,
       /\.(aif|aiff)$/i,
       '*.aif or *.aiff',
       this.constructor.name,
     );
 
-    result.status = validatedInputFile.status;
-    result.error = validatedInputFile.error;
-
-    if (result.status !== BearTunesConverterStatus.Success) {
-      return result;
+    if (!inputValidationResult.ok) {
+      return inputValidationResult.error;
     }
 
-    const outputPathResolution = BearTunesConverter.resolveOutputPath(
+    const outputPathResolutionResult = BearTunesConverter.resolveOutputPath(
       aiffFilePath,
       outputPath,
       /\.(aif|aiff)$/i,
@@ -361,15 +404,11 @@ export class BearTunesConverter {
       this.constructor.name,
     );
 
-    const resolvedOutputPath = outputPathResolution.resolvedOutputPath;
-    result.status = outputPathResolution.status;
-    result.error = outputPathResolution.error;
-
-    if (result.status !== BearTunesConverterStatus.Success || resolvedOutputPath === undefined) {
-      return result;
+    if (!outputPathResolutionResult.ok) {
+      return outputPathResolutionResult.error;
     }
 
-    result.outputPath = resolvedOutputPath;
+    const resolvedOutputPath = outputPathResolutionResult.resolvedOutputPath;
 
     const childResult = childProcess.spawnSync(
       'flac',
@@ -378,45 +417,44 @@ export class BearTunesConverter {
     );
 
     return BearTunesConverter.finalizeChildProcessResult(
-      result,
       childResult,
       aiffFilePath,
       deleteAiffAfterConversion,
+      resolvedOutputPath,
     );
   }
 
   /**
-   * Converts a FLAC file to MP3, optionally preparing and transferring tag metadata.
+   * Converts a FLAC file to an MP3 file, optionally preparing and transferring tag metadata.
    *
-   * @param flacFilePath - Path to the source FLAC file.
-   * @param outputPath - Optional target MP3 file path or output directory.
-   * @param deleteFlacAfterConversion - Whether the source FLAC file should be deleted after successful conversion.
-   * @returns Promise resolved with a conversion result that may report input or output validation
-   *   failures, tag transfer preparation failure, FLAC decode process failure, LAME encode process
-   *   failure, or a general pipeline failure.
+   * The method validates the input file, resolves the output file path, optionally prepares
+   * tag transfer arguments, runs a `flac` to `lame` conversion pipeline, and maps the pipeline
+   * result to a converter result. On successful conversion, it may also delete the source FLAC
+   * file when requested. Any temporary files created for tag transfer preparation are removed
+   * before the method finishes.
+   *
+   * @param flacFilePath - Path to the source FLAC file to convert.
+   * @param outputPath - Optional target MP3 file path or output directory path.
+   * @param deleteFlacAfterConversion - Whether the source FLAC file should be deleted after a successful conversion.
+   * @returns A promise resolved with a converter result describing whether the conversion succeeded or why it failed.
    */
   async flacToMp3(
     flacFilePath: string,
     outputPath: string | undefined = undefined,
     deleteFlacAfterConversion = false,
   ): Promise<BearTunesConverterResult> {
-    const result = BearTunesConverter.createInitialConverterResult();
-
-    const validatedInputFile = BearTunesConverter.validateInputFile(
+    const inputValidationResult = BearTunesConverter.validateInputFile(
       flacFilePath,
       /\.flac$/i,
       '*.flac',
       this.constructor.name,
     );
 
-    result.status = validatedInputFile.status;
-    result.error = validatedInputFile.error;
-
-    if (result.status !== BearTunesConverterStatus.Success) {
-      return result;
+    if (!inputValidationResult.ok) {
+      return inputValidationResult.error;
     }
 
-    const outputPathResolution = BearTunesConverter.resolveOutputPath(
+    const outputPathResolutionResult = BearTunesConverter.resolveOutputPath(
       flacFilePath,
       outputPath,
       /\.flac$/i,
@@ -425,16 +463,11 @@ export class BearTunesConverter {
       this.constructor.name,
     );
 
-    const resolvedOutputPath = outputPathResolution.resolvedOutputPath;
-    result.status = outputPathResolution.status;
-    result.error = outputPathResolution.error;
-
-    if (result.status !== BearTunesConverterStatus.Success || resolvedOutputPath === undefined) {
-      return result;
+    if (!outputPathResolutionResult.ok) {
+      return outputPathResolutionResult.error;
     }
 
-    result.outputPath = resolvedOutputPath;
-
+    const resolvedOutputPath = outputPathResolutionResult.resolvedOutputPath;
     const lameArguments = this.buildLameArguments();
     const lameOptionsJoined = lameArguments.join(' ');
 
@@ -453,12 +486,10 @@ export class BearTunesConverter {
         temporaryFiles = preparedTagTransfer.temporaryFiles;
         tagArguments = preparedTagTransfer.lameTagOptions;
       } catch (error) {
-        result.status = BearTunesConverterStatus.TagTransferPreparationFailed;
-        result.error = normalizeUnknownError(error);
-        result.encoderStdout = undefined;
-        result.encoderStderr = undefined;
-
-        return result;
+        return BearTunesConverter.createFailureResult(
+          BearTunesConverterFailureCode.TagTransferPreparationFailed,
+          normalizeUnknownError(error),
+        );
       }
     }
 
@@ -480,32 +511,34 @@ export class BearTunesConverter {
         },
       );
 
-      result.status = BearTunesConverterStatus.Success;
-      result.error = undefined;
-      result.encoderStdout = childResult.second.stdout?.toString('utf8');
-      result.encoderStderr = childResult.second.stderr?.toString('utf8');
-
       if (deleteFlacAfterConversion) {
         BearTunesConverter.tryDeleteFile(flacFilePath, 'source file');
       }
 
-      return result;
+      return BearTunesConverter.createSuccessResult(
+        resolvedOutputPath,
+        childResult.second.stdout?.toString('utf8'),
+        childResult.second.stderr?.toString('utf8'),
+      );
     } catch (error) {
       if (error instanceof FirstPipelineCommandFailedError) {
-        result.status = BearTunesConverterStatus.FlacDecodeProcessFailed;
-        result.error = error;
-      } else if (error instanceof SecondPipelineCommandFailedError) {
-        result.status = BearTunesConverterStatus.LameEncodeProcessFailed;
-        result.error = error;
-      } else {
-        result.status = BearTunesConverterStatus.ConversionPipelineFailed;
-        result.error = normalizeUnknownError(error);
+        return BearTunesConverter.createFailureResult(
+          BearTunesConverterFailureCode.FlacDecodeProcessFailed,
+          error,
+        );
       }
 
-      result.encoderStdout = undefined;
-      result.encoderStderr = undefined;
+      if (error instanceof SecondPipelineCommandFailedError) {
+        return BearTunesConverter.createFailureResult(
+          BearTunesConverterFailureCode.LameEncodeProcessFailed,
+          error,
+        );
+      }
 
-      return result;
+      return BearTunesConverter.createFailureResult(
+        BearTunesConverterFailureCode.ConversionPipelineFailed,
+        normalizeUnknownError(error),
+      );
     } finally {
       temporaryFiles.forEach((filePath) => {
         BearTunesConverter.tryDeleteFile(filePath, 'temporary tag transfer file');

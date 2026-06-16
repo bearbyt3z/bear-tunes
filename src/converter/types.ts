@@ -1,10 +1,7 @@
 /**
- * Status codes describing the outcome of a converter operation.
+ * Error codes classifying converter failures.
  */
-export enum BearTunesConverterStatus {
-  /** The conversion operation completed successfully. */
-  Success = 0,
-
+export enum BearTunesConverterFailureCode {
   /** The input path does not point to a supported input file. */
   InvalidInputFile = 101,
 
@@ -40,24 +37,53 @@ export enum BearTunesConverterStatus {
 }
 
 /**
- * Result returned by a BearTunes converter operation.
+ * Fields shared by all converter results, regardless of success or failure.
  */
-export interface BearTunesConverterResult {
-  /** Final status of the conversion attempt. */
-  status: BearTunesConverterStatus;
+export interface BearTunesConverterResultBase {
+  /** Standard error output captured from the encoder process, when available. */
+  encoderStdout?: string;
 
-  /** Error describing the failure cause, if any. */
-  error: Error | undefined;
-
-  /** Standard output captured from the encoder process. */
-  encoderStdout: string | undefined;
-
-  /** Standard error output captured from the encoder process. */
-  encoderStderr: string | undefined;
-
-  /** Resolved output file path. */
-  outputPath: string | undefined;
+  /** Standard error output captured from the encoder process, when available. */
+  encoderStderr?: string;
 }
+
+/**
+ * Result returned when a conversion completes successfully.
+ */
+export interface BearTunesConverterSuccessResult extends BearTunesConverterResultBase {
+  /** Discriminator indicating that the conversion succeeded. */
+  ok: true;
+
+  /** Resolved path of the successfully produced output file. */
+  outputPath: string;
+}
+
+/**
+ * Result returned when a conversion fails.
+ */
+export interface BearTunesConverterFailureResult extends BearTunesConverterResultBase {
+  /** Discriminator indicating that the conversion failed. */
+  ok: false;
+
+  /** Domain-specific code classifying the conversion failure. */
+  failureCode: BearTunesConverterFailureCode;
+
+  /** Error object describing the failure cause. */
+  error: Error;
+}
+
+/**
+ * Discriminated union describing the outcome of a converter operation.
+ *
+ * When `ok` is `true`, the result is a {@link BearTunesConverterSuccessResult}
+ * and contains the resolved `outputPath`.
+ *
+ * When `ok` is `false`, the result is a {@link BearTunesConverterFailureResult}
+ * and contains `failureCode` together with the underlying `error`.
+ */
+export type BearTunesConverterResult =
+  | BearTunesConverterSuccessResult
+  | BearTunesConverterFailureResult;
 
 /**
  * Configuration options controlling BearTunes audio conversion.

@@ -10,7 +10,7 @@ import {
   tryGetAudioFileTypeFromFile,
 } from '#tools';
 
-import { BearTunesConverter, BearTunesConverterStatus } from '#converter';
+import { BearTunesConverter } from '#converter';
 import { BearTunesRenamer } from '#renamer';
 import { BearTunesTagger } from '#tagger';
 
@@ -18,7 +18,7 @@ import {
   DirectoryProcessingStatus,
 } from './types.js';
 
-import type { BearTunesConverterResult } from '#converter';
+import type { BearTunesConverterFailureResult } from '#converter';
 
 import type {
   BearTunesProcessorDependencies,
@@ -126,20 +126,20 @@ export class BearTunesProcessor {
   /**
    * Logs a standardized warning message for a failed audio conversion.
    *
-   * The helper keeps conversion-specific error formatting in one place so callers
+   * The helper keeps conversion failure message formatting in one place so callers
    * do not need to duplicate warning message construction.
    *
    * @param filePath - The source file whose conversion failed.
-   * @param result - The converter result containing status, error, and stderr details.
+   * @param result - The converter failure result containing the failure code, error details, and optional encoder stderr output.
    * @param stderrLabel - The label used to describe the stderr output in the warning message.
    */
   private static logConversionFailure(
     filePath: string,
-    result: BearTunesConverterResult,
+    result: BearTunesConverterFailureResult,
     stderrLabel: string,
   ): void {
-    let warnMessage = `Converting file ${filePath} failed with status code ${result.status} and message:\n`;
-    warnMessage += `${result.error?.message}:\n${stderrLabel}: ${result.encoderStderr}`;
+    let warnMessage = `Converting file ${filePath} failed with code ${result.failureCode} and message:\n`;
+    warnMessage += `${result.error.message}:\n${stderrLabel}: ${result.encoderStderr}`;
     logger.warn(warnMessage);
   }
 
@@ -206,7 +206,7 @@ export class BearTunesProcessor {
 
       const result = await this.dependencies.converter.flacToMp3(filePath);
 
-      if (result.status !== BearTunesConverterStatus.Success || !result.outputPath) {
+      if (!result.ok) {
         BearTunesProcessor.logConversionFailure(filePath, result, 'lame stderr');
         return false;
       }
@@ -278,7 +278,7 @@ export class BearTunesProcessor {
 
     const result = this.dependencies.converter.aiffToFlac(filePath, undefined, true);
 
-    if (result.status !== BearTunesConverterStatus.Success || !result.outputPath) {
+    if (!result.ok) {
       BearTunesProcessor.logConversionFailure(filePath, result, 'flac stderr');
       return false;
     }
