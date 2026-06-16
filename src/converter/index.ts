@@ -136,7 +136,7 @@ export class BearTunesConverter {
    * @param inputExtensionPattern - Pattern matching the source file extension that should be replaced.
    * @param outputExtension - Output file extension to use when deriving the final output path.
    * @param expectedOutputExtensionPattern - Pattern matching valid output file paths for the target format.
-   * @param className - Class name used in generated error messages.
+   * @param callerName - Caller name used in generated error messages.
    * @returns An object with `ok` set to `true` and the resolved output path, or `ok` set to `false`
    * with a converter failure result describing why output path resolution failed.
    */
@@ -146,7 +146,7 @@ export class BearTunesConverter {
     inputExtensionPattern: RegExp,
     outputExtension: string,
     expectedOutputExtensionPattern: RegExp,
-    className: string,
+    callerName: string,
   ): { ok: true; resolvedOutputPath: string } | { ok: false; error: BearTunesConverterFailureResult } {
     try {
       if (outputPath === undefined) {
@@ -180,7 +180,7 @@ export class BearTunesConverter {
           error: BearTunesConverter.createFailureResult(
             BearTunesConverterFailureCode.InvalidOutputFileExtension,
             new TypeError(
-              `${className}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
+              `${callerName}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
             ),
           ),
         };
@@ -191,7 +191,7 @@ export class BearTunesConverter {
         error: BearTunesConverter.createFailureResult(
           BearTunesConverterFailureCode.InvalidOutputPath,
           new TypeError(
-            `${className}: Specified output path ${outputPath} is neither a file nor directory`,
+            `${callerName}: Specified output path ${outputPath} is neither a file nor directory`,
           ),
         ),
       };
@@ -201,7 +201,7 @@ export class BearTunesConverter {
         error: BearTunesConverter.createFailureResult(
           BearTunesConverterFailureCode.OutputPathAccessError,
           new ReferenceError(
-            `${className}: Cannot access file ${outputPath} (incorrect path?)`,
+            `${callerName}: Cannot access file ${outputPath} (incorrect path?)`,
             { cause: error },
           ),
         ),
@@ -218,7 +218,7 @@ export class BearTunesConverter {
    * @param inputFilePath - Path to the source file to validate.
    * @param expectedExtensionPattern - Pattern matching the required input file extension.
    * @param expectedExtensionDescription - Human-readable description of accepted input extensions used in error messages.
-   * @param className - Class name used in generated error messages.
+   * @param callerName - Caller name used in generated error messages.
    * @returns An object with `ok` set to `true` when the input file is valid, or `ok` set to `false`
    * with a converter failure result describing why validation failed.
    */
@@ -226,7 +226,7 @@ export class BearTunesConverter {
     inputFilePath: string,
     expectedExtensionPattern: RegExp,
     expectedExtensionDescription: string,
-    className: string,
+    callerName: string,
   ): { ok: true } | { ok: false; error: BearTunesConverterFailureResult } {
     try {
       const inputFilePathStats = fs.lstatSync(inputFilePath);
@@ -237,7 +237,7 @@ export class BearTunesConverter {
           error: BearTunesConverter.createFailureResult(
             BearTunesConverterFailureCode.InvalidInputFile,
             new TypeError(
-              `${className}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
+              `${callerName}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
             ),
           ),
         };
@@ -250,7 +250,7 @@ export class BearTunesConverter {
         error: BearTunesConverter.createFailureResult(
           BearTunesConverterFailureCode.InputFileAccessError,
           new ReferenceError(
-            `${className}: Cannot access file ${inputFilePath} (incorrect path?)`,
+            `${callerName}: Cannot access file ${inputFilePath} (incorrect path?)`,
             { cause: error },
           ),
         ),
