@@ -273,24 +273,52 @@ export class BearTunesConverter {
   }
 
   /**
-   * Converts a synchronous encoder process result into a converter result.
+   * Finalizes a successful conversion by optionally deleting the source file
+   * and returning a converter success result.
    *
-   * The method maps process termination details and captured output streams to either
-   * a success result or a failure result. On success, it may also delete the source
-   * file when requested.
+   * @param sourceFilePath - Source file path that may be deleted after successful conversion.
+   * @param deleteSourceAfterConversion - Whether the source file should be removed after a successful conversion.
+   * @param outputPath - Resolved path of the successfully produced output file.
+   * @param encoderStdout - Standard output captured from the encoder process, when available.
+   * @param encoderStderr - Standard error captured from the encoder process, when available.
+   * @returns A converter success result with `ok` set to `true`.
+   */
+  private static finalizeSuccessfulConversion(
+    sourceFilePath: string,
+    deleteSourceAfterConversion: boolean,
+    outputPath: string,
+    encoderStdout?: string,
+    encoderStderr?: string,
+  ): BearTunesConverterSuccessResult {
+    if (deleteSourceAfterConversion) {
+      BearTunesConverter.tryDeleteFile(sourceFilePath, 'source file');
+    }
+
+    return BearTunesConverter.createSuccessResult(
+      outputPath,
+      encoderStdout,
+      encoderStderr,
+    );
+  }
+
+  /**
+   * Handles the result of a completed encoder process and maps it to a converter result.
+   *
+   * The method converts process termination details and captured output streams into
+   * either a success result or a failure result.
    *
    * @param childResult - Raw result returned by the synchronous child process execution.
    * @param sourceFilePath - Source file path that may be deleted after successful conversion.
    * @param deleteSourceAfterConversion - Whether the source file should be removed after a successful conversion.
-   * @param resolvedOutputPath - Resolved output file path to include in the success result.
+   * @param outputPath - Resolved output file path to include in the success result.
    * @returns A converter result describing whether the encoder process succeeded, failed with
    * a non-zero exit status, or was terminated by a signal.
    */
-  private static finalizeChildProcessResult(
+  private static handleEncoderProcessResult(
     childResult: childProcess.SpawnSyncReturns<Buffer>,
     sourceFilePath: string,
     deleteSourceAfterConversion: boolean,
-    resolvedOutputPath: string,
+    outputPath: string,
   ): BearTunesConverterResult {
     const encoderStdout = childResult.stdout?.toString();
     const encoderStderr = childResult.stderr?.toString();
@@ -313,12 +341,10 @@ export class BearTunesConverter {
       );
     }
 
-    if (deleteSourceAfterConversion) {
-      BearTunesConverter.tryDeleteFile(sourceFilePath, 'source file');
-    }
-
-    return BearTunesConverter.createSuccessResult(
-      resolvedOutputPath,
+    return BearTunesConverter.finalizeSuccessfulConversion(
+      sourceFilePath,
+      deleteSourceAfterConversion,
+      outputPath,
       encoderStdout,
       encoderStderr,
     );
@@ -416,7 +442,7 @@ export class BearTunesConverter {
       { stdio: 'inherit' },
     );
 
-    return BearTunesConverter.finalizeChildProcessResult(
+    return BearTunesConverter.handleEncoderProcessResult(
       childResult,
       aiffFilePath,
       deleteAiffAfterConversion,
@@ -511,11 +537,9 @@ export class BearTunesConverter {
         },
       );
 
-      if (deleteFlacAfterConversion) {
-        BearTunesConverter.tryDeleteFile(flacFilePath, 'source file');
-      }
-
-      return BearTunesConverter.createSuccessResult(
+      return BearTunesConverter.finalizeSuccessfulConversion(
+        flacFilePath,
+        deleteFlacAfterConversion,
         resolvedOutputPath,
         childResult.second.stdout?.toString('utf8'),
         childResult.second.stderr?.toString('utf8'),
