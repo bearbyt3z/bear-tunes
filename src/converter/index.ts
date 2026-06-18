@@ -147,65 +147,46 @@ export class BearTunesConverter {
     outputExtension: string,
     expectedOutputExtensionPattern: RegExp,
     callerName: string,
-  ): { ok: true; resolvedOutputPath: string } | { ok: false; error: BearTunesConverterFailureResult } {
+  ): string | BearTunesConverterFailureResult {
     try {
       if (outputPath === undefined) {
-        return {
-          ok: true,
-          resolvedOutputPath: inputFilePath.replace(inputExtensionPattern, outputExtension),
-        };
+        return inputFilePath.replace(inputExtensionPattern, outputExtension);
       }
 
       const outputPathStats = fs.lstatSync(outputPath);
 
       if (outputPathStats.isDirectory()) {
-        return {
-          ok: true,
-          resolvedOutputPath:
-            outputPath.replace(/\/+$/, path.sep)
-            + path.basename(inputFilePath).replace(inputExtensionPattern, outputExtension),
-        };
+        return outputPath.replace(/\/+$/, path.sep)
+          + path.basename(inputFilePath).replace(inputExtensionPattern, outputExtension);
       }
 
       if (outputPathStats.isFile()) {
         if (outputPath.match(expectedOutputExtensionPattern)) {
-          return {
-            ok: true,
-            resolvedOutputPath: outputPath,
-          };
+          return outputPath;
         }
 
-        return {
-          ok: false,
-          error: BearTunesConverter.createFailureResult(
-            BearTunesConverterFailureCode.InvalidOutputFileExtension,
-            new TypeError(
-              `${callerName}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
-            ),
+        return BearTunesConverter.createFailureResult(
+          BearTunesConverterFailureCode.InvalidOutputFileExtension,
+          new TypeError(
+            `${callerName}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
           ),
-        };
+        );
       }
 
-      return {
-        ok: false,
-        error: BearTunesConverter.createFailureResult(
-          BearTunesConverterFailureCode.InvalidOutputPath,
-          new TypeError(
-            `${callerName}: Specified output path ${outputPath} is neither a file nor directory`,
-          ),
+      return BearTunesConverter.createFailureResult(
+        BearTunesConverterFailureCode.InvalidOutputPath,
+        new TypeError(
+          `${callerName}: Specified output path ${outputPath} is neither a file nor directory`,
         ),
-      };
+      );
     } catch (error) {
-      return {
-        ok: false,
-        error: BearTunesConverter.createFailureResult(
-          BearTunesConverterFailureCode.OutputPathAccessError,
-          new ReferenceError(
-            `${callerName}: Cannot access file ${outputPath} (incorrect path?)`,
-            { cause: error },
-          ),
+      return BearTunesConverter.createFailureResult(
+        BearTunesConverterFailureCode.OutputPathAccessError,
+        new ReferenceError(
+          `${callerName}: Cannot access file ${outputPath} (incorrect path?)`,
+          { cause: error },
         ),
-      };
+      );
     }
   }
 
@@ -227,35 +208,35 @@ export class BearTunesConverter {
     expectedExtensionPattern: RegExp,
     expectedExtensionDescription: string,
     callerName: string,
-  ): { ok: true } | { ok: false; error: BearTunesConverterFailureResult } {
+  ): BearTunesConverterFailureResult | null {
     try {
       const inputFilePathStats = fs.lstatSync(inputFilePath);
 
       if (!inputFilePathStats.isFile() || !inputFilePath.match(expectedExtensionPattern)) {
-        return {
-          ok: false,
-          error: BearTunesConverter.createFailureResult(
-            BearTunesConverterFailureCode.InvalidInputFile,
-            new TypeError(
-              `${callerName}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
-            ),
+        return BearTunesConverter.createFailureResult(
+          BearTunesConverterFailureCode.InvalidInputFile,
+          new TypeError(
+            `${callerName}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
           ),
-        };
+        );
       }
 
-      return { ok: true };
+      return null;
     } catch (error) {
-      return {
-        ok: false,
-        error: BearTunesConverter.createFailureResult(
-          BearTunesConverterFailureCode.InputFileAccessError,
-          new ReferenceError(
-            `${callerName}: Cannot access file ${inputFilePath} (incorrect path?)`,
-            { cause: error },
-          ),
+      return BearTunesConverter.createFailureResult(
+        BearTunesConverterFailureCode.InputFileAccessError,
+        new ReferenceError(
+          `${callerName}: Cannot access file ${inputFilePath} (incorrect path?)`,
+          { cause: error },
         ),
-      };
+      );
     }
+  }
+
+  private static isFailureResult(
+    result: string | BearTunesConverterFailureResult | null,
+  ): result is BearTunesConverterFailureResult {
+    return result !== null && typeof result !== 'string' && result.ok === false;
   }
 
   /**
@@ -410,18 +391,18 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteAiffAfterConversion = false,
   ): BearTunesConverterResult {
-    const inputValidationResult = BearTunesConverter.validateInputFilePath(
+    const inputValidationFailure = BearTunesConverter.validateInputFilePath(
       aiffFilePath,
       /\.(aif|aiff)$/i,
       '*.aif or *.aiff',
       this.constructor.name,
     );
 
-    if (!inputValidationResult.ok) {
-      return inputValidationResult.error;
+    if (inputValidationFailure) {
+      return inputValidationFailure;
     }
 
-    const outputPathResolutionResult = BearTunesConverter.resolveOutputPath(
+    const resolvedOutputPathOrFailure = BearTunesConverter.resolveOutputPath(
       aiffFilePath,
       outputPath,
       /\.(aif|aiff)$/i,
@@ -430,11 +411,11 @@ export class BearTunesConverter {
       this.constructor.name,
     );
 
-    if (!outputPathResolutionResult.ok) {
-      return outputPathResolutionResult.error;
+    if (BearTunesConverter.isFailureResult(resolvedOutputPathOrFailure)) {
+      return resolvedOutputPathOrFailure;
     }
 
-    const resolvedOutputPath = outputPathResolutionResult.resolvedOutputPath;
+    const resolvedOutputPath = resolvedOutputPathOrFailure;
 
     const childResult = childProcess.spawnSync(
       'flac',
@@ -469,18 +450,18 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteFlacAfterConversion = false,
   ): Promise<BearTunesConverterResult> {
-    const inputValidationResult = BearTunesConverter.validateInputFilePath(
+    const inputValidationFailure = BearTunesConverter.validateInputFilePath(
       flacFilePath,
       /\.flac$/i,
       '*.flac',
       this.constructor.name,
     );
 
-    if (!inputValidationResult.ok) {
-      return inputValidationResult.error;
+    if (inputValidationFailure) {
+      return inputValidationFailure;
     }
 
-    const outputPathResolutionResult = BearTunesConverter.resolveOutputPath(
+    const resolvedOutputPathOrFailure = BearTunesConverter.resolveOutputPath(
       flacFilePath,
       outputPath,
       /\.flac$/i,
@@ -489,11 +470,12 @@ export class BearTunesConverter {
       this.constructor.name,
     );
 
-    if (!outputPathResolutionResult.ok) {
-      return outputPathResolutionResult.error;
+    if (BearTunesConverter.isFailureResult(resolvedOutputPathOrFailure)) {
+      return resolvedOutputPathOrFailure;
     }
 
-    const resolvedOutputPath = outputPathResolutionResult.resolvedOutputPath;
+    const resolvedOutputPath = resolvedOutputPathOrFailure;
+
     const lameArguments = this.buildLameArguments();
     const lameOptionsJoined = lameArguments.join(' ');
 
