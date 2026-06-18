@@ -137,8 +137,8 @@ export class BearTunesConverter {
    * @param outputExtension - Output file extension to use when deriving the final output path.
    * @param expectedOutputExtensionPattern - Pattern matching valid output file paths for the target format.
    * @param callerName - Caller name used in generated error messages.
-   * @returns An object with `ok` set to `true` and the resolved output path, or `ok` set to `false`
-   * with a converter failure result describing why output path resolution failed.
+   * @returns The resolved output file path, or a {@link BearTunesConverterFailureResult}
+   * describing why output path resolution failed.
    */
   private static resolveOutputPath(
     inputFilePath: string,
@@ -200,8 +200,8 @@ export class BearTunesConverter {
    * @param expectedExtensionPattern - Pattern matching the required input file extension.
    * @param expectedExtensionDescription - Human-readable description of accepted input extensions used in error messages.
    * @param callerName - Caller name used in generated error messages.
-   * @returns An object with `ok` set to `true` when the input file is valid, or `ok` set to `false`
-   * with a converter failure result describing why validation failed.
+   * @returns `null` when the input file path is valid, or a
+   * {@link BearTunesConverterFailureResult} describing why validation failed.
    */
   private static validateInputFilePath(
     inputFilePath: string,
