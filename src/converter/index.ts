@@ -233,6 +233,16 @@ export class BearTunesConverter {
     }
   }
 
+  /**
+   * Checks whether a helper result represents a converter failure result.
+   *
+   * This type guard is used to narrow helper return values that may contain either
+   * a resolved string value, a converter failure result, or `null`.
+   *
+   * @param result - Helper result to inspect.
+   * @returns `true` when `result` is a {@link BearTunesConverterFailureResult},
+   * otherwise `false`.
+   */
   private static isFailureResult(
     result: string | BearTunesConverterFailureResult | null,
   ): result is BearTunesConverterFailureResult {
