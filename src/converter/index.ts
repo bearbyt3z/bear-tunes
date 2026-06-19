@@ -191,16 +191,14 @@ export class BearTunesConverter {
   }
 
   /**
-   * Validates that the input path points to an accessible file with the expected extension.
-   *
-   * The method checks both filesystem accessibility and whether the referenced path
-   * is a file whose name matches the expected input extension pattern.
+   * Returns a converter failure result when the input path is inaccessible,
+   * does not point to a file, or does not match the expected extension.
    *
    * @param inputFilePath - Path to the source file to validate.
    * @param expectedExtensionPattern - Pattern matching the required input file extension.
    * @param expectedExtensionDescription - Human-readable description of accepted input extensions used in error messages.
    * @param callerName - Caller name used in generated error messages.
-   * @returns `null` when the input file path is valid, or a
+   * @returns `undefined` when the input file path is valid, or a
    * {@link BearTunesConverterFailureResult} describing why validation failed.
    */
   private static getInputFileValidationFailure(
