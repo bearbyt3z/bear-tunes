@@ -203,12 +203,12 @@ export class BearTunesConverter {
    * @returns `null` when the input file path is valid, or a
    * {@link BearTunesConverterFailureResult} describing why validation failed.
    */
-  private static validateInputFilePath(
+  private static getInputFileValidationFailure(
     inputFilePath: string,
     expectedExtensionPattern: RegExp,
     expectedExtensionDescription: string,
     callerName: string,
-  ): BearTunesConverterFailureResult | null {
+  ): BearTunesConverterFailureResult | undefined {
     try {
       const inputFilePathStats = fs.lstatSync(inputFilePath);
 
@@ -221,7 +221,7 @@ export class BearTunesConverter {
         );
       }
 
-      return null;
+      return undefined;
     } catch (error) {
       return BearTunesConverter.createFailureResult(
         BearTunesConverterFailureCode.InputFileAccessError,
@@ -401,7 +401,7 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteAiffAfterConversion = false,
   ): BearTunesConverterResult {
-    const inputValidationFailure = BearTunesConverter.validateInputFilePath(
+    const inputValidationFailure = BearTunesConverter.getInputFileValidationFailure(
       aiffFilePath,
       /\.(aif|aiff)$/i,
       '*.aif or *.aiff',
@@ -460,7 +460,7 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteFlacAfterConversion = false,
   ): Promise<BearTunesConverterResult> {
-    const inputValidationFailure = BearTunesConverter.validateInputFilePath(
+    const inputValidationFailure = BearTunesConverter.getInputFileValidationFailure(
       flacFilePath,
       /\.flac$/i,
       '*.flac',
