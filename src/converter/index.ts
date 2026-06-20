@@ -14,6 +14,9 @@ import {
 } from '#tools';
 
 import {
+  ConverterGuardError,
+} from './errors.js';
+import {
   Mp3BitrateMode,
   BearTunesConverterFailureCode,
   LameQuality,
@@ -191,41 +194,48 @@ export class BearTunesConverter {
   }
 
   /**
-   * Returns a converter failure result when the input path is inaccessible,
-   * does not point to a file, or does not match the expected extension.
+   * Asserts that the input path points to an accessible file with the expected extension.
+   *
+   * This helper acts as a fail-fast guard for conversion preconditions.
+   * It aborts the current conversion flow by throwing {@link ConverterGuardError}
+   * when the input path cannot be accessed, does not point to a file, or does not
+   * match the expected extension.
+   *
+   * If the method returns normally, the caller may continue conversion assuming
+   * that the input file precondition has been satisfied.
    *
    * @param inputFilePath - Path to the source file to validate.
    * @param expectedExtensionPattern - Pattern matching the required input file extension.
    * @param expectedExtensionDescription - Human-readable description of accepted input extensions used in error messages.
    * @param callerName - Caller name used in generated error messages.
-   * @returns `undefined` when the input file path is valid, or a
-   * {@link BearTunesConverterFailureResult} describing why validation failed.
+   * @throws {ConverterGuardError} When the input path is inaccessible, does not
+   * point to a file, or does not match the expected extension.
    */
-  private static getInputFileValidationFailure(
+  private static assertValidInputFilePath(
     inputFilePath: string,
     expectedExtensionPattern: RegExp,
     expectedExtensionDescription: string,
     callerName: string,
-  ): BearTunesConverterFailureResult | undefined {
+  ): void {
+    let inputFilePathStats: fs.Stats;
+
     try {
-      const inputFilePathStats = fs.lstatSync(inputFilePath);
-
-      if (!inputFilePathStats.isFile() || !inputFilePath.match(expectedExtensionPattern)) {
-        return BearTunesConverter.createFailureResult(
-          BearTunesConverterFailureCode.InvalidInputFile,
-          new TypeError(
-            `${callerName}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
-          ),
-        );
-      }
-
-      return undefined;
+      inputFilePathStats = fs.lstatSync(inputFilePath);
     } catch (error) {
-      return BearTunesConverter.createFailureResult(
+      throw new ConverterGuardError(
         BearTunesConverterFailureCode.InputFileAccessError,
         new ReferenceError(
           `${callerName}: Cannot access file ${inputFilePath} (incorrect path?)`,
-          { cause: error },
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
+    }
+
+    if (!inputFilePathStats.isFile() || !inputFilePath.match(expectedExtensionPattern)) {
+      throw new ConverterGuardError(
+        BearTunesConverterFailureCode.InvalidInputFile,
+        new TypeError(
+          `${callerName}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
         ),
       );
     }
@@ -399,15 +409,22 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteAiffAfterConversion = false,
   ): BearTunesConverterResult {
-    const inputValidationFailure = BearTunesConverter.getInputFileValidationFailure(
-      aiffFilePath,
-      /\.(aif|aiff)$/i,
-      '*.aif or *.aiff',
-      this.constructor.name,
-    );
+    try {
+      BearTunesConverter.assertValidInputFilePath(
+        aiffFilePath,
+        /\.(aif|aiff)$/i,
+        '*.aif or *.aiff',
+        this.constructor.name,
+      );
+    } catch (error) {
+      if (error instanceof ConverterGuardError) {
+        return BearTunesConverter.createFailureResult(
+          error.failureCode,
+          error.cause,
+        );
+      }
 
-    if (inputValidationFailure) {
-      return inputValidationFailure;
+      throw error;
     }
 
     const resolvedOutputPathOrFailure = BearTunesConverter.resolveOutputPath(
@@ -458,15 +475,22 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteFlacAfterConversion = false,
   ): Promise<BearTunesConverterResult> {
-    const inputValidationFailure = BearTunesConverter.getInputFileValidationFailure(
-      flacFilePath,
-      /\.flac$/i,
-      '*.flac',
-      this.constructor.name,
-    );
+    try {
+      BearTunesConverter.assertValidInputFilePath(
+        flacFilePath,
+        /\.flac$/i,
+        '*.flac',
+        this.constructor.name,
+      );
+    } catch (error) {
+      if (error instanceof ConverterGuardError) {
+        return BearTunesConverter.createFailureResult(
+          error.failureCode,
+          error.cause,
+        );
+      }
 
-    if (inputValidationFailure) {
-      return inputValidationFailure;
+      throw error;
     }
 
     const resolvedOutputPathOrFailure = BearTunesConverter.resolveOutputPath(
