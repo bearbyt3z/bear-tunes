@@ -391,6 +391,12 @@ export class BearTunesConverter {
    * `flac` encoder synchronously, and maps the encoder result to a converter result.
    * On successful conversion, it may also delete the source AIFF file when requested.
    *
+   * Input file validation and output path resolution are performed internally
+   * by fail-fast guard helpers. Any resulting {@link ConverterGuardError} is
+   * caught within this method and mapped back to a
+   * {@link BearTunesConverterFailureResult}, so callers continue to interact
+   * with a result-based public API.
+   *
    * @param aiffFilePath - Path to the source AIFF file to convert.
    * @param outputPath - Optional target FLAC file path or output directory path.
    * @param deleteAiffAfterConversion - Whether the source AIFF file should be deleted after a successful conversion.
@@ -452,6 +458,12 @@ export class BearTunesConverter {
    * result to a converter result. On successful conversion, it may also delete the source FLAC
    * file when requested. Any temporary files created for tag transfer preparation are removed
    * before the method finishes.
+   *
+   * Input file validation and output path resolution are performed internally
+   * by fail-fast guard helpers. Any resulting {@link ConverterGuardError} is
+   * caught within this method and mapped back to a
+   * {@link BearTunesConverterFailureResult}, so callers continue to interact
+   * with a result-based public API.
    *
    * @param flacFilePath - Path to the source FLAC file to convert.
    * @param outputPath - Optional target MP3 file path or output directory path.
