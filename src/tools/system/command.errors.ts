@@ -1,4 +1,26 @@
 /**
+ * Error thrown when a system command cannot be started.
+ *
+ * Stores the command name together with the original startup failure cause.
+ */
+export class CommandExecutionStartError extends Error {
+  /** Name or path of the command that could not be started. */
+  readonly commandName: string;
+
+  /**
+   * Creates an error describing a failed command startup.
+   *
+   * @param commandName - Name or path of the command that could not be started.
+   * @param cause - Original error reported while starting the command.
+   */
+  constructor(commandName: string, cause: Error) {
+    super(`Failed to start child process "${commandName}".`, { cause });
+    this.name = new.target.name;
+    this.commandName = commandName;
+  }
+}
+
+/**
  * Error thrown when a synchronously executed system command fails.
  *
  * Stores the command name together with its termination details, captured

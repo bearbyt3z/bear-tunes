@@ -6,6 +6,7 @@ import { normalizeUnknownError } from '../utils/error.js';
 import { getFirstLine } from '../utils/format.js';
 import {
   CommandExecutionFailedError,
+  CommandExecutionStartError,
   FirstPipelineCommandFailedError,
   SecondPipelineCommandFailedError,
 } from './command.errors.js';
@@ -164,12 +165,12 @@ function waitForChildProcessResult(
  *
  * The command is executed with binary output capture. On success, the function
  * returns the process output and exit status. If the process cannot be started
- * or exits unsuccessfully, the function throws an error.
+ * or exits unsuccessfully, the function throws a typed command execution error.
  *
  * @param commandName - Name or path of the executable to run.
  * @param args - Command-line arguments passed to the executable.
  * @returns Captured command output and exit status.
- * @throws {Error} When the process cannot be started.
+ * @throws {CommandExecutionStartError} When the process cannot be started.
  * @throws {CommandExecutionFailedError} When the process exits with a non-zero
  * status or is terminated by a signal.
  */
@@ -180,7 +181,7 @@ export function executeCommandSync(
   const child = childProcess.spawnSync(commandName, [...args], { encoding: 'buffer' });
 
   if (child.error) {
-    throw child.error;
+    throw new CommandExecutionStartError(commandName, child.error);
   }
 
   if (child.status === null || child.status !== 0) {
