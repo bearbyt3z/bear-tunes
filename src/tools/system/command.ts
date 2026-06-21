@@ -5,6 +5,7 @@ import { pipeline } from 'node:stream/promises';
 import { normalizeUnknownError } from '../utils/error.js';
 import { getFirstLine } from '../utils/format.js';
 import {
+  CommandExecutionFailedError,
   FirstPipelineCommandFailedError,
   SecondPipelineCommandFailedError,
 } from './command.errors.js';
@@ -168,7 +169,9 @@ function waitForChildProcessResult(
  * @param commandName - Name or path of the executable to run.
  * @param args - Command-line arguments passed to the executable.
  * @returns Captured command output and exit status.
- * @throws Error when the process cannot be started or exits with a non-zero status.
+ * @throws {Error} When the process cannot be started.
+ * @throws {CommandExecutionFailedError} When the process exits with a non-zero
+ * status or is terminated by a signal.
  */
 export function executeCommandSync(
   commandName: string,
@@ -180,12 +183,19 @@ export function executeCommandSync(
     throw child.error;
   }
 
-  if (child.status !== 0) {
-    throw buildProcessExitError(
+  if (child.status === null || child.status !== 0) {
+    throw new CommandExecutionFailedError(
+      buildProcessExitError(
+        commandName,
+        child.status,
+        child.signal,
+        child.stderr?.toString('utf8') ?? '',
+      ).message,
       commandName,
       child.status,
       child.signal,
-      child.stderr?.toString('utf8') ?? '',
+      child.stdout ?? undefined,
+      child.stderr ?? undefined,
     );
   }
 

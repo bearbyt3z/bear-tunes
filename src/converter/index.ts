@@ -1,4 +1,3 @@
-import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -7,7 +6,9 @@ import {
   BearTunesTagger,
 } from '#tagger';
 import {
+  CommandExecutionFailedError,
   executeCommandPipeline,
+  executeCommandSync,
   normalizeUnknownError,
   FirstPipelineCommandFailedError,
   SecondPipelineCommandFailedError,
@@ -293,55 +294,6 @@ export class BearTunesConverter {
   }
 
   /**
-   * Handles the result of a completed encoder process and maps it to a converter result.
-   *
-   * The method converts process termination details and captured output streams into
-   * either a success result or a failure result.
-   *
-   * @param childResult - Raw result returned by the synchronous child process execution.
-   * @param sourceFilePath - Source file path that may be deleted after successful conversion.
-   * @param deleteSourceAfterConversion - Whether the source file should be removed after a successful conversion.
-   * @param outputPath - Resolved output file path to include in the success result.
-   * @returns A converter result describing whether the encoder process succeeded, failed with
-   * a non-zero exit status, or was terminated by a signal.
-   */
-  private static handleEncoderProcessResult(
-    childResult: childProcess.SpawnSyncReturns<Buffer>,
-    sourceFilePath: string,
-    deleteSourceAfterConversion: boolean,
-    outputPath: string,
-  ): BearTunesConverterResult {
-    const encoderStdout = childResult.stdout?.toString();
-    const encoderStderr = childResult.stderr?.toString();
-
-    if (childResult.status === null) {
-      return BearTunesConverter.createFailureResult(
-        BearTunesConverterFailureCode.EncoderProcessSignaled,
-        new Error(`Encoder process terminated by signal: ${childResult.signal ?? 'signal is null'}`),
-        encoderStdout,
-        encoderStderr,
-      );
-    }
-
-    if (childResult.status !== 0) {
-      return BearTunesConverter.createFailureResult(
-        BearTunesConverterFailureCode.EncoderProcessFailed,
-        childResult.error ?? new Error(`Encoder process failed with exit code: ${childResult.status.toString()}`),
-        encoderStdout,
-        encoderStderr,
-      );
-    }
-
-    return BearTunesConverter.finalizeSuccessfulConversion(
-      sourceFilePath,
-      deleteSourceAfterConversion,
-      outputPath,
-      encoderStdout,
-      encoderStderr,
-    );
-  }
-
-  /**
    * Builds command-line arguments for the MP3 encoder from current converter options.
    *
    * @returns Encoder arguments ready to be passed to the LAME process.
@@ -387,15 +339,22 @@ export class BearTunesConverter {
   /**
    * Converts an AIFF file to a FLAC file.
    *
-   * The method validates the input file, resolves the output file path, runs the
-   * `flac` encoder synchronously, and maps the encoder result to a converter result.
-   * On successful conversion, it may also delete the source AIFF file when requested.
+   * The method validates the input file, resolves the output file path, executes
+   * the `flac` encoder synchronously, and maps the encoder outcome to a converter
+   * result. On successful conversion, it may also delete the source AIFF file
+   * when requested.
    *
    * Input file validation and output path resolution are performed internally
    * by fail-fast guard helpers. Any resulting {@link ConverterGuardError} is
    * caught within this method and mapped back to a
    * {@link BearTunesConverterFailureResult}, so callers continue to interact
    * with a result-based public API.
+   *
+   * Encoder execution is delegated to {@link executeCommandSync}. A
+   * {@link CommandExecutionFailedError} raised by that helper is caught and
+   * translated into either `EncoderProcessSignaled` or `EncoderProcessFailed`,
+   * while preserving captured encoder standard output and standard error in the
+   * returned failure result.
    *
    * @param aiffFilePath - Path to the source AIFF file to convert.
    * @param outputPath - Optional target FLAC file path or output directory path.
@@ -436,18 +395,43 @@ export class BearTunesConverter {
       throw error;
     }
 
-    const childResult = childProcess.spawnSync(
-      'flac',
-      ['--verify', '-8', '--force', '--output-name', resolvedOutputPath, aiffFilePath],
-      { stdio: 'inherit' },
-    );
+    try {
+      const commandResult = executeCommandSync(
+        'flac',
+        ['--verify', '-8', '--force', '--output-name', resolvedOutputPath, aiffFilePath],
+      );
 
-    return BearTunesConverter.handleEncoderProcessResult(
-      childResult,
-      aiffFilePath,
-      deleteAiffAfterConversion,
-      resolvedOutputPath,
-    );
+      return BearTunesConverter.finalizeSuccessfulConversion(
+        aiffFilePath,
+        deleteAiffAfterConversion,
+        resolvedOutputPath,
+        commandResult.stdout?.toString(),
+        commandResult.stderr?.toString(),
+      );
+    } catch (error) {
+      if (error instanceof CommandExecutionFailedError) {
+        const encoderStdout = error.stdout?.toString();
+        const encoderStderr = error.stderr?.toString();
+
+        if (error.status === null) {
+          return BearTunesConverter.createFailureResult(
+            BearTunesConverterFailureCode.EncoderProcessSignaled,
+            new Error(`Encoder process terminated by signal: ${error.signal ?? 'signal is null'}`),
+            encoderStdout,
+            encoderStderr,
+          );
+        }
+
+        return BearTunesConverter.createFailureResult(
+          BearTunesConverterFailureCode.EncoderProcessFailed,
+          new Error(`Encoder process failed with exit code: ${error.status.toString()}`),
+          encoderStdout,
+          encoderStderr,
+        );
+      }
+
+      throw error;
+    }
   }
 
   /**

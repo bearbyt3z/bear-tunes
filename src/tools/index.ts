@@ -39,6 +39,7 @@ export {
 } from './system/command.js';
 
 export {
+  CommandExecutionFailedError,
   FirstPipelineCommandFailedError,
   SecondPipelineCommandFailedError,
 } from './system/command.errors.js';

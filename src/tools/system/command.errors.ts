@@ -1,4 +1,54 @@
 /**
+ * Error thrown when a synchronously executed system command fails.
+ *
+ * Stores the command name together with its termination details, captured
+ * standard output and standard error streams.
+ */
+export class CommandExecutionFailedError extends Error {
+  /** Name or path of the command that failed. */
+  readonly commandName: string;
+
+  /** Exit status reported by the failed process, or `null` if it terminated due to a signal. */
+  readonly status: number | null;
+
+  /** Signal that terminated the failed process, or `null` if it exited normally. */
+  readonly signal: NodeJS.Signals | null;
+
+  /** Standard output captured from the failed process. */
+  readonly stdout: Buffer | undefined;
+
+  /** Standard error output captured from the failed process. */
+  readonly stderr: Buffer | undefined;
+
+  /**
+   * Creates an error describing a failed synchronous command execution.
+   *
+   * @param message - Human-readable error message describing the failure.
+   * @param commandName - Name or path of the command that failed.
+   * @param status - Exit status reported by the failed process, or `null` if it terminated due to a signal.
+   * @param signal - Signal that terminated the failed process, or `null` if it exited normally.
+   * @param stdout - Standard output captured from the failed process.
+   * @param stderr - Standard error output captured from the failed process.
+   */
+  constructor(
+    message: string,
+    commandName: string,
+    status: number | null,
+    signal: NodeJS.Signals | null,
+    stdout: Buffer | undefined,
+    stderr: Buffer | undefined,
+  ) {
+    super(message);
+    this.name = new.target.name;
+    this.commandName = commandName;
+    this.status = status;
+    this.signal = signal;
+    this.stdout = stdout;
+    this.stderr = stderr;
+  }
+}
+
+/**
  * Base error describing a failed command executed as part of a two-process pipeline.
  *
  * Stores the failing command name together with its termination details and
