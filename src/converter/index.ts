@@ -134,14 +134,20 @@ export class BearTunesConverter {
    * file name to that directory. If it points to a file, the method validates that
    * the file path uses the expected output extension.
    *
+   * This helper acts as a fail-fast guard for output path preconditions.
+   * It returns the resolved output file path when resolution succeeds and throws
+   * {@link ConverterGuardError} when the provided output path is inaccessible,
+   * invalid, or uses an unexpected file extension.
+   *
    * @param inputFilePath - Source file path used to derive the default output file path and file name.
    * @param outputPath - Optional output file path or output directory path provided by the caller.
    * @param inputExtensionPattern - Pattern matching the source file extension that should be replaced.
    * @param outputExtension - Output file extension to use when deriving the final output path.
    * @param expectedOutputExtensionPattern - Pattern matching valid output file paths for the target format.
    * @param callerName - Caller name used in generated error messages.
-   * @returns The resolved output file path, or a {@link BearTunesConverterFailureResult}
-   * describing why output path resolution failed.
+   * @returns The resolved output file path.
+   * @throws {ConverterGuardError} When the output path is inaccessible, is neither
+   * a file nor directory, or does not use the expected output extension.
    */
   private static resolveOutputPath(
     inputFilePath: string,
@@ -150,47 +156,49 @@ export class BearTunesConverter {
     outputExtension: string,
     expectedOutputExtensionPattern: RegExp,
     callerName: string,
-  ): string | BearTunesConverterFailureResult {
+  ): string {
+    if (outputPath === undefined) {
+      return inputFilePath.replace(inputExtensionPattern, outputExtension);
+    }
+
+    let outputPathStats: fs.Stats;
+
     try {
-      if (outputPath === undefined) {
-        return inputFilePath.replace(inputExtensionPattern, outputExtension);
-      }
-
-      const outputPathStats = fs.lstatSync(outputPath);
-
-      if (outputPathStats.isDirectory()) {
-        return outputPath.replace(/\/+$/, path.sep)
-          + path.basename(inputFilePath).replace(inputExtensionPattern, outputExtension);
-      }
-
-      if (outputPathStats.isFile()) {
-        if (outputPath.match(expectedOutputExtensionPattern)) {
-          return outputPath;
-        }
-
-        return BearTunesConverter.createFailureResult(
-          BearTunesConverterFailureCode.InvalidOutputFileExtension,
-          new TypeError(
-            `${callerName}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
-          ),
-        );
-      }
-
-      return BearTunesConverter.createFailureResult(
-        BearTunesConverterFailureCode.InvalidOutputPath,
-        new TypeError(
-          `${callerName}: Specified output path ${outputPath} is neither a file nor directory`,
-        ),
-      );
+      outputPathStats = fs.lstatSync(outputPath);
     } catch (error) {
-      return BearTunesConverter.createFailureResult(
+      throw new ConverterGuardError(
         BearTunesConverterFailureCode.OutputPathAccessError,
         new ReferenceError(
           `${callerName}: Cannot access file ${outputPath} (incorrect path?)`,
-          { cause: error },
+          { cause: normalizeUnknownError(error) },
         ),
       );
     }
+
+    if (outputPathStats.isDirectory()) {
+      return outputPath.replace(/\/+$/, path.sep)
+        + path.basename(inputFilePath).replace(inputExtensionPattern, outputExtension);
+    }
+
+    if (outputPathStats.isFile()) {
+      if (outputPath.match(expectedOutputExtensionPattern)) {
+        return outputPath;
+      }
+
+      throw new ConverterGuardError(
+        BearTunesConverterFailureCode.InvalidOutputFileExtension,
+        new TypeError(
+          `${callerName}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
+        ),
+      );
+    }
+
+    throw new ConverterGuardError(
+      BearTunesConverterFailureCode.InvalidOutputPath,
+      new TypeError(
+        `${callerName}: Specified output path ${outputPath} is neither a file nor directory`,
+      ),
+    );
   }
 
   /**
@@ -239,22 +247,6 @@ export class BearTunesConverter {
         ),
       );
     }
-  }
-
-  /**
-   * Checks whether a helper result represents a converter failure result.
-   *
-   * This type guard is used to narrow helper return values that may contain either
-   * a resolved string value, a converter failure result, or `null`.
-   *
-   * @param result - Helper result to inspect.
-   * @returns `true` when `result` is a {@link BearTunesConverterFailureResult},
-   * otherwise `false`.
-   */
-  private static isFailureResult(
-    result: string | BearTunesConverterFailureResult | null,
-  ): result is BearTunesConverterFailureResult {
-    return result !== null && typeof result !== 'string' && result.ok === false;
   }
 
   /**
@@ -409,11 +401,22 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteAiffAfterConversion = false,
   ): BearTunesConverterResult {
+    let resolvedOutputPath: string;
+
     try {
       BearTunesConverter.assertValidInputFilePath(
         aiffFilePath,
         /\.(aif|aiff)$/i,
         '*.aif or *.aiff',
+        this.constructor.name,
+      );
+
+      resolvedOutputPath = BearTunesConverter.resolveOutputPath(
+        aiffFilePath,
+        outputPath,
+        /\.(aif|aiff)$/i,
+        '.flac',
+        /\.flac$/i,
         this.constructor.name,
       );
     } catch (error) {
@@ -426,21 +429,6 @@ export class BearTunesConverter {
 
       throw error;
     }
-
-    const resolvedOutputPathOrFailure = BearTunesConverter.resolveOutputPath(
-      aiffFilePath,
-      outputPath,
-      /\.(aif|aiff)$/i,
-      '.flac',
-      /\.flac$/i,
-      this.constructor.name,
-    );
-
-    if (BearTunesConverter.isFailureResult(resolvedOutputPathOrFailure)) {
-      return resolvedOutputPathOrFailure;
-    }
-
-    const resolvedOutputPath = resolvedOutputPathOrFailure;
 
     const childResult = childProcess.spawnSync(
       'flac',
@@ -475,11 +463,22 @@ export class BearTunesConverter {
     outputPath: string | undefined = undefined,
     deleteFlacAfterConversion = false,
   ): Promise<BearTunesConverterResult> {
+    let resolvedOutputPath: string;
+
     try {
       BearTunesConverter.assertValidInputFilePath(
         flacFilePath,
         /\.flac$/i,
         '*.flac',
+        this.constructor.name,
+      );
+
+      resolvedOutputPath = BearTunesConverter.resolveOutputPath(
+        flacFilePath,
+        outputPath,
+        /\.flac$/i,
+        '.mp3',
+        /\.mp3$/i,
         this.constructor.name,
       );
     } catch (error) {
@@ -492,21 +491,6 @@ export class BearTunesConverter {
 
       throw error;
     }
-
-    const resolvedOutputPathOrFailure = BearTunesConverter.resolveOutputPath(
-      flacFilePath,
-      outputPath,
-      /\.flac$/i,
-      '.mp3',
-      /\.mp3$/i,
-      this.constructor.name,
-    );
-
-    if (BearTunesConverter.isFailureResult(resolvedOutputPathOrFailure)) {
-      return resolvedOutputPathOrFailure;
-    }
-
-    const resolvedOutputPath = resolvedOutputPathOrFailure;
 
     const lameArguments = this.buildLameArguments();
     const lameOptionsJoined = lameArguments.join(' ');
