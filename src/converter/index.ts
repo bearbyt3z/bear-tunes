@@ -396,7 +396,10 @@ export class BearTunesConverter {
         );
       }
 
-      throw error;
+      return BearTunesConverter.createFailureResult(
+        BearTunesConverterFailureCode.UnexpectedPreparationError,
+        normalizeUnknownError(error),
+      );
     }
 
     try {
@@ -415,7 +418,7 @@ export class BearTunesConverter {
     } catch (error) {
       if (error instanceof CommandExecutionStartError) {
         return BearTunesConverter.createFailureResult(
-          BearTunesConverterFailureCode.EncoderProcessFailed,
+          BearTunesConverterFailureCode.EncoderProcessStartFailed,
           error,
         );
       }
@@ -442,7 +445,7 @@ export class BearTunesConverter {
       }
 
       return BearTunesConverter.createFailureResult(
-        BearTunesConverterFailureCode.EncoderProcessFailed,
+        BearTunesConverterFailureCode.UnexpectedSingleCommandExecutionError,
         normalizeUnknownError(error),
       );
     }
@@ -503,7 +506,10 @@ export class BearTunesConverter {
         );
       }
 
-      throw error;
+      return BearTunesConverter.createFailureResult(
+        BearTunesConverterFailureCode.UnexpectedPreparationError,
+        normalizeUnknownError(error),
+      );
     }
 
     const lameArguments = this.buildLameArguments();
@@ -573,13 +579,13 @@ export class BearTunesConverter {
 
       if (error instanceof CommandPipelineInfrastructureError) {
         return BearTunesConverter.createFailureResult(
-          BearTunesConverterFailureCode.ConversionPipelineFailed,
+          BearTunesConverterFailureCode.ConversionPipelineInfrastructureFailed,
           error,
         );
       }
 
       return BearTunesConverter.createFailureResult(
-        BearTunesConverterFailureCode.ConversionPipelineFailed,
+        BearTunesConverterFailureCode.UnexpectedPipelineExecutionError,
         normalizeUnknownError(error),
       );
     } finally {

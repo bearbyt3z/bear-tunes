@@ -2,6 +2,8 @@
  * Error codes classifying converter failures.
  */
 export enum BearTunesConverterFailureCode {
+  // 100-109: input / output validation
+
   /** The input path does not point to a supported input file. */
   InvalidInputFile = 101,
 
@@ -17,23 +19,41 @@ export enum BearTunesConverterFailureCode {
   /** The output path could not be accessed. */
   OutputPathAccessError = 105,
 
-  /** The encoder process was terminated by a signal. */
-  EncoderProcessSignaled = 106,
+  // 110-119: conversion preparation
 
-  /** The encoder process failed or exited with a non-zero status code. */
-  EncoderProcessFailed = 107,
-
-  /** The FLAC-to-MP3 conversion pipeline failed. */
-  ConversionPipelineFailed = 108,
+  /** An unexpected error occurred while preparing conversion prerequisites. */
+  UnexpectedPreparationError = 111,
 
   /** Preparing MP3 tag transfer metadata failed. */
-  TagTransferPreparationFailed = 109,
+  TagTransferPreparationFailed = 112,
+
+  // 120-129: single-process encoder execution
+
+  /** The encoder process could not be started. */
+  EncoderProcessStartFailed = 121,
+
+  /** The encoder process was terminated by a signal. */
+  EncoderProcessSignaled = 122,
+
+  /** The encoder process failed or exited with a non-zero status code. */
+  EncoderProcessFailed = 123,
+
+  /** An unexpected error occurred while executing a single encoder process. */
+  UnexpectedSingleCommandExecutionError = 124,
+
+  // 130-139: multi-process pipeline execution
+
+  /** The conversion pipeline failed due to infrastructure issues. */
+  ConversionPipelineInfrastructureFailed = 131,
 
   /** The FLAC decoder process failed. */
-  FlacDecodeProcessFailed = 110,
+  FlacDecodeProcessFailed = 132,
 
   /** The LAME encoder process failed. */
-  LameEncodeProcessFailed = 111,
+  LameEncodeProcessFailed = 133,
+
+  /** An unexpected error occurred while executing the conversion pipeline. */
+  UnexpectedPipelineExecutionError = 134,
 }
 
 /**
