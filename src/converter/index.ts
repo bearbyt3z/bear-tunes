@@ -355,9 +355,10 @@ export class BearTunesConverter {
    * Encoder execution is delegated to {@link executeCommandSync}. A
    * {@link CommandExecutionStartError} raised by that helper is mapped to
    * `EncoderProcessFailed`, while a {@link CommandExecutionFailedError} is
-   * translated into either `EncoderProcessSignaled` or `EncoderProcessFailed`,
-   * while preserving captured encoder standard output and standard error in the
-   * returned failure result.
+   * translated into either `EncoderProcessSignaled` or `EncoderProcessFailed`.
+   * Any other unexpected execution error is normalized and mapped to
+   * `EncoderProcessFailed`, while preserving captured encoder standard output
+   * and standard error when available in the returned failure result.
    *
    * @param aiffFilePath - Path to the source AIFF file to convert.
    * @param outputPath - Optional target FLAC file path or output directory path.
@@ -440,7 +441,10 @@ export class BearTunesConverter {
         );
       }
 
-      throw error;
+      return BearTunesConverter.createFailureResult(
+        BearTunesConverterFailureCode.EncoderProcessFailed,
+        normalizeUnknownError(error),
+      );
     }
   }
 
