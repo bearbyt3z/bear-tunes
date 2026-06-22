@@ -438,16 +438,20 @@ export class BearTunesConverter {
    * Converts a FLAC file to an MP3 file, optionally preparing and transferring tag metadata.
    *
    * The method validates the input file, resolves the output file path, optionally prepares
-   * tag transfer arguments, runs a `flac` to `lame` conversion pipeline, and maps the pipeline
-   * result to a converter result. On successful conversion, it may also delete the source FLAC
+   * tag transfer arguments, runs a `flac` to `lame` conversion pipeline, and maps the outcome
+   * to a converter result. After a successful conversion, it may also delete the source FLAC
    * file when requested. Any temporary files created for tag transfer preparation are removed
    * before the method finishes.
    *
-   * Input file validation and output path resolution are performed internally
-   * by fail-fast guard helpers. Any resulting {@link ConverterGuardError} is
-   * caught within this method and mapped back to a
-   * {@link BearTunesConverterFailureResult}, so callers continue to interact
+   * Input file validation and output path resolution are performed internally by fail-fast
+   * guard helpers. Any resulting {@link ConverterGuardError} is caught within this method
+   * and mapped to a {@link BearTunesConverterFailureResult}, so callers continue to interact
    * with a result-based public API.
+   *
+   * Pipeline execution is delegated to {@link executeCommandPipeline}. Any
+   * {@link CommandPipelineInfrastructureError} raised by that helper is mapped to
+   * `ConversionPipelineFailed`, while command-specific non-zero exits are mapped to
+   * `FlacDecodeProcessFailed` or `LameEncodeProcessFailed`.
    *
    * @param flacFilePath - Path to the source FLAC file to convert.
    * @param outputPath - Optional target MP3 file path or output directory path.

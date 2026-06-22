@@ -41,6 +41,7 @@ export {
 export {
   CommandExecutionFailedError,
   CommandExecutionStartError,
+  CommandPipelineInfrastructureError,
   FirstPipelineCommandFailedError,
   SecondPipelineCommandFailedError,
 } from './system/command.errors.js';

@@ -71,6 +71,27 @@ export class CommandExecutionFailedError extends Error {
 }
 
 /**
+ * Error thrown when a command pipeline cannot be initialized or executed correctly
+ * for infrastructure-related reasons.
+ *
+ * This covers failures such as child process startup errors, pipe initialization
+ * problems, and stream pipeline errors that prevent the command pipeline from
+ * running to completion.
+ */
+export class CommandPipelineInfrastructureError extends Error {
+  /**
+   * Creates an error describing a pipeline infrastructure failure.
+   *
+   * @param message - Human-readable error message describing the failure.
+   * @param cause - Original error that caused the pipeline infrastructure failure.
+   */
+  constructor(message: string, cause?: Error) {
+    super(message, cause === undefined ? undefined : { cause });
+    this.name = new.target.name;
+  }
+}
+
+/**
  * Base error describing a failed command executed as part of a two-process pipeline.
  *
  * Stores the failing command name together with its termination details and

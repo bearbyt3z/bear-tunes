@@ -7,6 +7,7 @@ import { getFirstLine } from '../utils/format.js';
 import {
   CommandExecutionFailedError,
   CommandExecutionStartError,
+  CommandPipelineInfrastructureError,
   FirstPipelineCommandFailedError,
   SecondPipelineCommandFailedError,
 } from './command.errors.js';
@@ -221,10 +222,11 @@ export function executeCommandSync(
  * @param secondCommand - The second command in the pipeline.
  * @param captureOptions - Configuration describing which streams should be captured.
  * @returns Execution results for both commands in the successful pipeline, with
- *   non-captured streams returned as `undefined`.
- * @throws Error when the pipe itself fails or a child process cannot be started.
- * @throws FirstPipelineCommandFailedError when the first command exits unsuccessfully.
- * @throws SecondPipelineCommandFailedError when the second command exits unsuccessfully.
+ * non-captured streams returned as `undefined`.
+ * @throws {CommandPipelineInfrastructureError} When the pipeline cannot be
+ * initialized or executed because of infrastructure-related issues.
+ * @throws {FirstPipelineCommandFailedError} When the first command exits unsuccessfully.
+ * @throws {SecondPipelineCommandFailedError} When the second command exits unsuccessfully.
  */
 export async function executeCommandPipeline(
   firstCommand: CommandToExecute,
@@ -239,13 +241,23 @@ export async function executeCommandPipeline(
     ...captureOptions,
   } satisfies Required<ExecuteCommandPipelineCaptureOptions>;
 
-  const firstChild = childProcess.spawn(firstCommand.commandName, [...firstCommand.args], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  let firstChild: childProcess.ChildProcess;
+  let secondChild: childProcess.ChildProcess;
 
-  const secondChild = childProcess.spawn(secondCommand.commandName, [...secondCommand.args], {
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
+  try {
+    firstChild = childProcess.spawn(firstCommand.commandName, [...firstCommand.args], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    secondChild = childProcess.spawn(secondCommand.commandName, [...secondCommand.args], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+  } catch (error) {
+    throw new CommandPipelineInfrastructureError(
+      'Failed to start command pipeline child processes.',
+      normalizeUnknownError(error),
+    );
+  }
 
   if (
     firstChild.stdout === null
@@ -254,7 +266,9 @@ export async function executeCommandPipeline(
     || secondChild.stdout === null
     || secondChild.stderr === null
   ) {
-    throw new Error('Failed to initialize child process pipes.');
+    throw new CommandPipelineInfrastructureError(
+      'Failed to initialize child process pipes for command pipeline.',
+    );
   }
 
   const firstProcessPromise = waitForChildProcessResult(firstChild);
@@ -273,28 +287,48 @@ export async function executeCommandPipeline(
     .then((): Error | undefined => undefined)
     .catch((error: unknown): Error => normalizeUnknownError(error));
 
-  const [
-    pipelineError,
-    firstProcessResult,
-    secondProcessResult,
-    firstStderr,
-    secondStdout,
-    secondStderr,
-  ] = await Promise.all([
-    pipelineErrorPromise,
-    firstProcessPromise,
-    secondProcessPromise,
-    firstStderrPromise,
-    secondStdoutPromise,
-    secondStderrPromise,
-  ]);
+  let pipelineError: Error | undefined;
+  let firstProcessResult: ClosedChildProcess;
+  let secondProcessResult: ClosedChildProcess;
+  let firstStderr: Buffer | undefined;
+  let secondStdout: Buffer | undefined;
+  let secondStderr: Buffer | undefined;
+
+  try {
+    [
+      pipelineError,
+      firstProcessResult,
+      secondProcessResult,
+      firstStderr,
+      secondStdout,
+      secondStderr,
+    ] = await Promise.all([
+      pipelineErrorPromise,
+      firstProcessPromise,
+      secondProcessPromise,
+      firstStderrPromise,
+      secondStdoutPromise,
+      secondStderrPromise,
+    ]);
+  } catch (error) {
+    throw new CommandPipelineInfrastructureError(
+      'Failed to capture command pipeline streams.',
+      normalizeUnknownError(error),
+    );
+  }
 
   if (firstProcessResult.error !== undefined) {
-    throw firstProcessResult.error;
+    throw new CommandPipelineInfrastructureError(
+      `Failed to start first command in pipeline: ${firstCommand.commandName}.`,
+      firstProcessResult.error,
+    );
   }
 
   if (secondProcessResult.error !== undefined) {
-    throw secondProcessResult.error;
+    throw new CommandPipelineInfrastructureError(
+      `Failed to start second command in pipeline: ${secondCommand.commandName}.`,
+      secondProcessResult.error,
+    );
   }
 
   if (firstProcessResult.status !== 0) {
@@ -332,7 +366,10 @@ export async function executeCommandPipeline(
   }
 
   if (pipelineError !== undefined) {
-    throw pipelineError;
+    throw new CommandPipelineInfrastructureError(
+      'Command pipeline stream execution failed.',
+      pipelineError,
+    );
   }
 
   return {
