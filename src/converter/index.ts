@@ -7,6 +7,8 @@ import {
 } from '#tagger';
 import {
   CommandExecutionFailedError,
+  CommandExecutionStartError,
+  CommandPipelineInfrastructureError,
   executeCommandPipeline,
   executeCommandSync,
   normalizeUnknownError,
@@ -351,7 +353,8 @@ export class BearTunesConverter {
    * with a result-based public API.
    *
    * Encoder execution is delegated to {@link executeCommandSync}. A
-   * {@link CommandExecutionFailedError} raised by that helper is caught and
+   * {@link CommandExecutionStartError} raised by that helper is mapped to
+   * `EncoderProcessFailed`, while a {@link CommandExecutionFailedError} is
    * translated into either `EncoderProcessSignaled` or `EncoderProcessFailed`,
    * while preserving captured encoder standard output and standard error in the
    * returned failure result.
@@ -409,6 +412,13 @@ export class BearTunesConverter {
         commandResult.stderr?.toString(),
       );
     } catch (error) {
+      if (error instanceof CommandExecutionStartError) {
+        return BearTunesConverter.createFailureResult(
+          BearTunesConverterFailureCode.EncoderProcessFailed,
+          error,
+        );
+      }
+
       if (error instanceof CommandExecutionFailedError) {
         const encoderStdout = error.stdout?.toString();
         const encoderStderr = error.stderr?.toString();
@@ -553,6 +563,13 @@ export class BearTunesConverter {
       if (error instanceof SecondPipelineCommandFailedError) {
         return BearTunesConverter.createFailureResult(
           BearTunesConverterFailureCode.LameEncodeProcessFailed,
+          error,
+        );
+      }
+
+      if (error instanceof CommandPipelineInfrastructureError) {
+        return BearTunesConverter.createFailureResult(
+          BearTunesConverterFailureCode.ConversionPipelineFailed,
           error,
         );
       }
