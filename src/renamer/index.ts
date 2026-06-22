@@ -19,7 +19,7 @@ export type { BearTunesRenamerOptions };
 const defaultRenamerOptions = Object.freeze({
   filenamePattern: '%artists% - %title%', // title already contains remixers etc.
   directoryPattern: '%genre%/%artists%',
-  verbose: true,
+  verbose: false,
 } as const satisfies BearTunesRenamerOptions);
 
 export class BearTunesRenamer {
