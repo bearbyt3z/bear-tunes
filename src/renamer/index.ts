@@ -23,8 +23,16 @@ const defaultRenamerOptions = Object.freeze({
 } as const satisfies BearTunesRenamerOptions);
 
 export class BearTunesRenamer {
-  options: BearTunesRenamerOptions;
+  /**
+   * Effective renamer configuration for this instance.
+   */
+  private readonly options: BearTunesRenamerOptions;
 
+  /**
+   * Creates a renamer instance with merged default and custom options.
+   *
+   * @param options - Partial renamer configuration overriding default values.
+   */
   constructor(options: Partial<BearTunesRenamerOptions> = {}) {
     this.options = {
       ...defaultRenamerOptions,
