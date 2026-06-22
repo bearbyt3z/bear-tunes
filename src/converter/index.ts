@@ -350,15 +350,17 @@ export class BearTunesConverter {
    * by fail-fast guard helpers. Any resulting {@link ConverterGuardError} is
    * caught within this method and mapped back to a
    * {@link BearTunesConverterFailureResult}, so callers continue to interact
-   * with a result-based public API.
+   * with a result-based public API. Any other unexpected preparation error is
+   * normalized and mapped to `UnexpectedPreparationError`.
    *
    * Encoder execution is delegated to {@link executeCommandSync}. A
    * {@link CommandExecutionStartError} raised by that helper is mapped to
-   * `EncoderProcessFailed`, while a {@link CommandExecutionFailedError} is
+   * `EncoderProcessStartFailed`, while a {@link CommandExecutionFailedError} is
    * translated into either `EncoderProcessSignaled` or `EncoderProcessFailed`.
    * Any other unexpected execution error is normalized and mapped to
-   * `EncoderProcessFailed`, while preserving captured encoder standard output
-   * and standard error when available in the returned failure result.
+   * `UnexpectedSingleCommandExecutionError`, while preserving captured encoder
+   * standard output and standard error when available in the returned failure
+   * result.
    *
    * @param aiffFilePath - Path to the source AIFF file to convert.
    * @param outputPath - Optional target FLAC file path or output directory path.
@@ -463,12 +465,16 @@ export class BearTunesConverter {
    * Input file validation and output path resolution are performed internally by fail-fast
    * guard helpers. Any resulting {@link ConverterGuardError} is caught within this method
    * and mapped to a {@link BearTunesConverterFailureResult}, so callers continue to interact
-   * with a result-based public API.
+   * with a result-based public API. Any other unexpected preparation error is normalized and
+   * mapped to `UnexpectedPreparationError`.
    *
-   * Pipeline execution is delegated to {@link executeCommandPipeline}. Any
+   * Tag transfer preparation failures are mapped to `TagTransferPreparationFailed`.
+   *
+   * Pipeline execution is delegated to {@link executeCommandPipeline}. A
    * {@link CommandPipelineInfrastructureError} raised by that helper is mapped to
-   * `ConversionPipelineFailed`, while command-specific non-zero exits are mapped to
-   * `FlacDecodeProcessFailed` or `LameEncodeProcessFailed`.
+   * `ConversionPipelineInfrastructureFailed`, while command-specific non-zero exits are mapped
+   * to `FlacDecodeProcessFailed` or `LameEncodeProcessFailed`. Any other unexpected pipeline
+   * execution error is normalized and mapped to `UnexpectedPipelineExecutionError`.
    *
    * @param flacFilePath - Path to the source FLAC file to convert.
    * @param outputPath - Optional target MP3 file path or output directory path.
