@@ -139,8 +139,15 @@ export class BearTunesRenamer {
 
     const normalizedOutputDirectory = outputDirectory.replace(/[/\\]+$/, path.sep);
     const boundDirectory = BearTunesRenamer.bindValues(directoryPattern, trackInfo);
-    const resolvedOutputDirectory = normalizedOutputDirectory
-      + replacePathForbiddenChars(boundDirectory);
+
+    const boundDirectorySegments = boundDirectory
+      .split(/[/\\]+/)
+      .filter((segment) => segment.length > 0)
+      .map((segment) => replacePathForbiddenChars(segment));
+
+    const resolvedOutputDirectory = boundDirectorySegments.length > 0
+      ? path.join(normalizedOutputDirectory, ...boundDirectorySegments)
+      : normalizedOutputDirectory;
 
     try {
       fs.mkdirSync(resolvedOutputDirectory, { recursive: true });
@@ -252,6 +259,6 @@ export class BearTunesRenamer {
       return String(value);
     });
 
-    return result.replace(/[/\\]+/, path.sep); // changing for the right path separator
+    return result;
   }
 }
