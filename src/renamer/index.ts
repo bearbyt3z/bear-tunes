@@ -101,7 +101,7 @@ export class BearTunesRenamer {
    * placeholder or when a required TrackInfo value is missing.
    */
   private static bindValues(pattern: string, trackInfo: TrackInfo): string {
-    const result = pattern.replace(/%\w+%/ig, (match) => {
+    return pattern.replace(/%\w+%/ig, (match) => {
       const keyName = match.replace(/%/g, '');
 
       if (!keyName || !(keyName in trackInfo)) {
@@ -139,8 +139,6 @@ export class BearTunesRenamer {
 
       return String(value);
     });
-
-    return result;
   }
 
   /**
