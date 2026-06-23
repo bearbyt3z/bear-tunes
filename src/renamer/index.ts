@@ -86,6 +86,20 @@ export class BearTunesRenamer {
     return { ok: false, failureCode, error };
   }
 
+  /**
+   * Binds TrackInfo values to placeholders used in a rename pattern.
+   *
+   * The method replaces placeholders such as `%title%` or `%artists%`
+   * with values read from the provided track metadata. Array values are
+   * joined with commas, plain objects are JSON-stringified when possible,
+   * and primitive values are converted to strings.
+   *
+   * @param pattern - Pattern containing TrackInfo-based placeholders.
+   * @param trackInfo - Track metadata providing values for placeholders.
+   * @returns The pattern with all placeholders replaced by bound values.
+   * @throws {RenamerGuardError} When the pattern contains an invalid
+   * placeholder or when a required TrackInfo value is missing.
+   */
   private static bindValues(pattern: string, trackInfo: TrackInfo): string {
     const result = pattern.replace(/%\w+%/ig, (match) => {
       const keyName = match.replace(/%/g, '');
@@ -281,6 +295,19 @@ export class BearTunesRenamer {
     }
   }
 
+  /**
+   * Renames or moves a track file according to the configured renamer patterns.
+   *
+   * The method prepares the final output path from the provided track metadata
+   * and optional output directory, executes the filesystem rename operation,
+   * and returns a discriminated result describing either success or failure.
+   *
+   * @param trackPath - Path to the source track file.
+   * @param trackInfo - Track metadata used to build the target path.
+   * @param outputDirectory - Optional base output directory provided by the caller.
+   * @returns A renamer result describing either the resolved output path
+   * or the classified failure.
+   */
   rename(
     trackPath: string,
     trackInfo: TrackInfo,
