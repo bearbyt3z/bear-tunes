@@ -134,24 +134,21 @@ export class BearTunesRenamer {
    *
    * When `outputDirectory` is not provided, the method returns the current
    * directory of the source track. Otherwise it validates the provided output
-   * directory, binds the directory pattern, sanitizes the path, creates missing
-   * directories, and returns the resolved output directory path.
+   * directory, binds the configured directory pattern to track metadata,
+   * sanitizes the path, creates missing directories, and returns the resolved
+   * output directory path.
    *
    * @param trackPath - Path to the source track file.
    * @param outputDirectory - Optional base output directory provided by the caller.
-   * @param directoryPattern - Pattern used to build the nested output directory.
    * @param trackInfo - Track metadata used to bind directory placeholders.
-   * @param callerName - Caller name used in generated error messages.
    * @returns The resolved output directory path.
    * @throws {RenamerGuardError} When the output directory is invalid,
    * inaccessible, or cannot be created.
    */
-  private static resolveOutputDirectoryPath(
+  private resolveOutputDirectoryPath(
     trackPath: string,
     outputDirectory: string | undefined,
-    directoryPattern: string,
     trackInfo: TrackInfo,
-    callerName: string,
   ): string {
     if (outputDirectory === undefined) {
       return path.dirname(trackPath);
@@ -165,7 +162,7 @@ export class BearTunesRenamer {
       throw new RenamerGuardError(
         BearTunesRenamerFailureCode.OutputDirectoryAccessError,
         new ReferenceError(
-          `${callerName}: Cannot access output directory path ${outputDirectory}`,
+          `${this.constructor.name}: Cannot access output directory path ${outputDirectory}`,
           { cause: normalizeUnknownError(error) },
         ),
       );
@@ -175,13 +172,13 @@ export class BearTunesRenamer {
       throw new RenamerGuardError(
         BearTunesRenamerFailureCode.InvalidOutputDirectory,
         new TypeError(
-          `${callerName}: Specified output directory path ${outputDirectory} is not a directory`,
+          `${this.constructor.name}: Specified output directory path ${outputDirectory} is not a directory`,
         ),
       );
     }
 
     const normalizedOutputDirectory = outputDirectory.replace(/[/\\]+$/, path.sep);
-    const boundDirectory = BearTunesRenamer.bindValues(directoryPattern, trackInfo);
+    const boundDirectory = BearTunesRenamer.bindValues(this.options.directoryPattern, trackInfo);
 
     const boundDirectorySegments = boundDirectory
       .split(/[/\\]+/)
@@ -198,7 +195,7 @@ export class BearTunesRenamer {
       throw new RenamerGuardError(
         BearTunesRenamerFailureCode.OutputDirectoryAccessError,
         new ReferenceError(
-          `${callerName}: Cannot create output directory ${resolvedOutputDirectory}`,
+          `${this.constructor.name}: Cannot create output directory ${resolvedOutputDirectory}`,
           { cause: normalizeUnknownError(error) },
         ),
       );
@@ -215,18 +212,16 @@ export class BearTunesRenamer {
    * file name so it can be safely used in the filesystem.
    *
    * @param trackPath - Path to the source track file.
-   * @param filenamePattern - Pattern used to build the target file name.
    * @param trackInfo - Track metadata used to bind filename placeholders.
    * @returns The sanitized target file name including the original extension.
    * @throws {RenamerGuardError} When binding the filename pattern fails.
    */
-  private static buildOutputFilename(
+  private buildOutputFilename(
     trackPath: string,
-    filenamePattern: string,
     trackInfo: TrackInfo,
   ): string {
     return replacePathForbiddenChars(
-      BearTunesRenamer.bindValues(filenamePattern, trackInfo)
+      BearTunesRenamer.bindValues(this.options.filenamePattern, trackInfo)
       + path.extname(trackPath),
     );
   }
@@ -239,33 +234,24 @@ export class BearTunesRenamer {
    *
    * @param trackPath - Path to the source track file.
    * @param outputDirectory - Optional base output directory provided by the caller.
-   * @param filenamePattern - Pattern used to build the target file name.
-   * @param directoryPattern - Pattern used to build the nested output directory.
    * @param trackInfo - Track metadata used to bind placeholders.
-   * @param callerName - Caller name used in generated error messages.
    * @returns The final output path for the rename operation.
    * @throws {RenamerGuardError} When output path preparation fails.
    */
-  private static resolveOutputPath(
+  private resolveOutputPath(
     trackPath: string,
     outputDirectory: string | undefined,
-    filenamePattern: string,
-    directoryPattern: string,
     trackInfo: TrackInfo,
-    callerName: string,
   ): string {
-    const filename = BearTunesRenamer.buildOutputFilename(
+    const filename = this.buildOutputFilename(
       trackPath,
-      filenamePattern,
       trackInfo,
     );
 
-    const resolvedOutputDirectory = BearTunesRenamer.resolveOutputDirectoryPath(
+    const resolvedOutputDirectory = this.resolveOutputDirectoryPath(
       trackPath,
       outputDirectory,
-      directoryPattern,
       trackInfo,
-      callerName,
     );
 
     return path.join(resolvedOutputDirectory, filename);
@@ -276,13 +262,11 @@ export class BearTunesRenamer {
    *
    * @param trackPath - Path to the source track file.
    * @param outputPath - Final destination path for the renamed file.
-   * @param callerName - Caller name used in generated error messages.
    * @throws {RenamerGuardError} When the filesystem rename operation fails.
    */
-  private static executeRenameOperation(
+  private executeRenameOperation(
     trackPath: string,
     outputPath: string,
-    callerName: string,
   ): void {
     try {
       fs.renameSync(trackPath, outputPath);
@@ -290,7 +274,7 @@ export class BearTunesRenamer {
       throw new RenamerGuardError(
         BearTunesRenamerFailureCode.RenameOperationFailed,
         new Error(
-          `${callerName}: Failed to rename ${trackPath} to ${outputPath}`,
+          `${this.constructor.name}: Failed to rename ${trackPath} to ${outputPath}`,
           { cause: normalizeUnknownError(error) },
         ),
       );
@@ -305,13 +289,10 @@ export class BearTunesRenamer {
     let outputPath: string;
 
     try {
-      outputPath = BearTunesRenamer.resolveOutputPath(
+      outputPath = this.resolveOutputPath(
         trackPath,
         outputDirectory,
-        this.options.filenamePattern,
-        this.options.directoryPattern,
         trackInfo,
-        this.constructor.name,
       );
     } catch (error) {
       if (error instanceof RenamerGuardError) {
@@ -328,11 +309,7 @@ export class BearTunesRenamer {
     }
 
     try {
-      BearTunesRenamer.executeRenameOperation(
-        trackPath,
-        outputPath,
-        this.constructor.name,
-      );
+      this.executeRenameOperation(trackPath, outputPath);
     } catch (error) {
       if (error instanceof RenamerGuardError) {
         return BearTunesRenamer.createFailureResult(
