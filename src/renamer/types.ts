@@ -1,5 +1,78 @@
+/**
+ * Error codes classifying renamer failures.
+ */
+export enum BearTunesRenamerFailureCode {
+  // 300-309: rename preparation
+
+  /** The rename pattern contains an unsupported placeholder. */
+  InvalidRenamePatternPlaceholder = 301,
+
+  /** A required TrackInfo property used by a pattern was not defined. */
+  MissingTrackInfoValue = 302,
+
+  /** The provided output directory path is not a directory. */
+  InvalidOutputDirectory = 303,
+
+  /** The output directory could not be accessed or created. */
+  OutputDirectoryAccessError = 304,
+
+  /** An unexpected error occurred while preparing the rename operation. */
+  UnexpectedPreparationError = 305,
+
+  // 310-319: rename execution
+
+  /** Renaming or moving the track file failed. */
+  RenameOperationFailed = 311,
+}
+
+/**
+ * Result returned when a rename operation completes successfully.
+ */
+export interface BearTunesRenamerSuccessResult {
+  /** Discriminator indicating that the rename operation succeeded. */
+  ok: true;
+
+  /** Resolved path of the renamed file. */
+  outputPath: string;
+}
+
+/**
+ * Result returned when a rename operation fails.
+ */
+export interface BearTunesRenamerFailureResult {
+  /** Discriminator indicating that the rename operation failed. */
+  ok: false;
+
+  /** Domain-specific code classifying the rename failure. */
+  failureCode: BearTunesRenamerFailureCode;
+
+  /** Error object describing the failure cause. */
+  error: Error;
+}
+
+/**
+ * Discriminated union describing the outcome of a rename operation.
+ *
+ * When `ok` is `true`, the result is a {@link BearTunesRenamerSuccessResult}
+ * and contains the resolved `outputPath`.
+ *
+ * When `ok` is `false`, the result is a {@link BearTunesRenamerFailureResult}
+ * and contains `failureCode` together with the underlying `error`.
+ */
+export type BearTunesRenamerResult =
+  | BearTunesRenamerSuccessResult
+  | BearTunesRenamerFailureResult;
+
+/**
+ * Configuration options controlling BearTunes file renaming.
+ */
 export interface BearTunesRenamerOptions {
+  /** Pattern used to build the target file name without extension. */
   filenamePattern: string;
+
+  /** Pattern used to build the target output directory. */
   directoryPattern: string;
+
+  /** Whether verbose logging is enabled. */
   verbose: boolean;
 }

@@ -19,6 +19,7 @@ import {
 } from './types.js';
 
 import type { BearTunesConverterFailureResult } from '#converter';
+import type { BearTunesRenamerFailureResult } from '#renamer';
 
 import type {
   BearTunesProcessorDependencies,
@@ -144,6 +145,23 @@ export class BearTunesProcessor {
   }
 
   /**
+   * Logs a standardized warning message for a failed file rename.
+   *
+   * The helper keeps rename failure message formatting in one place so callers
+   * do not need to duplicate warning message construction.
+   *
+   * @param filePath - The source file whose rename failed.
+   * @param result - The renamer failure result containing the failure code and error details.
+   */
+  private static logRenamingFailure(
+    filePath: string,
+    result: BearTunesRenamerFailureResult,
+  ): void {
+    const warnMessage = `Renaming file ${filePath} failed with code ${result.failureCode} and message:\n${result.error.message}`;
+    logger.warn(warnMessage);
+  }
+
+  /**
    * Processes a standalone MP3 file by reading track metadata, renaming the file,
    * and downloading album artwork when possible.
    *
@@ -168,10 +186,15 @@ export class BearTunesProcessor {
       return false;
     }
 
-    const filePathRenamed = this.dependencies.renamer.rename(filePath, trackInfo, outputDirectory);
+    const renameResult = this.dependencies.renamer.rename(filePath, trackInfo, outputDirectory);
+
+    if (!renameResult.ok) {
+      BearTunesProcessor.logRenamingFailure(filePath, renameResult);
+      return false;
+    }
 
     await BearTunesProcessor.downloadArtworkForTrack(
-      filePathRenamed,
+      renameResult.outputPath,
       trackInfo.album?.artwork,
       trackInfo.album?.url,
     );
@@ -232,26 +255,36 @@ export class BearTunesProcessor {
     }
 
     if (convertedMp3Path) {
-      const mp3FilePathRenamed = this.dependencies.renamer.rename(
+      const mp3RenameResult = this.dependencies.renamer.rename(
         convertedMp3Path,
         trackInfo,
         outputDirectory,
       );
 
+      if (!mp3RenameResult.ok) {
+        BearTunesProcessor.logRenamingFailure(convertedMp3Path, mp3RenameResult);
+        return false;
+      }
+
       this.flacFiles.delete(convertedMp3Path);
-      this.flacFiles.add(mp3FilePathRenamed);
+      this.flacFiles.add(mp3RenameResult.outputPath);
     }
 
     await this.dependencies.tagger.saveId3TagToFlacFile(filePath, trackInfo);
 
-    const filePathRenamed = this.dependencies.renamer.rename(
+    const flacRenameResult = this.dependencies.renamer.rename(
       filePath,
       trackInfo,
       outputDirectory,
     );
 
+    if (!flacRenameResult.ok) {
+      BearTunesProcessor.logRenamingFailure(filePath, flacRenameResult);
+      return false;
+    }
+
     await BearTunesProcessor.downloadArtworkForTrack(
-      filePathRenamed,
+      flacRenameResult.outputPath,
       trackInfo.album?.artwork,
       trackInfo.album?.url,
     );

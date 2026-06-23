@@ -3,14 +3,36 @@ import * as path from 'node:path';
 
 import logger from '#logger';
 import {
+  normalizeUnknownError,
   replacePathForbiddenChars,
 } from '#tools';
 
-import type { BearTunesRenamerOptions } from './types.js';
+import {
+  RenamerGuardError,
+} from './errors.js';
+import {
+  BearTunesRenamerFailureCode,
+} from './types.js';
+
+import type {
+  BearTunesRenamerFailureResult,
+  BearTunesRenamerOptions,
+  BearTunesRenamerResult,
+  BearTunesRenamerSuccessResult,
+} from './types.js';
 import type { TrackInfo } from '#shared-types';
 
-// reexporting type, so it will be included in the renamer module import
-export type { BearTunesRenamerOptions };
+// reexporting enum & types, so they will be included in the renamer module import
+export {
+  BearTunesRenamerFailureCode,
+};
+
+export type {
+  BearTunesRenamerFailureResult,
+  BearTunesRenamerOptions,
+  BearTunesRenamerResult,
+  BearTunesRenamerSuccessResult,
+};
 
 // Default options are intentionally defined as immutable:
 // - `as const` keeps exact literal types and readonly fields,
@@ -40,48 +62,154 @@ export class BearTunesRenamer {
     };
   }
 
-  rename(trackPath: string, trackInfo: TrackInfo, outputDirectory?: string): string {
-    // let newFilename = this.options.filenamePattern.replace(/%\w+%/ig, (match) => {
-    //   const keyName = match.replace(/%/g, '');
-    //   const key: keyof TrackInfo = keyName as keyof TrackInfo;
-    //   if (!key) throw new TypeError(`${this.constructor.name}: Rename pattern contains illegal property name: ${keyName}`);
-    //   if (trackInfo[key] === undefined) throw new ReferenceError(`${this.constructor.name}: Property ${keyName} wasn't defined in ${typeof trackInfo} parameter`);
-    //   if (trackInfo[key] instanceof Array) return (trackInfo[key] as string[]).join(', ');
-    //   return trackInfo[key]?.toString() ?? '';
-    // });
+  /**
+   * Creates a success result describing a completed rename operation.
+   *
+   * @param outputPath - Resolved path of the renamed file.
+   * @returns A renamer success result with `ok` set to `true`.
+   */
+  private static createSuccessResult(outputPath: string): BearTunesRenamerSuccessResult {
+    return { ok: true, outputPath };
+  }
 
-    const filename = BearTunesRenamer.bindValues(this.options.filenamePattern, trackInfo) + path.extname(trackPath);
-    let outputPath;
+  /**
+   * Creates a failure result describing an unsuccessful rename operation.
+   *
+   * @param failureCode - Domain-specific code classifying the rename failure.
+   * @param error - Error object describing the failure cause.
+   * @returns A renamer failure result with `ok` set to `false`.
+   */
+  private static createFailureResult(
+    failureCode: BearTunesRenamerFailureCode,
+    error: Error,
+  ): BearTunesRenamerFailureResult {
+    return { ok: false, failureCode, error };
+  }
 
-    try {
-      if (!outputDirectory) {
-        outputPath = path.dirname(trackPath);
-      } else if (fs.lstatSync(outputDirectory).isDirectory()) {
-        const normalizedOutputDirectory = outputDirectory.replace(/[/\\]+$/, path.sep);
-        const boundDirectory = BearTunesRenamer.bindValues(
-          this.options.directoryPattern,
-          trackInfo,
-        );
-
-        outputPath = normalizedOutputDirectory + replacePathForbiddenChars(boundDirectory);
-
-        fs.mkdirSync(outputPath, { recursive: true });
-      } else {
-        throw new TypeError(`${this.constructor.name}: Specified output directory path ${outputDirectory} is not a valid directory`);
-      }
-    } catch (error) {
-      throw new ReferenceError(`${this.constructor.name}: Cannot access directory ${outputDirectory} (incorrect path?)`, { cause: error });
+  /**
+   * Resolves the output directory path to use for a rename operation.
+   *
+   * When `outputDirectory` is not provided, the method returns the current
+   * directory of the source track. Otherwise it validates the provided output
+   * directory, binds the directory pattern, sanitizes the path, creates missing
+   * directories, and returns the resolved output directory path.
+   *
+   * @param trackPath - Path to the source track file.
+   * @param outputDirectory - Optional base output directory provided by the caller.
+   * @param directoryPattern - Pattern used to build the nested output directory.
+   * @param trackInfo - Track metadata used to bind directory placeholders.
+   * @param callerName - Caller name used in generated error messages.
+   * @returns The resolved output directory path.
+   * @throws {RenamerGuardError} When the output directory is invalid,
+   * inaccessible, or cannot be created.
+   */
+  private static resolveOutputDirectoryPath(
+    trackPath: string,
+    outputDirectory: string | undefined,
+    directoryPattern: string,
+    trackInfo: TrackInfo,
+    callerName: string,
+  ): string {
+    if (outputDirectory === undefined) {
+      return path.dirname(trackPath);
     }
 
-    outputPath += path.sep + replacePathForbiddenChars(filename);
+    let outputDirectoryStats: fs.Stats;
 
-    fs.renameSync(trackPath, outputPath);
+    try {
+      outputDirectoryStats = fs.lstatSync(outputDirectory);
+    } catch (error) {
+      throw new RenamerGuardError(
+        BearTunesRenamerFailureCode.OutputDirectoryAccessError,
+        new ReferenceError(
+          `${callerName}: Cannot access output directory path ${outputDirectory}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
+    }
+
+    if (!outputDirectoryStats.isDirectory()) {
+      throw new RenamerGuardError(
+        BearTunesRenamerFailureCode.InvalidOutputDirectory,
+        new TypeError(
+          `${callerName}: Specified output directory path ${outputDirectory} is not a directory`,
+        ),
+      );
+    }
+
+    const normalizedOutputDirectory = outputDirectory.replace(/[/\\]+$/, path.sep);
+    const boundDirectory = BearTunesRenamer.bindValues(directoryPattern, trackInfo);
+    const resolvedOutputDirectory = normalizedOutputDirectory
+      + replacePathForbiddenChars(boundDirectory);
+
+    try {
+      fs.mkdirSync(resolvedOutputDirectory, { recursive: true });
+    } catch (error) {
+      throw new RenamerGuardError(
+        BearTunesRenamerFailureCode.OutputDirectoryAccessError,
+        new ReferenceError(
+          `${callerName}: Cannot create output directory ${resolvedOutputDirectory}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
+    }
+
+    return resolvedOutputDirectory;
+  }
+
+  rename(
+    trackPath: string,
+    trackInfo: TrackInfo,
+    outputDirectory?: string,
+  ): BearTunesRenamerResult {
+    let outputPath: string;
+
+    try {
+      const filename = replacePathForbiddenChars(
+        BearTunesRenamer.bindValues(this.options.filenamePattern, trackInfo)
+        + path.extname(trackPath),
+      );
+
+      const resolvedOutputDirectory = BearTunesRenamer.resolveOutputDirectoryPath(
+        trackPath,
+        outputDirectory,
+        this.options.directoryPattern,
+        trackInfo,
+        this.constructor.name,
+      );
+
+      outputPath = path.join(resolvedOutputDirectory, filename);
+    } catch (error) {
+      if (error instanceof RenamerGuardError) {
+        return BearTunesRenamer.createFailureResult(
+          error.failureCode,
+          error.cause,
+        );
+      }
+
+      return BearTunesRenamer.createFailureResult(
+        BearTunesRenamerFailureCode.UnexpectedPreparationError,
+        normalizeUnknownError(error),
+      );
+    }
+
+    try {
+      fs.renameSync(trackPath, outputPath);
+    } catch (error) {
+      return BearTunesRenamer.createFailureResult(
+        BearTunesRenamerFailureCode.RenameOperationFailed,
+        new Error(
+          `${this.constructor.name}: Failed to rename ${trackPath} to ${outputPath}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
+    }
 
     if (this.options.verbose) {
       logger.info(`File was renamed to: "${outputPath}"`);
     }
 
-    return outputPath;
+    return BearTunesRenamer.createSuccessResult(outputPath);
   }
 
   static bindValues(pattern: string, trackInfo: TrackInfo): string {
@@ -89,14 +217,24 @@ export class BearTunesRenamer {
       const keyName = match.replace(/%/g, '');
 
       if (!keyName || !(keyName in trackInfo)) {
-        throw new TypeError(`${this.constructor.name}: Rename pattern contains illegal property name: ${keyName}`);
+        throw new RenamerGuardError(
+          BearTunesRenamerFailureCode.InvalidRenamePatternPlaceholder,
+          new TypeError(
+            `${this.name}: Rename pattern contains illegal property name: ${keyName}`,
+          ),
+        );
       }
 
       const key = keyName as keyof TrackInfo;
       const value = trackInfo[key];
 
       if (value === undefined) {
-        throw new ReferenceError(`${this.constructor.name}: Property ${keyName} wasn't defined in ${typeof trackInfo} parameter`);
+        throw new RenamerGuardError(
+          BearTunesRenamerFailureCode.MissingTrackInfoValue,
+          new ReferenceError(
+            `${this.name}: Property ${keyName} wasn't defined in ${typeof trackInfo} parameter`,
+          ),
+        );
       }
 
       if (Array.isArray(value)) {
