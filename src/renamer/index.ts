@@ -120,7 +120,7 @@ export class BearTunesRenamer {
         throw new RenamerGuardError(
           BearTunesRenamerFailureCode.MissingTrackInfoValue,
           new ReferenceError(
-            `${this.name}: Property ${keyName} wasn't defined in ${typeof trackInfo} parameter`,
+            `${this.name}: Missing TrackInfo value for placeholder %${keyName}%`,
           ),
         );
       }
