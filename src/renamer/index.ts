@@ -350,7 +350,7 @@ export class BearTunesRenamer {
     }
 
     if (this.options.verbose) {
-      logger.info(`File was renamed to: "${targetPath}"`);
+      logger.info(`Track file moved to: "${targetPath}"`);
     }
 
     return BearTunesRenamer.createSuccessResult(targetPath);
