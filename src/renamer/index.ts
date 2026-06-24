@@ -104,7 +104,7 @@ export class BearTunesRenamer {
     return pattern.replace(/%\w+%/ig, (match) => {
       const keyName = match.replace(/%/g, '');
 
-      if (!keyName || !(keyName in trackInfo)) {
+      if (!keyName || !Object.hasOwn(trackInfo, keyName)) {
         throw new RenamerGuardError(
           BearTunesRenamerFailureCode.UnsupportedRenamePatternPlaceholder,
           new TypeError(
