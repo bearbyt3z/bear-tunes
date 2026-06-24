@@ -194,7 +194,7 @@ export class BearTunesProcessor {
     }
 
     await BearTunesProcessor.downloadArtworkForTrack(
-      renameResult.outputPath,
+      renameResult.targetPath,
       trackInfo.album?.artwork,
       trackInfo.album?.url,
     );
@@ -267,7 +267,7 @@ export class BearTunesProcessor {
       }
 
       this.flacFiles.delete(convertedMp3Path);
-      this.flacFiles.add(mp3RenameResult.outputPath);
+      this.flacFiles.add(mp3RenameResult.targetPath);
     }
 
     await this.dependencies.tagger.saveId3TagToFlacFile(filePath, trackInfo);
@@ -284,7 +284,7 @@ export class BearTunesProcessor {
     }
 
     await BearTunesProcessor.downloadArtworkForTrack(
-      flacRenameResult.outputPath,
+      flacRenameResult.targetPath,
       trackInfo.album?.artwork,
       trackInfo.album?.url,
     );

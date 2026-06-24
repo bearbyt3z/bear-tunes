@@ -10,11 +10,11 @@ export enum BearTunesRenamerFailureCode {
   /** A required TrackInfo property used by a pattern was not defined. */
   MissingTrackInfoValue = 302,
 
-  /** The provided output directory path is not a directory. */
-  InvalidOutputDirectory = 303,
+  /** The provided target directory path is not a directory. */
+  InvalidTargetDirectory = 303,
 
-  /** The output directory could not be accessed or created. */
-  OutputDirectoryAccessError = 304,
+  /** The target directory could not be accessed or created. */
+  TargetDirectoryAccessError = 304,
 
   /** An unexpected error occurred while preparing the rename operation. */
   UnexpectedPreparationError = 305,
@@ -32,8 +32,8 @@ export interface BearTunesRenamerSuccessResult {
   /** Discriminator indicating that the rename operation succeeded. */
   ok: true;
 
-  /** Resolved path of the renamed file. */
-  outputPath: string;
+  /** Resolved target path of the renamed file. */
+  targetPath: string;
 }
 
 /**
@@ -54,7 +54,7 @@ export interface BearTunesRenamerFailureResult {
  * Discriminated union describing the outcome of a rename operation.
  *
  * When `ok` is `true`, the result is a {@link BearTunesRenamerSuccessResult}
- * and contains the resolved `outputPath`.
+ * and contains the resolved `targetPath`.
  *
  * When `ok` is `false`, the result is a {@link BearTunesRenamerFailureResult}
  * and contains `failureCode` together with the underlying `error`.
@@ -70,7 +70,7 @@ export interface BearTunesRenamerOptions {
   /** Pattern used to build the target file name without extension. */
   filenamePattern: string;
 
-  /** Pattern used to build the target output directory. */
+  /** Pattern used to build the target directory. */
   directoryPattern: string;
 
   /** Whether verbose logging is enabled. */
