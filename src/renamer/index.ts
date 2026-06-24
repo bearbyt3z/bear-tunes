@@ -106,9 +106,9 @@ export class BearTunesRenamer {
 
       if (!keyName || !(keyName in trackInfo)) {
         throw new RenamerGuardError(
-          BearTunesRenamerFailureCode.InvalidRenamePatternPlaceholder,
+          BearTunesRenamerFailureCode.UnsupportedRenamePatternPlaceholder,
           new TypeError(
-            `${this.name}: Rename pattern contains illegal property name: ${keyName}`,
+            `${this.name}: Unsupported rename pattern placeholder: %${keyName}%`,
           ),
         );
       }

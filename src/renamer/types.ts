@@ -5,7 +5,7 @@ export enum BearTunesRenamerFailureCode {
   // 300-309: rename preparation
 
   /** The rename pattern contains an unsupported placeholder. */
-  InvalidRenamePatternPlaceholder = 301,
+  UnsupportedRenamePatternPlaceholder = 301,
 
   /** A required TrackInfo property used by a pattern was not defined. */
   MissingTrackInfoValue = 302,
