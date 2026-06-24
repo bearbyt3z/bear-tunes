@@ -119,7 +119,7 @@ export class BearTunesRenamer {
       if (value === undefined) {
         throw new RenamerGuardError(
           BearTunesRenamerFailureCode.MissingTrackInfoValue,
-          new ReferenceError(
+          new Error(
             `${this.name}: Missing TrackInfo value for placeholder %${keyName}%`,
           ),
         );
@@ -173,7 +173,7 @@ export class BearTunesRenamer {
     } catch (error) {
       throw new RenamerGuardError(
         BearTunesRenamerFailureCode.TargetDirectoryAccessError,
-        new ReferenceError(
+        new Error(
           `${this.constructor.name}: Cannot access target directory path ${targetDirectory}`,
           { cause: normalizeUnknownError(error) },
         ),
@@ -206,7 +206,7 @@ export class BearTunesRenamer {
     } catch (error) {
       throw new RenamerGuardError(
         BearTunesRenamerFailureCode.TargetDirectoryAccessError,
-        new ReferenceError(
+        new Error(
           `${this.constructor.name}: Cannot create target directory ${resolvedTargetDirectory}`,
           { cause: normalizeUnknownError(error) },
         ),
