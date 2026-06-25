@@ -91,14 +91,16 @@ export class BearTunesRenamer {
    *
    * The method replaces placeholders such as `%title%` or `%artists%`
    * with values read from the provided track metadata. Array values are
-   * joined with commas, plain objects are JSON-stringified when possible,
-   * and primitive values are converted to strings.
+   * joined with commas, primitive values are converted to strings, and
+   * whole-object values are rejected because rename placeholders must
+   * resolve to a meaningful path segment.
    *
    * @param pattern - Pattern containing TrackInfo-based placeholders.
    * @param trackInfo - Track metadata providing values for placeholders.
    * @returns The pattern with all placeholders replaced by TrackInfo values.
-   * @throws {RenamerGuardError} When the pattern contains an invalid
-   * placeholder or when a required TrackInfo value is missing.
+   * @throws {RenamerGuardError} When the pattern contains an unsupported
+   * placeholder, when a required TrackInfo value is missing, or when a
+   * placeholder resolves to an unsupported object value.
    */
   private static replacePatternPlaceholders(pattern: string, trackInfo: TrackInfo): string {
     return pattern.replace(/%\w+%/ig, (match) => {
@@ -130,11 +132,12 @@ export class BearTunesRenamer {
       }
 
       if (typeof value === 'object' && value !== null) {
-        try {
-          return JSON.stringify(value);
-        } catch {
-          return '[Unserializable object]';
-        }
+        throw new RenamerGuardError(
+          BearTunesRenamerFailureCode.ObjectTrackInfoValueNotSupported,
+          new TypeError(
+            `${this.name}: Placeholder %${keyName}% cannot be resolved from an object value`,
+          ),
+        );
       }
 
       return String(value);

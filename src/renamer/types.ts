@@ -19,6 +19,9 @@ export enum BearTunesRenamerFailureCode {
   /** An unexpected error occurred while preparing the rename operation. */
   UnexpectedPreparationError = 305,
 
+  /** A placeholder resolved to a whole object value, which is not supported. */
+  ObjectTrackInfoValueNotSupported = 306,
+
   // 310-319: rename execution
 
   /** Renaming or moving the track file failed. */
