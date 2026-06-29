@@ -87,42 +87,79 @@ export class BearTunesRenamer {
   }
 
   /**
+   * Resolves a placeholder path against TrackInfo metadata.
+   *
+   * The placeholder path may reference a top-level TrackInfo property
+   * such as `title` or a nested property such as `album.title`.
+   *
+   * @param placeholderPath - Dot-separated placeholder path without `%` markers.
+   * @param trackInfo - Track metadata providing values for the placeholder.
+   * @returns The resolved TrackInfo value for the placeholder path.
+   * @throws {RenamerGuardError} When the placeholder path is empty or
+   * references an unsupported TrackInfo property.
+   */
+  private static resolvePlaceholderValue(
+    placeholderPath: string,
+    trackInfo: TrackInfo,
+  ): unknown {
+    if (!placeholderPath) {
+      throw new RenamerGuardError(
+        BearTunesRenamerFailureCode.UnsupportedRenamePatternPlaceholder,
+        new TypeError(
+          `${this.name}: Unsupported rename pattern placeholder: %%`,
+        ),
+      );
+    }
+
+    const segments = placeholderPath.split('.');
+    let current: unknown = trackInfo;
+
+    for (const segment of segments) {
+      if (
+        typeof current !== 'object'
+        || current === null
+        || !Object.hasOwn(current, segment)
+      ) {
+        throw new RenamerGuardError(
+          BearTunesRenamerFailureCode.UnsupportedRenamePatternPlaceholder,
+          new TypeError(
+            `${this.name}: Unsupported rename pattern placeholder: %${placeholderPath}%`,
+          ),
+        );
+      }
+
+      current = (current as Record<string, unknown>)[segment];
+    }
+
+    return current;
+  }
+
+  /**
    * Replaces placeholders used in a rename pattern with TrackInfo values.
    *
-   * The method replaces placeholders such as `%title%` or `%artists%`
-   * with values read from the provided track metadata. Array values are
-   * joined with commas, primitive values are converted to strings, and
-   * whole-object values are rejected because rename placeholders must
-   * resolve to a meaningful path segment.
+   * The method replaces placeholders such as `%title%`, `%artists%`,
+   * or `%album.title%` with values read from the provided track metadata.
+   * Array values are joined with commas, scalar values are converted to strings,
+   * and whole-object values are rejected because placeholders must resolve
+   * to a direct replacement value.
    *
    * @param pattern - Pattern containing TrackInfo-based placeholders.
    * @param trackInfo - Track metadata providing values for placeholders.
    * @returns The pattern with all placeholders replaced by TrackInfo values.
    * @throws {RenamerGuardError} When the pattern contains an unsupported
    * placeholder, when a required TrackInfo value is missing, or when a
-   * placeholder resolves to an unsupported object value.
+   * placeholder resolves to a whole object value.
    */
   private static replacePatternPlaceholders(pattern: string, trackInfo: TrackInfo): string {
-    return pattern.replace(/%\w+%/ig, (match) => {
-      const keyName = match.replace(/%/g, '');
-
-      if (!keyName || !Object.hasOwn(trackInfo, keyName)) {
-        throw new RenamerGuardError(
-          BearTunesRenamerFailureCode.UnsupportedRenamePatternPlaceholder,
-          new TypeError(
-            `${this.name}: Unsupported rename pattern placeholder: %${keyName}%`,
-          ),
-        );
-      }
-
-      const key = keyName as keyof TrackInfo;
-      const value = trackInfo[key];
+    return pattern.replace(/%(?:\w+\.)*\w+%/ig, (match) => {
+      const placeholderPath = match.slice(1, -1);
+      const value = BearTunesRenamer.resolvePlaceholderValue(placeholderPath, trackInfo);
 
       if (value === undefined) {
         throw new RenamerGuardError(
           BearTunesRenamerFailureCode.MissingTrackInfoValue,
           new Error(
-            `${this.name}: Missing TrackInfo value for placeholder %${keyName}%`,
+            `${this.name}: Missing TrackInfo value for placeholder %${placeholderPath}%`,
           ),
         );
       }
@@ -135,12 +172,29 @@ export class BearTunesRenamer {
         throw new RenamerGuardError(
           BearTunesRenamerFailureCode.ObjectTrackInfoValueNotSupported,
           new TypeError(
-            `${this.name}: Placeholder %${keyName}% cannot be resolved from an object value`,
+            `${this.name}: Placeholder %${placeholderPath}% cannot be resolved from an object value`,
           ),
         );
       }
 
-      return String(value);
+      if (typeof value === 'string') {
+        return value;
+      }
+
+      if (
+        typeof value === 'number'
+        || typeof value === 'boolean'
+        || typeof value === 'bigint'
+      ) {
+        return String(value);
+      }
+
+      throw new RenamerGuardError(
+        BearTunesRenamerFailureCode.UnexpectedPreparationError,
+        new TypeError(
+          `${this.name}: Placeholder %${placeholderPath}% resolved to an unsupported runtime value`,
+        ),
+      );
     });
   }
 
