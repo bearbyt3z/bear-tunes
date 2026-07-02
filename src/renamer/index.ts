@@ -3,6 +3,7 @@ import * as path from 'node:path';
 
 import logger from '#logger';
 import {
+  isObjectRecord,
   normalizeUnknownError,
   replacePathForbiddenChars,
 } from '#tools';
@@ -115,11 +116,7 @@ export class BearTunesRenamer {
     let current: unknown = trackInfo;
 
     for (const segment of segments) {
-      if (
-        typeof current !== 'object'
-        || current === null
-        || !Object.hasOwn(current, segment)
-      ) {
+      if (!isObjectRecord(current) || !Object.hasOwn(current, segment)) {
         throw new RenamerGuardError(
           BearTunesRenamerFailureCode.UnsupportedRenamePatternPlaceholder,
           new TypeError(
@@ -128,7 +125,7 @@ export class BearTunesRenamer {
         );
       }
 
-      current = (current as Record<string, unknown>)[segment];
+      current = current[segment];
     }
 
     return current;
@@ -168,7 +165,7 @@ export class BearTunesRenamer {
         return value.join(', ');
       }
 
-      if (typeof value === 'object' && value !== null) {
+      if (isObjectRecord(value)) {
         throw new RenamerGuardError(
           BearTunesRenamerFailureCode.ObjectTrackInfoValueNotSupported,
           new TypeError(
