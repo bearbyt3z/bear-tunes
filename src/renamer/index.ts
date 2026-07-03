@@ -136,16 +136,19 @@ export class BearTunesRenamer {
    *
    * The method replaces placeholders such as `%title%`, `%artists%`,
    * or `%album.title%` with values read from the provided track metadata.
-   * Array values are joined with commas, scalar values are converted to strings,
-   * and whole-object values are rejected because placeholders must resolve
-   * to a direct replacement value.
+   * Array values are joined with commas. String values are returned as-is.
+   * Number, boolean, and bigint values are converted to strings. Whole-object
+   * values are rejected because placeholders must resolve to a direct
+   * replacement value.
    *
    * @param pattern - Pattern containing TrackInfo-based placeholders.
    * @param trackInfo - Track metadata providing values for placeholders.
-   * @returns The pattern with all placeholders replaced by TrackInfo values.
+   * @returns The pattern with all supported placeholders replaced by resolved
+   * TrackInfo values.
    * @throws {RenamerGuardError} When the pattern contains an unsupported
-   * placeholder, when a required TrackInfo value is missing, or when a
-   * placeholder resolves to a whole object value.
+   * placeholder, when a required TrackInfo value is missing, when a
+   * placeholder resolves to a whole object value, or when it resolves
+   * to an unsupported runtime value.
    */
   private static replacePatternPlaceholders(pattern: string, trackInfo: TrackInfo): string {
     return pattern.replace(/%(?:\w+\.)*\w+%/ig, (match) => {
