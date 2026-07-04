@@ -92,6 +92,8 @@ export class BearTunesRenamer {
    *
    * The placeholder path may reference a top-level TrackInfo property
    * such as `title` or a nested property such as `album.title`.
+   * Nested traversal is supported only through object properties;
+   * array elements cannot be addressed through placeholder segments.
    *
    * @param placeholderPath - Dot-separated placeholder path without `%` markers.
    * @param trackInfo - Track metadata providing values for the placeholder.
@@ -116,6 +118,15 @@ export class BearTunesRenamer {
     let current: unknown = trackInfo;
 
     for (const segment of segments) {
+      if (Array.isArray(current)) {
+        throw new RenamerGuardError(
+          BearTunesRenamerFailureCode.UnsupportedRenamePatternPlaceholder,
+          new TypeError(
+            `${this.name}: Unsupported rename pattern placeholder: %${placeholderPath}%`,
+          ),
+        );
+      }
+
       if (!isObjectRecord(current) || !Object.hasOwn(current, segment)) {
         throw new RenamerGuardError(
           BearTunesRenamerFailureCode.UnsupportedRenamePatternPlaceholder,
