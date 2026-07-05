@@ -213,18 +213,42 @@ export class BearTunesRenamer {
   }
 
   /**
-   * Resolves the target directory path to use for a rename operation.
+   * Resolves the base directory used to build the final target directory path.
    *
    * When `directoryPatternMode` is set to
    * {@link BearTunesRenamerDirectoryPatternMode.RequiresTargetBaseDirectory},
-   * the configured `directoryPattern` is applied only if the caller provides
-   * `targetBaseDirectory`. Otherwise the source track directory is returned.
+   * the source track directory is returned if `targetBaseDirectory` was not
+   * provided by the caller.
    *
-   * When `directoryPatternMode` is set to
-   * {@link BearTunesRenamerDirectoryPatternMode.Always},
-   * `directoryPattern` is always applied. The provided `targetBaseDirectory`
-   * is used as the base directory when available; otherwise the source track
-   * directory is used as the base directory.
+   * Otherwise the provided `targetBaseDirectory` is used as the base directory,
+   * and when it is not provided the source track directory is used instead.
+   *
+   * @param trackPath - Path to the source track file.
+   * @param targetBaseDirectory - Optional base directory provided by the caller.
+   * @returns The base directory path used for target directory resolution.
+   */
+  private resolveTargetDirectoryBasePath(
+    trackPath: string,
+    targetBaseDirectory: string | undefined,
+  ): string {
+    if (
+      this.options.directoryPatternMode === BearTunesRenamerDirectoryPatternMode.RequiresTargetBaseDirectory
+      && targetBaseDirectory === undefined
+    ) {
+      return path.dirname(trackPath);
+    }
+
+    return targetBaseDirectory ?? path.dirname(trackPath);
+  }
+
+  /**
+   * Resolves the target directory path to use for a rename operation.
+   *
+   * The method resolves the base directory path for the operation, validates
+   * that the base path points to an existing directory, applies the configured
+   * `directoryPattern` using track metadata, sanitizes the resulting path
+   * segments, creates missing target directories, and returns the resolved
+   * target directory path.
    *
    * @param trackPath - Path to the source track file.
    * @param targetBaseDirectory - Optional base directory provided by the caller.
@@ -238,15 +262,10 @@ export class BearTunesRenamer {
     targetBaseDirectory: string | undefined,
     trackInfo: TrackInfo,
   ): string {
-    if (
-      this.options.directoryPatternMode
-      === BearTunesRenamerDirectoryPatternMode.RequiresTargetBaseDirectory
-      && targetBaseDirectory === undefined
-    ) {
-      return path.dirname(trackPath);
-    }
-
-    const targetDirectoryBasePath = targetBaseDirectory ?? path.dirname(trackPath);
+    const targetDirectoryBasePath = this.resolveTargetDirectoryBasePath(
+      trackPath,
+      targetBaseDirectory,
+    );
 
     let targetDirectoryBasePathStats: fs.Stats;
 
