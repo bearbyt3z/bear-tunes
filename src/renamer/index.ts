@@ -212,52 +212,52 @@ export class BearTunesRenamer {
   /**
    * Resolves the target directory path to use for a rename operation.
    *
-   * When `targetDirectory` is not provided, the method returns the current
-   * directory of the source track. Otherwise it validates the provided target
+   * When `targetBaseDirectory` is not provided, the method returns the current
+   * directory of the source track. Otherwise it validates the provided base
    * directory, replaces placeholders in the configured directory pattern using
    * track metadata, sanitizes the path, creates missing directories, and returns
    * the resolved target directory path.
    *
    * @param trackPath - Path to the source track file.
-   * @param targetDirectory - Optional base target directory provided by the caller.
+   * @param targetBaseDirectory - Optional base directory provided by the caller.
    * @param trackInfo - Track metadata used to replace directory placeholders.
    * @returns The resolved target directory path.
-   * @throws {RenamerGuardError} When the target directory is invalid,
-   * inaccessible, or cannot be created.
+   * @throws {RenamerGuardError} When the target base directory is invalid,
+   * inaccessible, or cannot be used to create the resolved target directory.
    */
   private resolveTargetDirectoryPath(
     trackPath: string,
-    targetDirectory: string | undefined,
+    targetBaseDirectory: string | undefined,
     trackInfo: TrackInfo,
   ): string {
-    if (targetDirectory === undefined) {
+    if (targetBaseDirectory === undefined) {
       return path.dirname(trackPath);
     }
 
-    let targetDirectoryStats: fs.Stats;
+    let targetBaseDirectoryStats: fs.Stats;
 
     try {
-      targetDirectoryStats = fs.lstatSync(targetDirectory);
+      targetBaseDirectoryStats = fs.lstatSync(targetBaseDirectory);
     } catch (error) {
       throw new RenamerGuardError(
         BearTunesRenamerFailureCode.TargetDirectoryAccessError,
         new Error(
-          `${this.constructor.name}: Cannot access target directory path ${targetDirectory}`,
+          `${this.constructor.name}: Cannot access target base directory path ${targetBaseDirectory}`,
           { cause: normalizeUnknownError(error) },
         ),
       );
     }
 
-    if (!targetDirectoryStats.isDirectory()) {
+    if (!targetBaseDirectoryStats.isDirectory()) {
       throw new RenamerGuardError(
         BearTunesRenamerFailureCode.InvalidTargetDirectory,
         new TypeError(
-          `${this.constructor.name}: Specified target directory path ${targetDirectory} is not a directory`,
+          `${this.constructor.name}: Specified target base directory path ${targetBaseDirectory} is not a directory`,
         ),
       );
     }
 
-    const normalizedTargetDirectory = targetDirectory.replace(/[/\\]+$/, path.sep);
+    const normalizedTargetBaseDirectory = targetBaseDirectory.replace(/[/\\]+$/, path.sep);
     const replacedDirectoryPattern = BearTunesRenamer.replacePatternPlaceholders(this.options.directoryPattern, trackInfo);
 
     const sanitizedTargetDirectorySegments = replacedDirectoryPattern
@@ -266,8 +266,8 @@ export class BearTunesRenamer {
       .map((segment) => replacePathForbiddenChars(segment));
 
     const resolvedTargetDirectory = sanitizedTargetDirectorySegments.length > 0
-      ? path.join(normalizedTargetDirectory, ...sanitizedTargetDirectorySegments)
-      : normalizedTargetDirectory;
+      ? path.join(normalizedTargetBaseDirectory, ...sanitizedTargetDirectorySegments)
+      : normalizedTargetBaseDirectory;
 
     try {
       fs.mkdirSync(resolvedTargetDirectory, { recursive: true });
@@ -313,14 +313,14 @@ export class BearTunesRenamer {
    * and combines both parts into the final destination path.
    *
    * @param trackPath - Path to the source track file.
-   * @param targetDirectory - Optional base target directory provided by the caller.
+   * @param targetBaseDirectory - Optional base target directory provided by the caller.
    * @param trackInfo - Track metadata used to replace placeholders.
    * @returns The final target path for the rename operation.
    * @throws {RenamerGuardError} When target path preparation fails.
    */
   private resolveTargetPath(
     trackPath: string,
-    targetDirectory: string | undefined,
+    targetBaseDirectory: string | undefined,
     trackInfo: TrackInfo,
   ): string {
     const filename = this.buildTargetFilename(
@@ -330,7 +330,7 @@ export class BearTunesRenamer {
 
     const resolvedTargetDirectory = this.resolveTargetDirectoryPath(
       trackPath,
-      targetDirectory,
+      targetBaseDirectory,
       trackInfo,
     );
 
@@ -365,26 +365,26 @@ export class BearTunesRenamer {
    * Renames or moves a track file according to the configured renamer patterns.
    *
    * The method prepares the final target path from the provided track metadata
-   * and optional target directory, executes the filesystem rename operation,
+   * and optional target base directory, executes the filesystem rename operation,
    * and returns a discriminated result describing either success or failure.
    *
    * @param trackPath - Path to the source track file.
    * @param trackInfo - Track metadata used to build the target path.
-   * @param targetDirectory - Optional base target directory provided by the caller.
+   * @param targetBaseDirectory - Optional base target directory provided by the caller.
    * @returns A renamer result describing either the resolved target path or the
    * classified failure.
    */
   rename(
     trackPath: string,
     trackInfo: TrackInfo,
-    targetDirectory?: string,
+    targetBaseDirectory?: string,
   ): BearTunesRenamerResult {
     let targetPath: string;
 
     try {
       targetPath = this.resolveTargetPath(
         trackPath,
-        targetDirectory,
+        targetBaseDirectory,
         trackInfo,
       );
     } catch (error) {
