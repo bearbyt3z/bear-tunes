@@ -67,6 +67,26 @@ export type BearTunesRenamerResult =
   | BearTunesRenamerFailureResult;
 
 /**
+ * Strategy controlling when `directoryPattern` is applied while resolving
+ * the target directory for a rename operation.
+ */
+export enum BearTunesRenamerDirectoryPatternMode {
+  /**
+   * Apply `directoryPattern` only when the caller provides
+   * `targetBaseDirectory` to `rename()`.
+   */
+  RequiresTargetBaseDirectory = 'requiresTargetBaseDirectory',
+
+  /**
+   * Always apply `directoryPattern`.
+   *
+   * When `targetBaseDirectory` is provided, it is used as the base directory.
+   * Otherwise the source track directory is used as the base directory.
+   */
+  Always = 'always',
+}
+
+/**
  * Configuration options controlling BearTunes file renaming.
  */
 export interface BearTunesRenamerOptions {
@@ -75,6 +95,9 @@ export interface BearTunesRenamerOptions {
 
   /** Pattern used to build the target directory. */
   directoryPattern: string;
+
+  /** Controls when `directoryPattern` is used to build the target directory. */
+  directoryPatternMode: BearTunesRenamerDirectoryPatternMode;
 
   /** Whether verbose logging is enabled. */
   verbose: boolean;

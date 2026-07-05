@@ -12,6 +12,7 @@ import {
   RenamerGuardError,
 } from './errors.js';
 import {
+  BearTunesRenamerDirectoryPatternMode,
   BearTunesRenamerFailureCode,
 } from './types.js';
 
@@ -25,6 +26,7 @@ import type { TrackInfo } from '#shared-types';
 
 // reexporting enum & types, so they will be included in the renamer module import
 export {
+  BearTunesRenamerDirectoryPatternMode,
   BearTunesRenamerFailureCode,
 };
 
@@ -42,6 +44,7 @@ export type {
 const defaultRenamerOptions = Object.freeze({
   filenamePattern: '%artists% - %title%', // title already contains remixers etc.
   directoryPattern: '%genre%/%artists%',
+  directoryPatternMode: BearTunesRenamerDirectoryPatternMode.RequiresTargetBaseDirectory,
   verbose: false,
 } as const satisfies BearTunesRenamerOptions);
 
@@ -212,17 +215,22 @@ export class BearTunesRenamer {
   /**
    * Resolves the target directory path to use for a rename operation.
    *
-   * When `targetBaseDirectory` is not provided, the method returns the current
-   * directory of the source track. Otherwise it validates the provided base
-   * directory, replaces placeholders in the configured directory pattern using
-   * track metadata, sanitizes the path, creates missing directories, and returns
-   * the resolved target directory path.
+   * When `directoryPatternMode` is set to
+   * {@link BearTunesRenamerDirectoryPatternMode.RequiresTargetBaseDirectory},
+   * the configured `directoryPattern` is applied only if the caller provides
+   * `targetBaseDirectory`. Otherwise the source track directory is returned.
+   *
+   * When `directoryPatternMode` is set to
+   * {@link BearTunesRenamerDirectoryPatternMode.Always},
+   * `directoryPattern` is always applied. The provided `targetBaseDirectory`
+   * is used as the base directory when available; otherwise the source track
+   * directory is used as the base directory.
    *
    * @param trackPath - Path to the source track file.
    * @param targetBaseDirectory - Optional base directory provided by the caller.
    * @param trackInfo - Track metadata used to replace directory placeholders.
    * @returns The resolved target directory path.
-   * @throws {RenamerGuardError} When the target base directory is invalid,
+   * @throws {RenamerGuardError} When the resolved base directory is invalid,
    * inaccessible, or cannot be used to create the resolved target directory.
    */
   private resolveTargetDirectoryPath(
@@ -230,35 +238,44 @@ export class BearTunesRenamer {
     targetBaseDirectory: string | undefined,
     trackInfo: TrackInfo,
   ): string {
-    if (targetBaseDirectory === undefined) {
+    if (
+      this.options.directoryPatternMode
+      === BearTunesRenamerDirectoryPatternMode.RequiresTargetBaseDirectory
+      && targetBaseDirectory === undefined
+    ) {
       return path.dirname(trackPath);
     }
 
-    let targetBaseDirectoryStats: fs.Stats;
+    const targetDirectoryBasePath = targetBaseDirectory ?? path.dirname(trackPath);
+
+    let targetDirectoryBasePathStats: fs.Stats;
 
     try {
-      targetBaseDirectoryStats = fs.lstatSync(targetBaseDirectory);
+      targetDirectoryBasePathStats = fs.lstatSync(targetDirectoryBasePath);
     } catch (error) {
       throw new RenamerGuardError(
         BearTunesRenamerFailureCode.TargetDirectoryAccessError,
         new Error(
-          `${this.constructor.name}: Cannot access target base directory path ${targetBaseDirectory}`,
+          `${this.constructor.name}: Cannot access target base directory path ${targetDirectoryBasePath}`,
           { cause: normalizeUnknownError(error) },
         ),
       );
     }
 
-    if (!targetBaseDirectoryStats.isDirectory()) {
+    if (!targetDirectoryBasePathStats.isDirectory()) {
       throw new RenamerGuardError(
         BearTunesRenamerFailureCode.InvalidTargetDirectory,
         new TypeError(
-          `${this.constructor.name}: Specified target base directory path ${targetBaseDirectory} is not a directory`,
+          `${this.constructor.name}: Specified target base directory path ${targetDirectoryBasePath} is not a directory`,
         ),
       );
     }
 
-    const normalizedTargetBaseDirectory = targetBaseDirectory.replace(/[/\\]+$/, path.sep);
-    const replacedDirectoryPattern = BearTunesRenamer.replacePatternPlaceholders(this.options.directoryPattern, trackInfo);
+    const normalizedTargetDirectoryBasePath = targetDirectoryBasePath.replace(/[/\\]+$/, path.sep);
+    const replacedDirectoryPattern = BearTunesRenamer.replacePatternPlaceholders(
+      this.options.directoryPattern,
+      trackInfo,
+    );
 
     const sanitizedTargetDirectorySegments = replacedDirectoryPattern
       .split(/[/\\]+/)
@@ -266,8 +283,8 @@ export class BearTunesRenamer {
       .map((segment) => replacePathForbiddenChars(segment));
 
     const resolvedTargetDirectory = sanitizedTargetDirectorySegments.length > 0
-      ? path.join(normalizedTargetBaseDirectory, ...sanitizedTargetDirectorySegments)
-      : normalizedTargetBaseDirectory;
+      ? path.join(normalizedTargetDirectoryBasePath, ...sanitizedTargetDirectorySegments)
+      : normalizedTargetDirectoryBasePath;
 
     try {
       fs.mkdirSync(resolvedTargetDirectory, { recursive: true });
