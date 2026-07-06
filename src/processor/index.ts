@@ -70,8 +70,14 @@ const createDefaultProcessorDependencies = (
 };
 
 export class BearTunesProcessor {
+  /**
+   * Effective processor configuration for this instance.
+   */
   private readonly options: BearTunesProcessorOptions;
 
+  /**
+   * Effective processor dependencies for this instance.
+   */
   private readonly dependencies: BearTunesProcessorDependencies;
 
   /**
@@ -82,6 +88,12 @@ export class BearTunesProcessor {
    */
   private readonly convertedMp3Paths: Set<string>;
 
+  /**
+   * Creates a processor instance with merged default options and dependencies.
+   *
+   * @param options - Partial processor configuration overriding default values.
+   * @param dependencies - Partial processor dependencies overriding default instances.
+   */
   constructor(
     options: Partial<BearTunesProcessorOptions> = {},
     dependencies: Partial<BearTunesProcessorDependencies> = {},
