@@ -282,11 +282,43 @@ export class BearTunesRenamer {
   }
 
   /**
+   * Resolves the final target directory path from an already selected base path.
+   *
+   * The method normalizes the provided base directory path, applies the
+   * configured `directoryPattern` using track metadata, sanitizes the resulting
+   * path segments, and combines them into the final target directory path.
+   *
+   * @param targetDirectoryBasePath - Base directory path for target directory resolution.
+   * @param trackInfo - Track metadata used to replace directory placeholders.
+   * @returns The resolved target directory path derived from the base path.
+   * @throws {RenamerGuardError} When replacing directory pattern placeholders fails.
+   */
+  private resolveTargetDirectoryPathFromBasePath(
+    targetDirectoryBasePath: string,
+    trackInfo: TrackInfo,
+  ): string {
+    const normalizedTargetDirectoryBasePath = targetDirectoryBasePath.replace(/[/\\]+$/, path.sep);
+    const replacedDirectoryPattern = BearTunesRenamer.replacePatternPlaceholders(
+      this.options.directoryPattern,
+      trackInfo,
+    );
+
+    const sanitizedTargetDirectorySegments = replacedDirectoryPattern
+      .split(/[/\\]+/)
+      .filter((segment) => segment.length > 0)
+      .map((segment) => replacePathForbiddenChars(segment));
+
+    return sanitizedTargetDirectorySegments.length > 0
+      ? path.join(normalizedTargetDirectoryBasePath, ...sanitizedTargetDirectorySegments)
+      : normalizedTargetDirectoryBasePath;
+  }
+
+  /**
    * Resolves the target directory path to use for a rename operation.
    *
    * The method resolves and asserts the base directory path for the operation,
-   * applies the configured `directoryPattern` using track metadata, sanitizes
-   * the resulting path segments, creates missing target directories, and
+   * derives the final target directory path from that base path and the
+   * configured directory pattern, creates missing target directories, and
    * returns the resolved target directory path.
    *
    * @param trackPath - Path to the source track file.
@@ -308,20 +340,10 @@ export class BearTunesRenamer {
 
     this.assertValidTargetDirectoryBasePath(targetDirectoryBasePath);
 
-    const normalizedTargetDirectoryBasePath = targetDirectoryBasePath.replace(/[/\\]+$/, path.sep);
-    const replacedDirectoryPattern = BearTunesRenamer.replacePatternPlaceholders(
-      this.options.directoryPattern,
+    const resolvedTargetDirectory = this.resolveTargetDirectoryPathFromBasePath(
+      targetDirectoryBasePath,
       trackInfo,
     );
-
-    const sanitizedTargetDirectorySegments = replacedDirectoryPattern
-      .split(/[/\\]+/)
-      .filter((segment) => segment.length > 0)
-      .map((segment) => replacePathForbiddenChars(segment));
-
-    const resolvedTargetDirectory = sanitizedTargetDirectorySegments.length > 0
-      ? path.join(normalizedTargetDirectoryBasePath, ...sanitizedTargetDirectorySegments)
-      : normalizedTargetDirectoryBasePath;
 
     try {
       fs.mkdirSync(resolvedTargetDirectory, { recursive: true });
