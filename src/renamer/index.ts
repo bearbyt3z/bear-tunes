@@ -242,31 +242,21 @@ export class BearTunesRenamer {
   }
 
   /**
-   * Resolves the target directory path to use for a rename operation.
+   * Asserts that the target directory base path is accessible and points to a directory.
    *
-   * The method resolves the base directory path for the operation, validates
-   * that the base path points to an existing directory, applies the configured
-   * `directoryPattern` using track metadata, sanitizes the resulting path
-   * segments, creates missing target directories, and returns the resolved
-   * target directory path.
+   * This helper acts as a fail-fast guard for target directory resolution
+   * preconditions. It aborts the current rename preparation flow by throwing
+   * {@link RenamerGuardError} when the target directory base path cannot be
+   * accessed or does not point to a directory.
    *
-   * @param trackPath - Path to the source track file.
-   * @param targetBaseDirectory - Optional base directory provided by the caller.
-   * @param trackInfo - Track metadata used to replace directory placeholders.
-   * @returns The resolved target directory path.
-   * @throws {RenamerGuardError} When the resolved base directory is invalid,
-   * inaccessible, or cannot be used to create the resolved target directory.
+   * If the method returns normally, the caller may continue target directory
+   * resolution assuming that the base directory precondition has been satisfied.
+   *
+   * @param targetDirectoryBasePath - Base directory path to assert.
+   * @throws {RenamerGuardError} When the path is inaccessible or does not point
+   * to a directory.
    */
-  private resolveTargetDirectoryPath(
-    trackPath: string,
-    targetBaseDirectory: string | undefined,
-    trackInfo: TrackInfo,
-  ): string {
-    const targetDirectoryBasePath = this.resolveTargetDirectoryBasePath(
-      trackPath,
-      targetBaseDirectory,
-    );
-
+  private assertValidTargetDirectoryBasePath(targetDirectoryBasePath: string): void {
     let targetDirectoryBasePathStats: fs.Stats;
 
     try {
@@ -289,6 +279,34 @@ export class BearTunesRenamer {
         ),
       );
     }
+  }
+
+  /**
+   * Resolves the target directory path to use for a rename operation.
+   *
+   * The method resolves and asserts the base directory path for the operation,
+   * applies the configured `directoryPattern` using track metadata, sanitizes
+   * the resulting path segments, creates missing target directories, and
+   * returns the resolved target directory path.
+   *
+   * @param trackPath - Path to the source track file.
+   * @param targetBaseDirectory - Optional base directory provided by the caller.
+   * @param trackInfo - Track metadata used to replace directory placeholders.
+   * @returns The resolved target directory path.
+   * @throws {RenamerGuardError} When the resolved base directory is invalid,
+   * inaccessible, or cannot be used to create the resolved target directory.
+   */
+  private resolveTargetDirectoryPath(
+    trackPath: string,
+    targetBaseDirectory: string | undefined,
+    trackInfo: TrackInfo,
+  ): string {
+    const targetDirectoryBasePath = this.resolveTargetDirectoryBasePath(
+      trackPath,
+      targetBaseDirectory,
+    );
+
+    this.assertValidTargetDirectoryBasePath(targetDirectoryBasePath);
 
     const normalizedTargetDirectoryBasePath = targetDirectoryBasePath.replace(/[/\\]+$/, path.sep);
     const replacedDirectoryPattern = BearTunesRenamer.replacePatternPlaceholders(
