@@ -244,11 +244,12 @@ export class BearTunesProcessor {
         return false;
       }
 
-      logger.info(`FLAC file was converted to MP3: ${result.outputPath}`);
-
       convertedMp3Path = result.outputPath;
-      trackInfoSourcePath = result.outputPath;
-      this.convertedMp3Paths.add(result.outputPath);
+
+      logger.info(`FLAC file was converted to MP3: ${convertedMp3Path}`);
+
+      trackInfoSourcePath = convertedMp3Path;
+      this.convertedMp3Paths.add(convertedMp3Path);
     }
 
     const trackInfo = await this.dependencies.tagger.processTrack(trackInfoSourcePath);
