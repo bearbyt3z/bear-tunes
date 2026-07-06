@@ -37,6 +37,9 @@ export type {
   BearTunesRenamerSuccessResult,
 };
 
+/**
+ * Default renamer options applied when custom options are not provided.
+ */
 // Default options are intentionally defined as immutable:
 // - `as const` keeps exact literal types and readonly fields,
 // - `satisfies` checks compatibility with the public options type,
