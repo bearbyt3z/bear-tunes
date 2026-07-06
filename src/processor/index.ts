@@ -74,7 +74,13 @@ export class BearTunesProcessor {
 
   private readonly dependencies: BearTunesProcessorDependencies;
 
-  private readonly flacFiles: Set<string>;
+  /**
+   * Tracks MP3 paths generated from FLAC inputs during the current processor run.
+   *
+   * The set is used to skip those MP3 files if they are encountered later during
+   * directory traversal, preventing the same logical track from being processed twice.
+   */
+  private readonly convertedMp3Paths: Set<string>;
 
   constructor(
     options: Partial<BearTunesProcessorOptions> = {},
@@ -90,7 +96,7 @@ export class BearTunesProcessor {
       ...dependencies,
     };
 
-    this.flacFiles = new Set<string>();
+    this.convertedMp3Paths = new Set<string>();
   }
 
   /**
@@ -168,7 +174,7 @@ export class BearTunesProcessor {
    * Processes a standalone MP3 file by reading track metadata, renaming the file,
    * and downloading album artwork when possible.
    *
-   * MP3 files that were just produced from a FLAC conversion are skipped here to avoid
+   * MP3 files tracked in `convertedMp3Paths` are skipped here to avoid
    * processing the same logical track twice during a single run.
    *
    * @param filePath - The MP3 file to process.
@@ -177,8 +183,8 @@ export class BearTunesProcessor {
    * or to `false` when the file was skipped or could not be processed.
    */
   private async processMp3File(filePath: string, outputDirectory?: string): Promise<boolean> {
-    if (this.flacFiles.has(filePath)) {
-      this.flacFiles.delete(filePath);
+    if (this.convertedMp3Paths.has(filePath)) {
+      this.convertedMp3Paths.delete(filePath);
       return false;
     }
 
@@ -211,8 +217,9 @@ export class BearTunesProcessor {
    * and downloading artwork.
    *
    * When `convertFlacToMp3` is enabled, the function converts the FLAC file to MP3,
-   * extracts track metadata from the converted MP3, and tracks that generated MP3 path
-   * so later directory traversal does not process it again as an unrelated input file.
+   * extracts track metadata from the converted MP3, and tracks the generated MP3 path,
+   * and later its renamed path, in `convertedMp3Paths` so directory traversal does not
+   * process the same logical track again when that MP3 file is encountered later.
    *
    * When `convertFlacToMp3` is disabled, the function extracts track metadata directly
    * from the FLAC file instead and skips MP3 conversion entirely.
@@ -241,14 +248,14 @@ export class BearTunesProcessor {
 
       convertedMp3Path = result.outputPath;
       trackInfoSourcePath = result.outputPath;
-      this.flacFiles.add(result.outputPath);
+      this.convertedMp3Paths.add(result.outputPath);
     }
 
     const trackInfo = await this.dependencies.tagger.processTrack(trackInfoSourcePath);
 
     if (isEmptyPlainObject(trackInfo)) {
       if (convertedMp3Path) {
-        this.flacFiles.delete(convertedMp3Path);
+        this.convertedMp3Paths.delete(convertedMp3Path);
         logger.warn(`No track info found for converted FLAC/MP3 pair: ${filePath}`);
       } else {
         logger.warn(`No track info found for FLAC file: ${filePath}`);
@@ -269,8 +276,8 @@ export class BearTunesProcessor {
         return false;
       }
 
-      this.flacFiles.delete(convertedMp3Path);
-      this.flacFiles.add(mp3RenameResult.targetPath);
+      this.convertedMp3Paths.delete(convertedMp3Path);
+      this.convertedMp3Paths.add(mp3RenameResult.targetPath);
     }
 
     await this.dependencies.tagger.saveId3TagToFlacFile(filePath, trackInfo);
