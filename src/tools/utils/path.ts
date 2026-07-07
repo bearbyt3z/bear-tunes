@@ -1,6 +1,20 @@
 import * as path from 'node:path';
 
 /**
+ * Normalizes trailing path separators to a single platform-specific separator.
+ *
+ * The function replaces one or more trailing forward or backward slashes with
+ * a single `path.sep`, making the path safe to use as a normalized directory
+ * base before further `path.join()` composition.
+ *
+ * @param filePath - Path whose trailing separators should be normalized.
+ * @returns The input path with trailing separators normalized to one `path.sep`.
+ */
+export function normalizeTrailingPathSeparators(filePath: string): string {
+  return filePath.replace(/[/\\]+$/, path.sep);
+}
+
+/**
  * Replaces the filename extension in a filesystem path.
  *
  * @param filePath The filesystem path whose filename extension should be replaced.

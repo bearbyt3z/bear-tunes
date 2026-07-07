@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import logger from '#logger';
 import {
   isObjectRecord,
+  normalizeTrailingPathSeparators,
   normalizeUnknownError,
   replacePathForbiddenChars,
 } from '#tools';
@@ -274,7 +275,9 @@ export class BearTunesRenamer {
     targetDirectoryBasePath: string,
     trackInfo: TrackInfo,
   ): string {
-    const normalizedTargetDirectoryBasePath = targetDirectoryBasePath.replace(/[/\\]+$/, path.sep);
+    const normalizedTargetDirectoryBasePath = normalizeTrailingPathSeparators(
+      targetDirectoryBasePath,
+    );
     const replacedDirectoryPattern = BearTunesRenamer.replacePatternPlaceholders(
       this.options.directoryPattern,
       trackInfo,

@@ -11,6 +11,7 @@ import {
   CommandPipelineInfrastructureError,
   executeCommandPipeline,
   executeCommandSync,
+  normalizeTrailingPathSeparators,
   normalizeUnknownError,
   FirstPipelineCommandFailedError,
   SecondPipelineCommandFailedError,
@@ -179,7 +180,7 @@ export class BearTunesConverter {
     }
 
     if (outputPathStats.isDirectory()) {
-      const normalizedOutputDirectoryPath = outputPath.replace(/[/\\]+$/, path.sep);
+      const normalizedOutputDirectoryPath = normalizeTrailingPathSeparators(outputPath);
       const outputFilename = path.basename(inputFilePath).replace(
         inputExtensionPattern,
         outputExtension,

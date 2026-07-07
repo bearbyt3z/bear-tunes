@@ -76,6 +76,7 @@ export {
 } from './utils/parse.js';
 
 export {
+  normalizeTrailingPathSeparators,
   removeFilenameExtension,
   replaceFilenameExtension,
 } from './utils/path.js';
