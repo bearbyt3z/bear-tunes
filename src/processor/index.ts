@@ -69,6 +69,9 @@ const createDefaultProcessorDependencies = (
   };
 };
 
+/**
+ * Processes supported audio files and directories using the BearTunes pipeline.
+ */
 export class BearTunesProcessor {
   /**
    * Effective processor configuration for this instance.
