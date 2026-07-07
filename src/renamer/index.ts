@@ -51,6 +51,9 @@ const defaultRenamerOptions = Object.freeze({
   verbose: false,
 } as const satisfies BearTunesRenamerOptions);
 
+/**
+ * Renames or moves track files according to BearTunes naming patterns.
+ */
 export class BearTunesRenamer {
   /**
    * Effective renamer configuration for this instance.
