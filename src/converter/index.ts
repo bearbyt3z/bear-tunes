@@ -179,8 +179,13 @@ export class BearTunesConverter {
     }
 
     if (outputPathStats.isDirectory()) {
-      return outputPath.replace(/\/+$/, path.sep)
-        + path.basename(inputFilePath).replace(inputExtensionPattern, outputExtension);
+      const normalizedOutputDirectoryPath = outputPath.replace(/[/\\]+$/, path.sep);
+      const outputFilename = path.basename(inputFilePath).replace(
+        inputExtensionPattern,
+        outputExtension,
+      );
+
+      return path.join(normalizedOutputDirectoryPath, outputFilename);
     }
 
     if (outputPathStats.isFile()) {
