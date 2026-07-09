@@ -155,7 +155,8 @@ export class BearTunesProcessor {
    * do not need to duplicate warning message construction.
    *
    * @param filePath - The source file whose conversion failed.
-   * @param result - The converter failure result containing the failure code, error details, and optional encoder stderr output.
+   * @param result - The converter failure result containing the failure code, error details,
+   * and optional encoder stderr output.
    * @param stderrLabel - The label used to describe the stderr output in the warning message.
    */
   private static logConversionFailure(
