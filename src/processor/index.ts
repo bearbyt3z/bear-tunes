@@ -296,7 +296,12 @@ export class BearTunesProcessor {
       this.convertedMp3Paths.add(mp3RenameResult.targetPath);
     }
 
-    await this.dependencies.tagger.saveId3TagToFlacFile(filePath, trackInfo);
+    try {
+      await this.dependencies.tagger.saveId3TagToFlacFile(filePath, trackInfo);
+    } catch (error) {
+      logger.warn(`Saving ID3 tags to FLAC file failed: ${filePath}`, { error });
+      return false;
+    }
 
     const flacRenameResult = this.dependencies.renamer.rename(
       filePath,
