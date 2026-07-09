@@ -172,7 +172,7 @@ export class BearTunesConverter {
     } catch (error) {
       throw new ConverterGuardError(
         BearTunesConverterFailureCode.OutputPathAccessError,
-        new ReferenceError(
+        new Error(
           `${callerName}: Cannot access output path ${outputPath}`,
           { cause: normalizeUnknownError(error) },
         ),
@@ -241,7 +241,7 @@ export class BearTunesConverter {
     } catch (error) {
       throw new ConverterGuardError(
         BearTunesConverterFailureCode.InputFileAccessError,
-        new ReferenceError(
+        new Error(
           `${callerName}: Cannot access input path ${inputFilePath}`,
           { cause: normalizeUnknownError(error) },
         ),
