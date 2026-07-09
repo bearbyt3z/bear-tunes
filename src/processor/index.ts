@@ -351,7 +351,8 @@ export class BearTunesProcessor {
    * Dispatches a file to the appropriate processing pipeline based on its detected audio type.
    *
    * The audio type is resolved by the shared audio tools layer. Supported formats
-   * are MP3, FLAC, AIF, and AIFF. Files whose audio type cannot be detected are ignored.
+   * are MP3, FLAC, and AIFF, with `.aif` and `.aiff` both normalized to
+   * {@link AudioFileType.Aiff}. Files whose audio type cannot be detected are ignored.
    *
    * @param filePath - The file path to inspect and process.
    * @param outputDirectory - An optional destination directory for renamed output files.
