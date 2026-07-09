@@ -242,7 +242,8 @@ export class BearTunesProcessor {
    * @param filePath - The FLAC file to process.
    * @param outputDirectory - An optional destination directory for renamed output files.
    * @returns A promise resolving to `true` when the FLAC file was successfully processed,
-   * or to `false` when conversion, metadata extraction, or subsequent processing failed.
+   * or to `false` when conversion, metadata extraction, tag saving, or subsequent processing
+   * failed.
    */
   private async processFlacFile(filePath: string, outputDirectory?: string): Promise<boolean> {
     let trackInfoSourcePath = filePath;
