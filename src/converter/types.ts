@@ -19,6 +19,9 @@ export enum BearTunesConverterFailureCode {
   /** The output path could not be accessed. */
   OutputPathAccessError = 105,
 
+  /** The resolved output file path already exists. */
+  OutputFileAlreadyExists = 106,
+
   // 110-119: conversion preparation
 
   /** An unexpected error occurred while preparing conversion prerequisites. */
