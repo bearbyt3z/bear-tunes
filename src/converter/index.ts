@@ -211,7 +211,46 @@ export class BearTunesConverter {
 
     try {
       outputPathStats = fs.lstatSync(outputPath);
-    } catch (error) {
+    } catch (error: unknown) {
+      const errnoError = error as NodeJS.ErrnoException;
+
+      if (errnoError.code === 'ENOENT') {
+        if (!outputPath.match(expectedOutputExtensionPattern)) {
+          throw new ConverterGuardError(
+            BearTunesConverterFailureCode.InvalidOutputFileExtension,
+            new TypeError(
+              `${callerName}: Specified output path ${outputPath} does not have ${outputExtension} extension`,
+            ),
+          );
+        }
+
+        const outputDirectoryPath = path.dirname(outputPath);
+        let outputDirectoryStats: fs.Stats;
+
+        try {
+          outputDirectoryStats = fs.lstatSync(outputDirectoryPath);
+        } catch (directoryError) {
+          throw new ConverterGuardError(
+            BearTunesConverterFailureCode.OutputPathAccessError,
+            new Error(
+              `${callerName}: Cannot access output directory ${outputDirectoryPath}`,
+              { cause: normalizeUnknownError(directoryError) },
+            ),
+          );
+        }
+
+        if (!outputDirectoryStats.isDirectory()) {
+          throw new ConverterGuardError(
+            BearTunesConverterFailureCode.InvalidOutputPath,
+            new TypeError(
+              `${callerName}: Output path parent ${outputDirectoryPath} is not a directory`,
+            ),
+          );
+        }
+
+        return outputPath;
+      }
+
       throw new ConverterGuardError(
         BearTunesConverterFailureCode.OutputPathAccessError,
         new Error(
