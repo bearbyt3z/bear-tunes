@@ -129,6 +129,48 @@ export class BearTunesConverter {
   }
 
   /**
+   * Asserts that the resolved output file path does not already exist.
+   *
+   * This prevents conversion from overwriting an existing file regardless of
+   * whether the output path was derived from the input path, resolved from an
+   * output directory, or provided explicitly by the caller.
+   *
+   * @param outputFilePath - Resolved path of the file that conversion would create.
+   * @param callerName - Caller name used in generated error messages.
+   * @throws {ConverterGuardError} When the output file already exists or its
+   * existence cannot be determined.
+   */
+  private static assertOutputFileDoesNotExist(
+    outputFilePath: string,
+    callerName: string,
+  ): void {
+    try {
+      fs.lstatSync(outputFilePath);
+    } catch (error: unknown) {
+      const errnoError = error as NodeJS.ErrnoException;
+
+      if (errnoError.code === 'ENOENT') {
+        return;
+      }
+
+      throw new ConverterGuardError(
+        BearTunesConverterFailureCode.OutputPathAccessError,
+        new Error(
+          `${callerName}: Cannot access output path ${outputFilePath}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
+    }
+
+    throw new ConverterGuardError(
+      BearTunesConverterFailureCode.OutputFileAlreadyExists,
+      new Error(
+        `${callerName}: Output file already exists: ${outputFilePath}`,
+      ),
+    );
+  }
+
+  /**
    * Resolves the output file path to use for a conversion operation.
    *
    * If `outputPath` is not provided, the method derives the output path from
@@ -396,6 +438,11 @@ export class BearTunesConverter {
         /\.flac$/i,
         this.constructor.name,
       );
+
+      BearTunesConverter.assertOutputFileDoesNotExist(
+        resolvedOutputPath,
+        this.constructor.name,
+      );
     } catch (error) {
       if (error instanceof ConverterGuardError) {
         return BearTunesConverter.createFailureResult(
@@ -508,6 +555,11 @@ export class BearTunesConverter {
         /\.flac$/i,
         '.mp3',
         /\.mp3$/i,
+        this.constructor.name,
+      );
+
+      BearTunesConverter.assertOutputFileDoesNotExist(
+        resolvedOutputPath,
         this.constructor.name,
       );
     } catch (error) {
