@@ -173,17 +173,21 @@ export class BearTunesConverter {
   /**
    * Resolves the output file path to use for a conversion operation.
    *
-   * If `outputPath` is not provided, the method derives the output path from
-   * `inputFilePath` by replacing the input extension with `outputExtension`.
+   * If `outputPath` is not provided, the method derives the output file path
+   * from `inputFilePath` by replacing the input extension with
+   * `outputExtension`.
    *
-   * If `outputPath` points to a directory, the method appends the converted input
-   * file name to that directory. If it points to a file, the method validates that
-   * the file path uses the expected output extension.
+   * If `outputPath` points to an existing directory, the method appends the
+   * converted input file name to that directory. If it points to an existing
+   * file, the method validates that the path uses the expected output
+   * extension. If it does not exist, the method treats it as a target file
+   * path and verifies that its parent directory exists and is a directory.
    *
    * This helper acts as a fail-fast guard for output path preconditions.
-   * It returns the resolved output file path when resolution succeeds and throws
-   * {@link ConverterGuardError} when the provided output path is inaccessible,
-   * invalid, or uses an unexpected file extension.
+   * It returns the resolved output file path when resolution succeeds and
+   * throws {@link ConverterGuardError} when the output path is inaccessible,
+   * invalid, uses an unexpected file extension, or has an invalid parent
+   * directory.
    *
    * @param inputFilePath - Source file path used to derive the default output file path and file name.
    * @param outputPath - Optional output file path or output directory path provided by the caller.
@@ -192,8 +196,9 @@ export class BearTunesConverter {
    * @param expectedOutputExtensionPattern - Pattern matching valid output file paths for the target format.
    * @param callerName - Caller name used in generated error messages.
    * @returns The resolved output file path.
-   * @throws {ConverterGuardError} When the output path is inaccessible, is neither
-   * a file nor directory, or does not use the expected output extension.
+   * @throws {ConverterGuardError} When the output path is inaccessible, is an
+   * unsupported filesystem entry, uses an unexpected file extension, or refers
+   * to a target file whose parent directory is inaccessible or not a directory.
    */
   private static resolveOutputPath(
     inputFilePath: string,
@@ -450,7 +455,9 @@ export class BearTunesConverter {
    * result.
    *
    * @param aiffFilePath - Path to the source AIFF file to convert.
-   * @param outputPath - Optional target FLAC file path or output directory path.
+   * @param outputPath - Optional existing output directory or target FLAC file
+   * path. A target file path may not exist, but its parent directory must exist
+   * and be a directory.
    * @param deleteAiffAfterConversion - Whether the source AIFF file should be deleted after a successful conversion.
    * @returns A converter result describing whether the conversion succeeded or why it failed.
    */
@@ -569,7 +576,9 @@ export class BearTunesConverter {
    * execution error is normalized and mapped to `UnexpectedPipelineExecutionError`.
    *
    * @param flacFilePath - Path to the source FLAC file to convert.
-   * @param outputPath - Optional target MP3 file path or output directory path.
+   * @param outputPath - Optional existing output directory or target MP3 file
+   * path. A target file path may not exist, but its parent directory must exist
+   * and be a directory.
    * @param deleteFlacAfterConversion - Whether the source FLAC file should be deleted after a successful conversion.
    * @returns A promise resolved with a converter result describing whether the conversion succeeded or why it failed.
    */
