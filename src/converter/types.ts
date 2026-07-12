@@ -136,6 +136,9 @@ export interface BearTunesConverterOptions {
   /** Whether metadata should be transferred from the source file. */
   transferTagEntries: boolean;
 
+  /** Whether existing output files may be overwritten. */
+  forceOverwriteOutputFile: boolean;
+
   /** Whether verbose logging is enabled. */
   verbose: boolean;
 }

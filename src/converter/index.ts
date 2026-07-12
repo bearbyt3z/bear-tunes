@@ -70,6 +70,7 @@ const defaultConverterOptions = Object.freeze({
   mp3ChannelMode: Mp3ChannelMode.JointStereo,
   replayGainMode: ReplayGainMode.Accurate,
   transferTagEntries: false,
+  forceOverwriteOutputFile: false,
   verbose: false,
 } as const satisfies BearTunesConverterOptions);
 
