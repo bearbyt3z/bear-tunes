@@ -20,6 +20,7 @@ import {
 
 import type { BearTunesConverterFailureResult } from '#converter';
 import type { BearTunesRenamerFailureResult } from '#renamer';
+import type { TrackInfo } from '#shared-types';
 
 import type {
   BearTunesProcessorDependencies,
@@ -187,6 +188,27 @@ export class BearTunesProcessor {
   }
 
   /**
+   * Reads track metadata and converts tagger exceptions into a failed
+   * per-file processing outcome.
+   *
+   * This is a temporary boundary while BearTunesTagger still exposes an
+   * exception-based API. It prevents one tagger failure from aborting
+   * directory traversal.
+   *
+   * @param filePath - Path of the audio file whose metadata should be read.
+   * @returns Resolved track metadata, or `undefined` when metadata could not
+   * be read because the tagger threw.
+   */
+  private async tryProcessTrack(filePath: string): Promise<TrackInfo | undefined> {
+    try {
+      return await this.dependencies.tagger.processTrack(filePath);
+    } catch (error) {
+      logger.warn(`Reading track metadata failed: ${filePath}`, { error });
+      return undefined;
+    }
+  }
+
+  /**
    * Processes a standalone MP3 file by reading track metadata, renaming the file,
    * and downloading album artwork when possible.
    *
@@ -204,7 +226,11 @@ export class BearTunesProcessor {
       return false;
     }
 
-    const trackInfo = await this.dependencies.tagger.processTrack(filePath);
+    const trackInfo = await this.tryProcessTrack(filePath);
+
+    if (trackInfo === undefined) {
+      return false;
+    }
 
     if (isEmptyPlainObject(trackInfo)) {
       logger.warn(`No track info found for MP3 file: ${filePath}`);
@@ -243,8 +269,8 @@ export class BearTunesProcessor {
    * @param filePath - The FLAC file to process.
    * @param outputDirectory - An optional destination directory for renamed output files.
    * @returns A promise resolving to `true` when the FLAC file was successfully processed,
-   * or to `false` when conversion, metadata extraction, tag saving, or subsequent processing
-   * failed.
+   * or to `false` when conversion, metadata extraction, tag saving, or subsequent
+   * processing failed.
    */
   private async processFlacFile(filePath: string, outputDirectory?: string): Promise<boolean> {
     let trackInfoSourcePath = filePath;
@@ -269,7 +295,15 @@ export class BearTunesProcessor {
       this.convertedMp3Paths.add(convertedMp3Path);
     }
 
-    const trackInfo = await this.dependencies.tagger.processTrack(trackInfoSourcePath);
+    const trackInfo = await this.tryProcessTrack(trackInfoSourcePath);
+
+    if (trackInfo === undefined) {
+      if (convertedMp3Path) {
+        this.convertedMp3Paths.delete(convertedMp3Path);
+      }
+
+      return false;
+    }
 
     if (isEmptyPlainObject(trackInfo)) {
       if (convertedMp3Path) {
