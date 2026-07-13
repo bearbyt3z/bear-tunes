@@ -137,14 +137,10 @@ export class BearTunesConverter {
    * output directory, or provided explicitly by the caller.
    *
    * @param outputFilePath - Resolved path of the file that conversion would create.
-   * @param callerName - Caller name used in generated error messages.
    * @throws {ConverterGuardError} When the output file already exists or its
    * existence cannot be determined.
    */
-  private static assertOutputFileDoesNotExist(
-    outputFilePath: string,
-    callerName: string,
-  ): void {
+  private assertOutputFileDoesNotExist(outputFilePath: string): void {
     try {
       fs.lstatSync(outputFilePath);
     } catch (error: unknown) {
@@ -157,7 +153,7 @@ export class BearTunesConverter {
       throw new ConverterGuardError(
         BearTunesConverterFailureCode.OutputPathAccessError,
         new Error(
-          `${callerName}: Cannot access output path ${outputFilePath}`,
+          `${this.constructor.name}: Cannot access output path ${outputFilePath}`,
           { cause: normalizeUnknownError(error) },
         ),
       );
@@ -166,7 +162,7 @@ export class BearTunesConverter {
     throw new ConverterGuardError(
       BearTunesConverterFailureCode.OutputFileAlreadyExists,
       new Error(
-        `${callerName}: Output file already exists: ${outputFilePath}`,
+        `${this.constructor.name}: Output file already exists: ${outputFilePath}`,
       ),
     );
   }
@@ -195,19 +191,17 @@ export class BearTunesConverter {
    * @param inputExtensionPattern - Pattern matching the source file extension that should be replaced.
    * @param outputExtension - Output file extension to use when deriving the final output path.
    * @param expectedOutputExtensionPattern - Pattern matching valid output file paths for the target format.
-   * @param callerName - Caller name used in generated error messages.
    * @returns The resolved output file path.
    * @throws {ConverterGuardError} When the output path is inaccessible, is an
    * unsupported filesystem entry, uses an unexpected file extension, or refers
    * to a target file whose parent directory is inaccessible or not a directory.
    */
-  private static resolveOutputPath(
+  private resolveOutputPath(
     inputFilePath: string,
     outputPath: string | undefined,
     inputExtensionPattern: RegExp,
     outputExtension: string,
     expectedOutputExtensionPattern: RegExp,
-    callerName: string,
   ): string {
     if (outputPath === undefined) {
       return inputFilePath.replace(inputExtensionPattern, outputExtension);
@@ -225,7 +219,7 @@ export class BearTunesConverter {
           throw new ConverterGuardError(
             BearTunesConverterFailureCode.InvalidOutputFileExtension,
             new TypeError(
-              `${callerName}: Specified output path ${outputPath} does not have ${outputExtension} extension`,
+              `${this.constructor.name}: Specified output path ${outputPath} does not have ${outputExtension} extension`,
             ),
           );
         }
@@ -239,7 +233,7 @@ export class BearTunesConverter {
           throw new ConverterGuardError(
             BearTunesConverterFailureCode.OutputPathAccessError,
             new Error(
-              `${callerName}: Cannot access output directory ${outputDirectoryPath}`,
+              `${this.constructor.name}: Cannot access output directory ${outputDirectoryPath}`,
               { cause: normalizeUnknownError(directoryError) },
             ),
           );
@@ -249,7 +243,7 @@ export class BearTunesConverter {
           throw new ConverterGuardError(
             BearTunesConverterFailureCode.InvalidOutputPath,
             new TypeError(
-              `${callerName}: Output path parent ${outputDirectoryPath} is not a directory`,
+              `${this.constructor.name}: Output path parent ${outputDirectoryPath} is not a directory`,
             ),
           );
         }
@@ -260,7 +254,7 @@ export class BearTunesConverter {
       throw new ConverterGuardError(
         BearTunesConverterFailureCode.OutputPathAccessError,
         new Error(
-          `${callerName}: Cannot access output path ${outputPath}`,
+          `${this.constructor.name}: Cannot access output path ${outputPath}`,
           { cause: normalizeUnknownError(error) },
         ),
       );
@@ -284,7 +278,7 @@ export class BearTunesConverter {
       throw new ConverterGuardError(
         BearTunesConverterFailureCode.InvalidOutputFileExtension,
         new TypeError(
-          `${callerName}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
+          `${this.constructor.name}: Specified output path ${outputPath} is a file but does not have ${outputExtension} extension`,
         ),
       );
     }
@@ -292,7 +286,7 @@ export class BearTunesConverter {
     throw new ConverterGuardError(
       BearTunesConverterFailureCode.InvalidOutputPath,
       new TypeError(
-        `${callerName}: Specified output path ${outputPath} is neither a file nor directory`,
+        `${this.constructor.name}: Specified output path ${outputPath} is neither a file nor directory`,
       ),
     );
   }
@@ -311,15 +305,13 @@ export class BearTunesConverter {
    * @param inputFilePath - Path to the source file to validate.
    * @param expectedExtensionPattern - Pattern matching the required input file extension.
    * @param expectedExtensionDescription - Human-readable description of accepted input extensions used in error messages.
-   * @param callerName - Caller name used in generated error messages.
    * @throws {ConverterGuardError} When the input path is inaccessible, does not
    * point to a file, or does not match the expected extension.
    */
-  private static assertValidInputFilePath(
+  private assertValidInputFilePath(
     inputFilePath: string,
     expectedExtensionPattern: RegExp,
     expectedExtensionDescription: string,
-    callerName: string,
   ): void {
     let inputFilePathStats: fs.Stats;
 
@@ -329,7 +321,7 @@ export class BearTunesConverter {
       throw new ConverterGuardError(
         BearTunesConverterFailureCode.InputFileAccessError,
         new Error(
-          `${callerName}: Cannot access input path ${inputFilePath}`,
+          `${this.constructor.name}: Cannot access input path ${inputFilePath}`,
           { cause: normalizeUnknownError(error) },
         ),
       );
@@ -339,7 +331,7 @@ export class BearTunesConverter {
       throw new ConverterGuardError(
         BearTunesConverterFailureCode.InvalidInputFile,
         new TypeError(
-          `${callerName}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
+          `${this.constructor.name}: Specified path ${inputFilePath} is not a file or does not have ${expectedExtensionDescription} extension`,
         ),
       );
     }
@@ -351,11 +343,11 @@ export class BearTunesConverter {
    * @param filePath - Path to the file that should be removed.
    * @param context - Short label describing the file purpose in log messages.
    */
-  private static tryDeleteFile(filePath: string, context: string): void {
+  private tryDeleteFile(filePath: string, context: string): void {
     try {
       fs.unlinkSync(filePath);
     } catch (error) {
-      logger.warn(`${this.name}: Failed to delete ${context}: ${filePath}`, { error });
+      logger.warn(`${this.constructor.name}: Failed to delete ${context}: ${filePath}`, { error });
     }
   }
 
@@ -370,7 +362,7 @@ export class BearTunesConverter {
    * @param encoderStderr - Standard error captured from the encoder process, when available.
    * @returns A converter success result with `ok` set to `true`.
    */
-  private static finalizeSuccessfulConversion(
+  private finalizeSuccessfulConversion(
     sourceFilePath: string,
     deleteSourceAfterConversion: boolean,
     outputPath: string,
@@ -378,7 +370,7 @@ export class BearTunesConverter {
     encoderStderr?: string,
   ): BearTunesConverterSuccessResult {
     if (deleteSourceAfterConversion) {
-      BearTunesConverter.tryDeleteFile(sourceFilePath, 'source file');
+      this.tryDeleteFile(sourceFilePath, 'source file');
     }
 
     return BearTunesConverter.createSuccessResult(
@@ -470,26 +462,21 @@ export class BearTunesConverter {
     let resolvedOutputPath: string;
 
     try {
-      BearTunesConverter.assertValidInputFilePath(
+      this.assertValidInputFilePath(
         aiffFilePath,
         /\.(aif|aiff)$/i,
         '*.aif or *.aiff',
-        this.constructor.name,
       );
 
-      resolvedOutputPath = BearTunesConverter.resolveOutputPath(
+      resolvedOutputPath = this.resolveOutputPath(
         aiffFilePath,
         outputPath,
         /\.(aif|aiff)$/i,
         '.flac',
         /\.flac$/i,
-        this.constructor.name,
       );
 
-      BearTunesConverter.assertOutputFileDoesNotExist(
-        resolvedOutputPath,
-        this.constructor.name,
-      );
+      this.assertOutputFileDoesNotExist(resolvedOutputPath);
     } catch (error) {
       if (error instanceof ConverterGuardError) {
         return BearTunesConverter.createFailureResult(
@@ -510,7 +497,7 @@ export class BearTunesConverter {
         ['--verify', '-8', '--force', '--output-name', resolvedOutputPath, aiffFilePath],
       );
 
-      return BearTunesConverter.finalizeSuccessfulConversion(
+      return this.finalizeSuccessfulConversion(
         aiffFilePath,
         deleteAiffAfterConversion,
         resolvedOutputPath,
@@ -591,26 +578,21 @@ export class BearTunesConverter {
     let resolvedOutputPath: string;
 
     try {
-      BearTunesConverter.assertValidInputFilePath(
+      this.assertValidInputFilePath(
         flacFilePath,
         /\.flac$/i,
         '*.flac',
-        this.constructor.name,
       );
 
-      resolvedOutputPath = BearTunesConverter.resolveOutputPath(
+      resolvedOutputPath = this.resolveOutputPath(
         flacFilePath,
         outputPath,
         /\.flac$/i,
         '.mp3',
         /\.mp3$/i,
-        this.constructor.name,
       );
 
-      BearTunesConverter.assertOutputFileDoesNotExist(
-        resolvedOutputPath,
-        this.constructor.name,
-      );
+      this.assertOutputFileDoesNotExist(resolvedOutputPath);
     } catch (error) {
       if (error instanceof ConverterGuardError) {
         return BearTunesConverter.createFailureResult(
@@ -668,7 +650,7 @@ export class BearTunesConverter {
         },
       );
 
-      return BearTunesConverter.finalizeSuccessfulConversion(
+      return this.finalizeSuccessfulConversion(
         flacFilePath,
         deleteFlacAfterConversion,
         resolvedOutputPath,
@@ -703,7 +685,7 @@ export class BearTunesConverter {
       );
     } finally {
       tagTransferTemporaryFiles.forEach((filePath) => {
-        BearTunesConverter.tryDeleteFile(filePath, 'temporary tag transfer file');
+        this.tryDeleteFile(filePath, 'temporary tag transfer file');
       });
     }
   }
