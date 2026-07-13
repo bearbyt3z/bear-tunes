@@ -130,17 +130,17 @@ export class BearTunesConverter {
   }
 
   /**
-   * Asserts that the resolved output file path does not already exist.
+   * Asserts that the resolved output file path may be used for conversion output.
    *
-   * This prevents conversion from overwriting an existing file regardless of
-   * whether the output path was derived from the input path, resolved from an
-   * output directory, or provided explicitly by the caller.
+   * A file that does not exist may always be created. An existing output file
+   * may be overwritten only when forced overwrite is enabled for this converter
+   * instance.
    *
    * @param outputFilePath - Resolved path of the file that conversion would create.
-   * @throws {ConverterGuardError} When the output file already exists or its
-   * existence cannot be determined.
+   * @throws {ConverterGuardError} When the output file already exists and forced
+   * overwrite is disabled, or when its existence cannot be determined.
    */
-  private assertOutputFileDoesNotExist(outputFilePath: string): void {
+  private assertOutputFileCanBeCreated(outputFilePath: string): void {
     try {
       fs.lstatSync(outputFilePath);
     } catch (error: unknown) {
@@ -159,12 +159,14 @@ export class BearTunesConverter {
       );
     }
 
-    throw new ConverterGuardError(
-      BearTunesConverterFailureCode.OutputFileAlreadyExists,
-      new Error(
-        `${this.constructor.name}: Output file already exists: ${outputFilePath}`,
-      ),
-    );
+    if (!this.options.forceOverwriteOutputFile) {
+      throw new ConverterGuardError(
+        BearTunesConverterFailureCode.OutputFileAlreadyExists,
+        new Error(
+          `${this.constructor.name}: Output file already exists: ${outputFilePath}`,
+        ),
+      );
+    }
   }
 
   /**
@@ -476,7 +478,7 @@ export class BearTunesConverter {
         /\.flac$/i,
       );
 
-      this.assertOutputFileDoesNotExist(resolvedOutputPath);
+      this.assertOutputFileCanBeCreated(resolvedOutputPath);
     } catch (error) {
       if (error instanceof ConverterGuardError) {
         return BearTunesConverter.createFailureResult(
@@ -492,10 +494,16 @@ export class BearTunesConverter {
     }
 
     try {
-      const commandResult = executeCommandSync(
-        'flac',
-        ['--verify', '-8', '--force', '--output-name', resolvedOutputPath, aiffFilePath],
-      );
+      const flacArguments = [
+        '--verify',
+        '-8',
+        ...(this.options.forceOverwriteOutputFile ? ['--force'] : []),
+        '--output-name',
+        resolvedOutputPath,
+        aiffFilePath,
+      ];
+
+      const commandResult = executeCommandSync('flac', flacArguments);
 
       return this.finalizeSuccessfulConversion(
         aiffFilePath,
@@ -592,7 +600,7 @@ export class BearTunesConverter {
         /\.mp3$/i,
       );
 
-      this.assertOutputFileDoesNotExist(resolvedOutputPath);
+      this.assertOutputFileCanBeCreated(resolvedOutputPath);
     } catch (error) {
       if (error instanceof ConverterGuardError) {
         return BearTunesConverter.createFailureResult(
