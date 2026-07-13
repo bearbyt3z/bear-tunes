@@ -130,15 +130,16 @@ export class BearTunesConverter {
   }
 
   /**
-   * Asserts that the resolved output file path may be used for conversion output.
+   * Asserts that conversion may write to the resolved output file path.
    *
-   * A file that does not exist may always be created. An existing output file
-   * may be overwritten only when forced overwrite is enabled for this converter
-   * instance.
+   * A nonexistent output file may always be created. An existing output file may
+   * be replaced only when {@link BearTunesConverterOptions.forceOverwriteOutputFile}
+   * is enabled. If this method returns normally, the caller may invoke an
+   * encoder with overwrite support for `outputFilePath`.
    *
-   * @param outputFilePath - Resolved path of the file that conversion would create.
-   * @throws {ConverterGuardError} When the output file already exists and forced
-   * overwrite is disabled, or when its existence cannot be determined.
+   * @param outputFilePath - Resolved path to which conversion will write.
+   * @throws {ConverterGuardError} When the output file already exists and
+   * forced overwrite is disabled, or when its existence cannot be determined.
    */
   private assertOutputFileCanBeCreated(outputFilePath: string): void {
     try {
@@ -428,10 +429,15 @@ export class BearTunesConverter {
   /**
    * Converts an AIFF file to a FLAC file.
    *
-   * The method validates the input file, resolves the output file path, executes
-   * the `flac` encoder synchronously, and maps the encoder outcome to a converter
-   * result. On successful conversion, it may also delete the source AIFF file
-   * when requested.
+   * The method validates the input file, resolves the output file path, and
+   * authorizes writing to that path according to `forceOverwriteOutputFile`.
+   * An existing output file is rejected unless forced overwrite is enabled.
+   *
+   * After the output path is authorized, the method runs the `flac` encoder with
+   * overwrite support, allowing it to create the output file or replace an
+   * authorized existing output file. The encoder outcome is mapped to a
+   * converter result. On successful conversion, the source AIFF file may also
+   * be deleted when requested.
    *
    * Input file validation and output path resolution are performed internally
    * by fail-fast guard helpers. Any resulting {@link ConverterGuardError} is
@@ -451,10 +457,13 @@ export class BearTunesConverter {
    *
    * @param aiffFilePath - Path to the source AIFF file to convert.
    * @param outputPath - Optional existing output directory or target FLAC file
-   * path. A target file path may not exist, but its parent directory must exist
-   * and be a directory.
-   * @param deleteAiffAfterConversion - Whether the source AIFF file should be deleted after a successful conversion.
-   * @returns A converter result describing whether the conversion succeeded or why it failed.
+   * path. An existing target file may be replaced only when
+   * `forceOverwriteOutputFile` is enabled. A nonexistent target file path must
+   * have an existing parent directory.
+   * @param deleteAiffAfterConversion - Whether the source AIFF file should be
+   * deleted after a successful conversion.
+   * @returns A converter result describing whether the conversion succeeded or
+   * why it failed.
    */
   aiffToFlac(
     aiffFilePath: string,
@@ -497,7 +506,7 @@ export class BearTunesConverter {
       const flacArguments = [
         '--verify',
         '-8',
-        ...(this.options.forceOverwriteOutputFile ? ['--force'] : []),
+        '--force', // output-path authorization is enforced by assertOutputFileCanBeCreated()
         '--output-name',
         resolvedOutputPath,
         aiffFilePath,
@@ -549,34 +558,47 @@ export class BearTunesConverter {
   }
 
   /**
-   * Converts a FLAC file to an MP3 file, optionally preparing and transferring tag metadata.
+   * Converts a FLAC file to an MP3 file, optionally preparing and transferring
+   * tag metadata.
    *
-   * The method validates the input file, resolves the output file path, optionally prepares
-   * tag transfer arguments, runs a `flac` to `lame` conversion pipeline, and maps the outcome
-   * to a converter result. After a successful conversion, it may also delete the source FLAC
-   * file when requested. Any temporary files created for tag transfer preparation are removed
-   * before the method finishes.
+   * The method validates the input file, resolves the output file path, and
+   * authorizes writing to that path according to `forceOverwriteOutputFile`.
+   * An existing output file is rejected unless forced overwrite is enabled.
    *
-   * Input file validation and output path resolution are performed internally by fail-fast
-   * guard helpers. Any resulting {@link ConverterGuardError} is caught within this method
-   * and mapped to a {@link BearTunesConverterFailureResult}, so callers continue to interact
-   * with a result-based public API. Any other unexpected preparation error is normalized and
-   * mapped to `UnexpectedPreparationError`.
+   * After the output path is authorized, the method optionally prepares tag
+   * transfer arguments and runs a `flac` to `lame` conversion pipeline. The
+   * LAME encoder creates the output file or replaces an authorized existing
+   * output file. The pipeline outcome is mapped to a converter result. On
+   * successful conversion, the source FLAC file may also be deleted when
+   * requested. Any temporary files created while preparing tag transfer are
+   * removed before the method finishes.
    *
-   * Tag transfer preparation failures are mapped to `TagTransferPreparationFailed`.
+   * Input file validation and output path resolution are performed internally
+   * by fail-fast guard helpers. Any resulting {@link ConverterGuardError} is
+   * caught within this method and mapped to a
+   * {@link BearTunesConverterFailureResult}, so callers continue to interact
+   * with a result-based public API. Any other unexpected preparation error is
+   * normalized and mapped to `UnexpectedPreparationError`.
+   *
+   * Tag transfer preparation failures are mapped to
+   * `TagTransferPreparationFailed`.
    *
    * Pipeline execution is delegated to {@link executeCommandPipeline}. A
-   * {@link CommandPipelineInfrastructureError} raised by that helper is mapped to
-   * `ConversionPipelineInfrastructureFailed`, while command-specific non-zero exits are mapped
-   * to `FlacDecodeProcessFailed` or `LameEncodeProcessFailed`. Any other unexpected pipeline
-   * execution error is normalized and mapped to `UnexpectedPipelineExecutionError`.
+   * {@link CommandPipelineInfrastructureError} raised by that helper is mapped
+   * to `ConversionPipelineInfrastructureFailed`, while command-specific
+   * non-zero exits are mapped to `FlacDecodeProcessFailed` or
+   * `LameEncodeProcessFailed`. Any other unexpected pipeline execution error is
+   * normalized and mapped to `UnexpectedPipelineExecutionError`.
    *
    * @param flacFilePath - Path to the source FLAC file to convert.
    * @param outputPath - Optional existing output directory or target MP3 file
-   * path. A target file path may not exist, but its parent directory must exist
-   * and be a directory.
-   * @param deleteFlacAfterConversion - Whether the source FLAC file should be deleted after a successful conversion.
-   * @returns A promise resolved with a converter result describing whether the conversion succeeded or why it failed.
+   * path. An existing target file may be replaced only when
+   * `forceOverwriteOutputFile` is enabled. A nonexistent target file path must
+   * have an existing parent directory.
+   * @param deleteFlacAfterConversion - Whether the source FLAC file should be
+   * deleted after a successful conversion.
+   * @returns A promise resolved with a converter result describing whether the
+   * conversion succeeded or why it failed.
    */
   async flacToMp3(
     flacFilePath: string,
