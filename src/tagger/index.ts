@@ -141,7 +141,10 @@ const defaultTaggerOptions = Object.freeze({
 } as const satisfies BearTunesTaggerOptions);
 
 export class BearTunesTagger {
-  options: BearTunesTaggerOptions;
+  /**
+   * Effective tagger configuration for this instance.
+   */
+  private readonly options: BearTunesTaggerOptions;
 
   constructor(options: Partial<BearTunesTaggerOptions> = {}) {
     this.options = {
