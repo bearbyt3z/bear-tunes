@@ -22,6 +22,9 @@ export enum BearTunesRenamerFailureCode {
   /** A placeholder resolved to a whole object value, which is not supported. */
   ObjectTrackInfoValueNotSupported = 306,
 
+  /** The resolved target file path already exists. */
+  TargetFileAlreadyExists = 307,
+
   // 310-319: rename execution
 
   /** Renaming or moving the track file failed. */
@@ -98,6 +101,16 @@ export interface BearTunesRenamerOptions {
 
   /** Controls when `directoryPattern` is used to build the target directory. */
   directoryPatternMode: BearTunesRenamerDirectoryPatternMode;
+
+  /**
+   * Whether renaming may overwrite an existing target file.
+   *
+   * When `false`, renaming fails with
+   * {@link BearTunesRenamerFailureCode.TargetFileAlreadyExists} before the
+   * filesystem rename operation starts. When `true`, renaming may replace an
+   * existing target file using the filesystem's rename behavior.
+   */
+  forceOverwriteTargetFile: boolean;
 
   /** Whether verbose logging is enabled. */
   verbose: boolean;

@@ -49,6 +49,7 @@ const defaultRenamerOptions = Object.freeze({
   filenamePattern: '%artists% - %title%', // title already contains remixers etc.
   directoryPattern: '%genre%/%artists%',
   directoryPatternMode: BearTunesRenamerDirectoryPatternMode.RequiresTargetBaseDirectory,
+  forceOverwriteTargetFile: false,
   verbose: false,
 } as const satisfies BearTunesRenamerOptions);
 
@@ -409,6 +410,48 @@ export class BearTunesRenamer {
   }
 
   /**
+   * Asserts that renaming may write to the resolved target file path.
+   *
+   * A nonexistent target file may always be created. An existing target file
+   * may be replaced only when
+   * {@link BearTunesRenamerOptions.forceOverwriteTargetFile} is enabled.
+   * If this method returns normally, the caller may invoke a rename operation
+   * that replaces `targetPath` when necessary.
+   *
+   * @param targetPath - Resolved path to which the track will be moved.
+   * @throws {RenamerGuardError} When the target file already exists and forced
+   * overwrite is disabled, or when its existence cannot be determined.
+   */
+  private assertTargetFileCanBeCreated(targetPath: string): void {
+    try {
+      fs.lstatSync(targetPath);
+    } catch (error: unknown) {
+      const errnoError = error as NodeJS.ErrnoException;
+
+      if (errnoError.code === 'ENOENT') {
+        return;
+      }
+
+      throw new RenamerGuardError(
+        BearTunesRenamerFailureCode.TargetDirectoryAccessError,
+        new Error(
+          `${this.constructor.name}: Cannot access target path ${targetPath}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
+    }
+
+    if (!this.options.forceOverwriteTargetFile) {
+      throw new RenamerGuardError(
+        BearTunesRenamerFailureCode.TargetFileAlreadyExists,
+        new Error(
+          `${this.constructor.name}: Target file already exists: ${targetPath}`,
+        ),
+      );
+    }
+  }
+
+  /**
    * Executes the filesystem rename step for a prepared target path.
    *
    * @param trackPath - Path to the source track file.
@@ -436,8 +479,13 @@ export class BearTunesRenamer {
    * Renames or moves a track file according to the configured renamer patterns.
    *
    * The method prepares the final target path from the provided track metadata
-   * and optional target base directory, executes the filesystem rename operation,
-   * and returns a discriminated result describing either success or failure.
+   * and optional target base directory, then authorizes writing to that path
+   * according to `forceOverwriteTargetFile`. An existing target file is rejected
+   * unless forced overwrite is enabled.
+   *
+   * After the target path is authorized, the method executes the filesystem
+   * rename operation and returns a discriminated result describing either
+   * success or failure.
    *
    * @param trackPath - Path to the source track file.
    * @param trackInfo - Track metadata used to build the target path.
@@ -458,6 +506,8 @@ export class BearTunesRenamer {
         targetBaseDirectory,
         trackInfo,
       );
+
+      this.assertTargetFileCanBeCreated(targetPath);
     } catch (error) {
       if (error instanceof RenamerGuardError) {
         return BearTunesRenamer.createFailureResult(
