@@ -45,6 +45,7 @@ import {
 } from '#tools';
 
 import {
+  BearTunesTaggerFailureCode,
   BeatportSearchResultArtistType,
   FlacPictureBlockType,
   ID3Version,
@@ -61,7 +62,10 @@ import {
 } from '#shared-types-schema';
 
 import type {
+  BearTunesTaggerFailureResult,
   BearTunesTaggerOptions,
+  BearTunesTaggerResult,
+  BearTunesTaggerSuccessResult,
   BeatportAlbumInfo,
   BeatportArtistInfo,
   BeatportLabelInfo,
@@ -87,13 +91,17 @@ import type {
 
 // exporting enums & types, so they will be included in the tagger import
 export {
+  BearTunesTaggerFailureCode,
   BeatportSearchResultArtistType,
   FlacPictureBlockType,
   ID3Version,
 };
 
 export type {
+  BearTunesTaggerFailureResult,
   BearTunesTaggerOptions,
+  BearTunesTaggerResult,
+  BearTunesTaggerSuccessResult,
   MatchingTrack,
   TrackArtworkFiles,
   BeatportSearchResultArtistInfo,

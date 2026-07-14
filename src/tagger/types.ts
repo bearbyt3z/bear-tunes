@@ -1,5 +1,110 @@
 import type { TrackInfo } from '#shared-types';
 
+/**
+ * Failure codes returned by BearTunes tagger operations.
+ */
+export enum BearTunesTaggerFailureCode {
+  // 400-409: input validation
+
+  /**
+   * The input file could not be accessed or inspected.
+   */
+  InputFileAccessError = 401,
+
+  /**
+   * The input file is not a supported audio format for the requested operation.
+   */
+  UnsupportedAudioFileType = 402,
+
+  // 410-419: tag reading and remote track resolution
+
+  /**
+   * Local metadata could not be read from the input audio file.
+   */
+  TagReadFailed = 411,
+
+  /**
+   * A companion URL file exists but does not contain a valid track URL.
+   */
+  TrackUrlFileInvalid = 412,
+
+  /**
+   * Matching the local track with a remote track failed.
+   */
+  TrackMatchFailed = 413,
+
+  /**
+   * A candidate remote track was rejected during interactive matching.
+   */
+  TrackMatchRejected = 414,
+
+  /**
+   * Metadata for the selected remote track could not be retrieved or validated.
+   */
+  TrackDataFetchFailed = 415,
+
+  // 420-429: tag writing
+
+  /**
+   * Metadata or artwork could not be written to the input audio file.
+   */
+  TagWriteFailed = 421,
+
+  // 430-439: unexpected errors
+
+  /**
+   * An unexpected error occurred while preparing a tagger operation.
+   */
+  UnexpectedPreparationError = 431,
+
+  /**
+   * An unexpected error occurred while executing a tagger operation.
+   */
+  UnexpectedExecutionError = 432,
+}
+
+/**
+ * Successful result returned by a BearTunes tagger operation.
+ */
+export interface BearTunesTaggerSuccessResult {
+  /**
+   * Indicates that the operation completed successfully.
+   */
+  ok: true;
+
+  /**
+   * Track metadata read, resolved, or written by the operation.
+   */
+  trackInfo: TrackInfo;
+}
+
+/**
+ * Failed result returned by a BearTunes tagger operation.
+ */
+export interface BearTunesTaggerFailureResult {
+  /**
+   * Indicates that the operation did not complete successfully.
+   */
+  ok: false;
+
+  /**
+   * Domain-specific code classifying the failure.
+   */
+  failureCode: BearTunesTaggerFailureCode;
+
+  /**
+   * Error describing the failure cause.
+   */
+  error: Error;
+}
+
+/**
+ * Result returned by a BearTunes tagger operation.
+ */
+export type BearTunesTaggerResult =
+  | BearTunesTaggerSuccessResult
+  | BearTunesTaggerFailureResult;
+
 export interface BearTunesTaggerOptions {
   domainURL: string;
   trackSearchPath: string;
