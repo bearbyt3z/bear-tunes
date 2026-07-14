@@ -123,6 +123,9 @@ function getTrackSearchURL(this: BearTunesTaggerOptions): URL {
   return new URL(this.trackSearchPath, this.domainURL);
 }
 
+/**
+ * Default tagger options applied when custom options are not provided.
+ */
 // Default options are intentionally defined as immutable:
 // - `as const` keeps exact literal types and readonly fields,
 // - `satisfies` checks compatibility with the public options type,
@@ -140,12 +143,20 @@ const defaultTaggerOptions = Object.freeze({
   metaflacVerbose: false,
 } as const satisfies BearTunesTaggerOptions);
 
+/**
+ * Reads and tags supported audio files used by BearTunes.
+ */
 export class BearTunesTagger {
   /**
    * Effective tagger configuration for this instance.
    */
   private readonly options: BearTunesTaggerOptions;
 
+  /**
+   * Creates a tagger instance with merged default and custom options.
+   *
+   * @param options - Partial tagger configuration overriding default values.
+   */
   constructor(options: Partial<BearTunesTaggerOptions> = {}) {
     this.options = {
       ...defaultTaggerOptions,
