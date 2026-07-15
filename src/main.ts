@@ -22,9 +22,6 @@ import {
   DirectoryProcessingStatus,
 } from '#processor';
 
-// const { createLogger, format, transports } = require('winston');
-// const { combine, timestamp, label, printf } = format;
-
 const inputDirectory = process.argv[2] ?? '.';
 const outputDirectory = process.argv[3] ?? undefined;
 
