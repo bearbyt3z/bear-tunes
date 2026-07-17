@@ -36,6 +36,7 @@ import {
   generateRandomHexString,
   getFirstLine,
   isSupportedArtworkFile,
+  normalizeUnknownError,
   prompt,
   removeFilenameExtension,
   replacePathForbiddenCharsInArray,
@@ -44,6 +45,9 @@ import {
   tryGetAudioFileTypeFromFile,
 } from '#tools';
 
+import {
+  TaggerGuardError,
+} from './errors.js';
 import {
   BearTunesTaggerFailureCode,
   BeatportSearchResultArtistType,
@@ -178,6 +182,70 @@ export class BearTunesTagger {
     });
   }
 
+  /**
+   * Creates a success result describing a completed tag read operation.
+   *
+   * @param trackInfo - Metadata read from the local audio file.
+   * @returns A tagger success result with `ok` set to `true`.
+   */
+  private static createSuccessResult(
+    trackInfo: TrackInfo,
+  ): BearTunesTaggerSuccessResult {
+    return { ok: true, trackInfo };
+  }
+
+  /**
+   * Creates a failure result describing an unsuccessful tagger operation.
+   *
+   * @param failureCode - Domain-specific code classifying the tagger failure.
+   * @param error - Error object describing the failure cause.
+   * @returns A tagger failure result with `ok` set to `false`.
+   */
+  private static createFailureResult(
+    failureCode: BearTunesTaggerFailureCode,
+    error: Error,
+    details?: Record<string, unknown>,
+  ): BearTunesTaggerFailureResult {
+    return {
+      ok: false,
+      failureCode,
+      error,
+      details,
+    };
+  }
+
+  /**
+   * Asserts that the input path points to an accessible regular file.
+   *
+   * @param trackPath - Path to the audio file to inspect.
+   * @throws {TaggerGuardError} When the path cannot be accessed or does not
+   * point to a regular file.
+   */
+  private assertAccessibleInputFile(trackPath: string): void {
+    let trackPathStats: fs.Stats;
+
+    try {
+      trackPathStats = fs.lstatSync(trackPath);
+    } catch (error) {
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.InputFileAccessError,
+        new Error(
+          `${this.constructor.name}: Cannot access input path ${trackPath}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
+    }
+
+    if (!trackPathStats.isFile()) {
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.InputFileAccessError,
+        new TypeError(
+          `${this.constructor.name}: Specified input path is not a file: ${trackPath}`,
+        ),
+      );
+    }
+  }
+
   async processTrack(trackPath: string): Promise<TrackInfo> {
     let forceRadioEdit = false;
 
@@ -201,11 +269,25 @@ export class BearTunesTagger {
 
       logger.info(`Using URL from file: ${trackUrl}`);
     } else {
-      const trackInfo = await this.readTag(trackPath);
+      const readTagResult = await this.readTag(trackPath);
+
+      if (!readTagResult.ok) {
+        logger.error(`Cannot read local tags for "${trackFilename}"`, {
+          ...readTagResult.details,
+          failureCode: readTagResult.failureCode,
+          error: readTagResult.error,
+        });
+        return {};
+      }
+
+      const trackInfo = readTagResult.trackInfo;
 
       let bestMatchingTrack;
       try {
-        bestMatchingTrack = await this.findBestMatchingTrack(trackInfo, trackFilenameKeywords);
+        bestMatchingTrack = await this.findBestMatchingTrack(
+          trackInfo,
+          trackFilenameKeywords,
+        );
       } catch (error: unknown) {
         logger.error(`Track matching failed for "${trackFilename}"`, { error });
         return {};
@@ -268,67 +350,122 @@ export class BearTunesTagger {
   }
 
   /**
-  * Reads local audio tags from a supported file.
-  *
-  * The file type is detected by the shared audio tools layer and then mapped
-  * to the appropriate local tag reader. MP3 files are read via the ID3 reader,
-  * while FLAC files are read via the FLAC tag reader.
-  *
-  * AIFF files and unknown file types are currently not supported for local tag
-  * extraction in the tagger. In such cases the method logs a warning and
-  * returns an empty track info object.
-  *
-  * @param trackPath - Path to the local audio file whose embedded tags should be read.
-  * @returns Extracted track information for supported local audio formats, or an empty object when no local tag reader is available for the detected file type.
-  */
-  async readTag(trackPath: string): Promise<TrackInfo> {
-    const audioFileType = await tryGetAudioFileTypeFromFile(trackPath);
+   * Reads local metadata from a supported audio file.
+   *
+   * MP3 files are read through the ID3 reader and FLAC files through the FLAC
+   * tag reader. AIFF files and unrecognized audio formats are not currently
+   * supported for local tag extraction.
+   *
+   * Reader failures and unsupported audio types are mapped to classified failure
+   * results. Unexpected errors are mapped to an unexpected preparation failure.
+   *
+   * @param trackPath - Path to the local audio file whose embedded tags should
+   * be read.
+   * @returns A result containing parsed and validated track metadata, or a
+   * classified failure.
+   */
+  async readTag(trackPath: string): Promise<BearTunesTaggerResult> {
+    try {
+      this.assertAccessibleInputFile(trackPath);
 
-    switch (audioFileType) {
-      case AudioFileType.Mp3:
-        return this.extractId3Tag(trackPath);
+      const audioFileType = await tryGetAudioFileTypeFromFile(trackPath);
 
-      case AudioFileType.Flac:
-        return this.extractFlacTag(trackPath);
+      switch (audioFileType) {
+        case AudioFileType.Mp3:
+          return BearTunesTagger.createSuccessResult(
+            this.extractId3Tag(trackPath),
+          );
 
-      case AudioFileType.Aiff:
-      case undefined:
-        logger.warn(`No local tag reader available for audio type: ${audioFileType ?? 'unknown'} (${trackPath})`);
-        return {};
+        case AudioFileType.Flac:
+          return BearTunesTagger.createSuccessResult(
+            this.extractFlacTag(trackPath),
+          );
+
+        case AudioFileType.Aiff:
+        case undefined:
+          return BearTunesTagger.createFailureResult(
+            BearTunesTaggerFailureCode.UnsupportedAudioFileType,
+            new TypeError(
+              `${this.constructor.name}: Unsupported audio file type: ${audioFileType ?? 'unknown'} (${trackPath})`,
+            ),
+          );
+      }
+    } catch (error) {
+      if (error instanceof TaggerGuardError) {
+        return BearTunesTagger.createFailureResult(
+          error.failureCode,
+          error.cause,
+          error.details,
+        );
+      }
+
+      return BearTunesTagger.createFailureResult(
+        BearTunesTaggerFailureCode.UnexpectedPreparationError,
+        normalizeUnknownError(error),
+      );
     }
   }
 
+  /**
+   * Reads selected ID3 metadata from an MP3 file and maps it to `TrackInfo`.
+   *
+   * The method invokes the local ID3 reader, parses its JSON output, normalizes
+   * the resulting data, and validates it against the shared track schema.
+   *
+   * @param trackPath - Path to the MP3 file to inspect.
+   * @returns Parsed and validated local track metadata.
+   * @throws {TaggerGuardError} When the ID3 reader cannot read the requested
+   * metadata, its output cannot be parsed, or the normalized metadata does not
+   * satisfy the track schema.
+   */
   // Unfortunately display plugin is not available anymore in eyeD3 v0.9.7: https://github.com/nicfit/eyeD3/pull/585
   // This is mentioned also in history file: https://github.com/nicfit/eyeD3/blob/6ae155405770afbc1446432e71782d761218baa4/HISTORY.rst
   // "Changes: Removed display-plugin due to Grako EOL (#585)"
-  extractId3Tag(trackPath: string): TrackInfo {
-    // const displayPluginOutput = childProcess.spawnSync('eyeD3', [
-    //   '--plugin', 'display',
-    //   '--pattern-file', this.options.eyeD3DisplayPluginPatternFile,
-    //   trackPath,
-    // ], {
-    //   encoding: 'utf-8',
-    // });
-
+  // Old display plugin usage was:
+  // const displayPluginOutput = childProcess.spawnSync('eyeD3', [
+  //   '--plugin', 'display',
+  //   '--pattern-file', this.options.eyeD3DisplayPluginPatternFile,
+  //   trackPath,
+  // ], {
+  //   encoding: 'utf-8',
+  // });
+  private extractId3Tag(trackPath: string): TrackInfo {
     // Replacing eyeD3 display-plugin with a simple python script:
-    const displayPluginOutput = childProcess.spawnSync('./eyed3-display-plugin.py', [
-      this.options.eyeD3DisplayPluginPatternFile,
-      trackPath,
-    ], {
-      encoding: 'utf-8',
-    });
-    if (displayPluginOutput.stderr) {
-      logger.warn(`Cannot read ID3 tag of ${path.basename(trackPath)}:\n${getFirstLine(displayPluginOutput.stderr)}`); // show only first line of error from plugin (ommit traceback)
-      return {};
-    }
+    const displayPluginOutput = childProcess.spawnSync(
+      './eyed3-display-plugin.py',
+      [
+        this.options.eyeD3DisplayPluginPatternFile,
+        trackPath,
+      ],
+      {
+        encoding: 'utf-8',
+      },
+    );
 
-    // console.log(displayPluginOutput.stdout);
+    if (
+      displayPluginOutput.error
+      || displayPluginOutput.status !== 0
+      || displayPluginOutput.stderr
+    ) {
+      const readerErrorMessage = displayPluginOutput.error?.message
+        ?? getFirstLine(displayPluginOutput.stderr)
+        ?? `ID3 reader exited with status ${String(displayPluginOutput.status)}`;
+
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TagReadFailed,
+        new Error(
+          `${this.constructor.name}: Cannot read ID3 tag of ${path.basename(trackPath)}: `
+          + readerErrorMessage,
+          { cause: displayPluginOutput.error },
+        ),
+      );
+    }
 
     try {
       const id3TagJson: unknown = JSON.parse(
         displayPluginOutput.stdout
           .replaceAll('\u0003', '') // replace unicode characters that break parse() (e.g. Beatoprt's ETX 0x03 at the beginning of URL)
-          .replaceAll(/,\s*\}/g, '}'), // remove trailing commas that comes from plugin pattern (text-fields)
+          .replaceAll(/,\s*}/g, '}'), // remove trailing commas that comes from plugin pattern (text-fields)
       );
 
       const normalizedTrackInfo = normalizeTrackInfo(id3TagJson);
@@ -337,17 +474,30 @@ export class BearTunesTagger {
       });
 
       if (!parsedTrackInfo.success) {
-        logger.warn('Cannot validate ID3 tag output from display plugin', {
-          trackPath,
-          issues: formatZodErrorIssues(parsedTrackInfo.error),
-        });
-        return {};
+        throw new TaggerGuardError(
+          BearTunesTaggerFailureCode.TagReadFailed,
+          new TypeError(
+            `${this.constructor.name}: Cannot validate ID3 tag output from ${trackPath}`,
+          ),
+          {
+            issues: formatZodErrorIssues(parsedTrackInfo.error),
+          },
+        );
       }
 
       return parsedTrackInfo.data;
-    } catch (error: unknown) {
-      logger.warn('Cannot parse ID3 tag output from display plugin', { error });
-      return {};
+    } catch (error) {
+      if (error instanceof TaggerGuardError) {
+        throw error;
+      }
+
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TagReadFailed,
+        new Error(
+          `${this.constructor.name}: Cannot parse ID3 tag output from ${trackPath}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
     }
   }
 
@@ -501,45 +651,59 @@ export class BearTunesTagger {
   /**
    * Reads selected metadata from a FLAC file and maps it to `TrackInfo`.
    *
-   * The method retrieves textual FLAC tags through `metaflac`, parses them into a
-   * normalized tag map, supplements the result with duration extracted from
-   * STREAMINFO metadata, and then normalizes and validates the assembled data
-   * against the shared track schema.
+   * The method reads selected Vorbis comment fields through `metaflac`, parses
+   * them into a normalized tag map, and supplements the result with duration
+   * extracted from the FLAC STREAMINFO metadata. It then normalizes the
+   * assembled data and validates it against the shared track schema.
    *
-   * When `metaflac` fails or the normalized payload does not match the expected
-   * schema, the method logs a warning and returns an empty track object.
-   *
-   * @param flacFilePath Path to the FLAC file to inspect.
-   * @returns Parsed track metadata, or an empty object when extraction fails.
+   * @param flacFilePath - Path to the FLAC file to inspect.
+   * @returns Parsed and validated local track metadata.
+   * @throws {TaggerGuardError} When metaflac cannot read the requested tags, or
+   * the normalized metadata does not satisfy the track schema.
    */
-  extractFlacTag(flacFilePath: string): TrackInfo {
-    const metaflacResult = childProcess.spawnSync('metaflac', [
-      '--show-tag=artist',
-      '--show-tag=title',
-      '--show-tag=album',
-      '--show-tag=albumartist',
-      '--show-tag=tracknumber',
-      '--show-tag=tracktotal',
-      '--show-tag=discnumber',
-      '--show-tag=disctotal',
-      '--show-tag=genre',
-      '--show-tag=date',
-      '--show-tag=composer',
-      '--show-tag=isrc',
-      flacFilePath,
-    ]);
+  private extractFlacTag(flacFilePath: string): TrackInfo {
+    const metaflacResult = childProcess.spawnSync(
+      'metaflac',
+      [
+        '--show-tag=ARTIST',
+        '--show-tag=TITLE',
+        '--show-tag=ALBUM',
+        '--show-tag=ALBUMARTIST',
+        '--show-tag=TRACKNUMBER',
+        '--show-tag=TRACKTOTAL',
+        '--show-tag=DISCNUMBER',
+        '--show-tag=DISCTOTAL',
+        '--show-tag=GENRE',
+        '--show-tag=DATE',
+        '--show-tag=COMPOSER',
+        '--show-tag=ISRC',
+        flacFilePath,
+      ],
+      {
+        encoding: 'utf-8',
+      },
+    );
 
-    if (metaflacResult.status !== 0) {
-      if (this.options.verbose) {
-        logger.warn(`metaflac process returned with ${metaflacResult.status} code and stderr: ${metaflacResult.stderr.toString()}`);
-      }
-      return {};
+    if (
+      metaflacResult.error
+      || metaflacResult.status !== 0
+      || metaflacResult.stderr // TODO: Verify whether metaflac can write non-error warnings to stderr on success.
+    ) {
+      const metaflacErrorMessage = metaflacResult.error?.message
+        ?? getFirstLine(metaflacResult.stderr)
+        ?? `metaflac exited with status ${String(metaflacResult.status)}`;
+
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TagReadFailed,
+        new Error(
+          `${this.constructor.name}: Cannot read FLAC tag from ${flacFilePath}: `
+          + metaflacErrorMessage,
+          { cause: metaflacResult.error },
+        ),
+      );
     }
 
-    const metaflacOutput = metaflacResult.stdout.toString();
-
-    const tags = BearTunesTagger.parseMetaflacTags(metaflacOutput);
-
+    const tags = BearTunesTagger.parseMetaflacTags(metaflacResult.stdout);
     const duration = BearTunesTagger.extractFlacDuration(flacFilePath);
 
     const rawTrackInfo = {
@@ -557,11 +721,20 @@ export class BearTunesTagger {
     };
 
     const normalizedTrackInfo = normalizeTrackInfo(rawTrackInfo);
-    const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo);
+    const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo, {
+      reportInput: true,
+    });
 
     if (!parsedTrackInfo.success) {
-      logger.warn('Cannot validate FLAC tag output from metaflac', { error: parsedTrackInfo.error, flacFilePath });
-      return {};
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TagReadFailed,
+        new TypeError(
+          `${this.constructor.name}: Cannot validate FLAC tag output from ${flacFilePath}`,
+        ),
+        {
+          issues: formatZodErrorIssues(parsedTrackInfo.error),
+        },
+      );
     }
 
     return parsedTrackInfo.data;

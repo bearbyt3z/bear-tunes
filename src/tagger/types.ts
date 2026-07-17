@@ -96,6 +96,13 @@ export interface BearTunesTaggerFailureResult {
    * Error describing the failure cause.
    */
   error: Error;
+
+  /**
+   * Optional structured diagnostic details for logging or error reporting.
+   *
+   * For validation failures, this may include formatted schema issues.
+   */
+  details?: Record<string, unknown>;
 }
 
 /**
