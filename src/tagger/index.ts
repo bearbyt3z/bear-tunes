@@ -1288,22 +1288,26 @@ export class BearTunesTagger {
   static cleanupTrackArtworkFiles(imagePaths: TrackArtworkFiles): void {
     Object.values(imagePaths).forEach((imagePath) => {
       if (imagePath !== undefined) {
-        /*
-         * TypeScript/ESLint incorrectly infers `Object.values(imagePaths)` as producing `any` elements,
-         * despite `imagePaths` being typed as `TrackArtworkFiles` (with optional `string` properties).
-         *
-         * This is a known limitation in TS inference for `Object.values()` with optional object properties:
-         * optional fields (`string | undefined`) are not properly preserved in the array result.
-         *
-         * Runtime guard `if (imagePath !== undefined)` ensures safety before `unlinkSync()`.
-         *
-         * Refs:
-         * - [TS #44494](https://github.com/microsoft/TypeScript/issues/44494)
-         * - [TS #48587](https://github.com/microsoft/TypeScript/issues/48587)
-         *
-         */
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        fs.unlinkSync(imagePath);
+        try {
+          /*
+           * TypeScript/ESLint incorrectly infers `Object.values(imagePaths)` as producing `any` elements,
+           * despite `imagePaths` being typed as `TrackArtworkFiles` (with optional `string` properties).
+           *
+           * This is a known limitation in TS inference for `Object.values()` with optional object properties:
+           * optional fields (`string | undefined`) are not properly preserved in the array result.
+           *
+           * Runtime guard `if (imagePath !== undefined)` ensures safety before `unlinkSync()`.
+           *
+           * Refs:
+           * - [TS #44494](https://github.com/microsoft/TypeScript/issues/44494)
+           * - [TS #48587](https://github.com/microsoft/TypeScript/issues/48587)
+           *
+           */
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+          fs.unlinkSync(imagePath);
+        } catch (error: unknown) {
+          logger.warn(`Failed to remove temporary artwork file: ${imagePath}`, { error });
+        }
       }
     });
   }
