@@ -507,6 +507,14 @@ export class BearTunesRenamer {
         trackInfo,
       );
 
+      if (path.resolve(trackPath) === path.resolve(targetPath)) {
+        if (this.options.verbose) {
+          logger.info(`Track file already has the target name: ${targetPath}`);
+        }
+
+        return BearTunesRenamer.createSuccessResult(targetPath);
+      }
+
       this.assertTargetFileCanBeCreated(targetPath);
     } catch (error) {
       if (error instanceof RenamerGuardError) {
