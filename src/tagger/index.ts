@@ -1477,19 +1477,6 @@ export class BearTunesTagger {
       );
     }
 
-    // Moved to separate module BearTunesRenamer:
-    // Correct filename to match ID3 tag info:
-    // const correctedFilename = tools.replacePathForbiddenChars(`${trackData.artists} - ${trackData.title}${path.extname(trackPath)}`);
-    // fs.renameSync(trackPath, path.dirname(trackPath) + path.sep + correctedFilename);
-    // logger.info(`File was renamed to: ${correctedFilename}`);
-    // fs.rename(trackPath, path.dirname(trackPath) + path.sep + correctedFilename, (error) => {
-    //   if (error) {
-    //     console.error(`Couldn't rename ${trackFilename}`);
-    //     return;
-    //   }
-    //   console.log(`File was renamed to: ${correctedFilename}`);
-    // });
-
     BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
   }
 
