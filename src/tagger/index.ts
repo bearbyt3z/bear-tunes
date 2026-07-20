@@ -1325,159 +1325,161 @@ export class BearTunesTagger {
   async saveId3TagToMp3File(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}): Promise<void> {
     const imagePaths: TrackArtworkFiles = {};
 
-    imagePaths.publisherLogotype = await BearTunesTagger.tryDownloadImageAsset({
-      imageUrl: trackData.publisher?.logotype,
-      sourcePageUrl: trackData.publisher?.url,
-      label: 'publisher logotype',
-      verbose,
-    });
+    try {
+      imagePaths.publisherLogotype = await BearTunesTagger.tryDownloadImageAsset({
+        imageUrl: trackData.publisher?.logotype,
+        sourcePageUrl: trackData.publisher?.url,
+        label: 'publisher logotype',
+        verbose,
+      });
 
-    imagePaths.frontCover = await BearTunesTagger.tryDownloadImageAsset({
-      imageUrl: trackData.album?.artwork,
-      sourcePageUrl: trackData.album?.url,
-      label: 'album artwork',
-      verbose,
-    });
+      imagePaths.frontCover = await BearTunesTagger.tryDownloadImageAsset({
+        imageUrl: trackData.album?.artwork,
+        sourcePageUrl: trackData.album?.url,
+        label: 'album artwork',
+        verbose,
+      });
 
-    imagePaths.waveform = await BearTunesTagger.tryDownloadImageAsset({
-      imageUrl: trackData.waveform,
-      sourcePageUrl: trackData.url,
-      label: 'waveform',
-      verbose,
-    });
+      imagePaths.waveform = await BearTunesTagger.tryDownloadImageAsset({
+        imageUrl: trackData.waveform,
+        sourcePageUrl: trackData.url,
+        label: 'waveform',
+        verbose,
+      });
 
-    const trackFilename = path.basename(trackPath);
+      const trackFilename = path.basename(trackPath);
 
-    const eyeD3Options: string[] = [
-      '--verbose',
-      '--remove-frame', 'PRIV', '--remove-all-comments', // remove personal info: https://aaronk.me/removing-personal-information-from-mp3s-bought-off-amazon/
-      '--remove-frame', 'TCOP', '--user-text-frame', 'DESCRIPTION:', // remove frmaes set by Athame (COPYRIGHT & DESCRIPTION)
-      '--text-frame', 'TAUT:', // remove frame incompatible with v2.4
-      '--preserve-file-times', // do not update file modification times
-    ];
+      const eyeD3Options: string[] = [
+        '--verbose',
+        '--remove-frame', 'PRIV', '--remove-all-comments', // remove personal info: https://aaronk.me/removing-personal-information-from-mp3s-bought-off-amazon/
+        '--remove-frame', 'TCOP', '--user-text-frame', 'DESCRIPTION:', // remove frmaes set by Athame (COPYRIGHT & DESCRIPTION)
+        '--text-frame', 'TAUT:', // remove frame incompatible with v2.4
+        '--preserve-file-times', // do not update file modification times
+      ];
 
-    if (trackData.artists && trackData.artists.length > 0) {
-      eyeD3Options.push('--artist', trackData.artists.join(', '));
-      // '--artist', trackData.artists.replace('ø', 'o'),
-    }
-    if (trackData.title) {
-      // eyeD3Options.push('--title', trackData.title.replace(/^-/, '- '));
-      eyeD3Options.push('--text-frame', `TIT2:${escapeUnescapedColons(trackData.title)}`); // --title option with a parameter starting with a hyphen (-) will cause eyeD3 to report the usage error
-    }
-    if (trackData.remixers && trackData.remixers.length > 0) {
-      eyeD3Options.push('--text-frame', `TPE4:${escapeUnescapedColons(trackData.remixers.join(', '))}`); // TPE4 => REMIXEDBY
-    }
-    if (trackData.album?.title) {
-      // eyeD3Options.push('--album', trackData.album.title.replace(/^-/, '- '));
-      eyeD3Options.push('--text-frame', `TALB:${escapeUnescapedColons(trackData.album.title)}`); // the same as with --title
-    }
-    if (trackData.album?.artists && trackData.album.artists.length > 0) {
-      eyeD3Options.push('--album-artist', trackData.album.artists.join(', '));
-    }
-    if (trackData.album?.trackNumber) {
-      let albumNumbers = trackData.album.trackNumber.toString();
-      if (trackData.album?.trackTotal) {
-        albumNumbers += `/${trackData.album.trackTotal.toString()}`;
+      if (trackData.artists && trackData.artists.length > 0) {
+        eyeD3Options.push('--artist', trackData.artists.join(', '));
+        // '--artist', trackData.artists.replace('ø', 'o'),
       }
-      eyeD3Options.push('--text-frame', `TRCK:${albumNumbers}`); // eyeD3 adds leading 0 when using --track & --track-total
-      // '--track', trackData.album.trackNumber,
-      // '--track-total', trackData.album.trackTotal,
-      // '--no-zero-padding',  // there is no such option in eyeD3 anymore?
-      // '--disc-num', '???',  // there is no disc information on beatport? (and other streaming like Amazon?)
-      // '--disc-total', '???',
-    }
-    if (trackData.year) {
-      // '--release-year', trackData.year,
-      // '--text-frame', `TDRC:${trackData.year}`,
-      eyeD3Options.push('--text-frame', `TYER:${trackData.year}`);
-    }
-    if (trackData.released) {
-      const releasedString = formatLocalDateToIsoDateString(trackData.released);
-      eyeD3Options.push('--text-frame', `TORY:${releasedString}`);
-      eyeD3Options.push('--text-frame', `TRDA:${releasedString}`);
-      eyeD3Options.push('--text-frame', `TDAT:${releasedString}`);
-      eyeD3Options.push('--text-frame', `TDRC:${releasedString}`);
-      eyeD3Options.push('--text-frame', `TDOR:${releasedString}`);
-      eyeD3Options.push('--text-frame', `TDRL:${releasedString}`);
-      // '--release-date', trackData.released,
-      // '--orig-release-date', trackData.released,
-    }
-    if (trackData.url) {
-      eyeD3Options.push('--url-frame', `WOAF:${escapeUnescapedColons(trackData.url.toString())}`); // file webpage
-    }
-    if (trackData.publisher?.url) {
-      eyeD3Options.push('--url-frame', `WPUB:${escapeUnescapedColons(trackData.publisher.url.toString())}`); // publisher webpage
-    }
-    if (trackData.bpm) {
-      eyeD3Options.push('--bpm', trackData.bpm.toString());
-    }
-    if (trackData.key) {
-      eyeD3Options.push('--text-frame', `TKEY:${trackData.key}`);
-      eyeD3Options.push('--user-text-frame', `INITIALKEY:${trackData.key}`); // TKEY is not recoginzed in foobar2000
-    }
-    if (trackData.album?.catalogNumber) {
-      // https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
-      eyeD3Options.push('--user-text-frame', `CATALOGNUMBER:${escapeUnescapedColons(trackData.album.catalogNumber)}`);
-      eyeD3Options.push('--user-text-frame', `CATALOG #:${escapeUnescapedColons(trackData.album.catalogNumber)}`);
-    }
+      if (trackData.title) {
+        // eyeD3Options.push('--title', trackData.title.replace(/^-/, '- '));
+        eyeD3Options.push('--text-frame', `TIT2:${escapeUnescapedColons(trackData.title)}`); // --title option with a parameter starting with a hyphen (-) will cause eyeD3 to report the usage error
+      }
+      if (trackData.remixers && trackData.remixers.length > 0) {
+        eyeD3Options.push('--text-frame', `TPE4:${escapeUnescapedColons(trackData.remixers.join(', '))}`); // TPE4 => REMIXEDBY
+      }
+      if (trackData.album?.title) {
+        // eyeD3Options.push('--album', trackData.album.title.replace(/^-/, '- '));
+        eyeD3Options.push('--text-frame', `TALB:${escapeUnescapedColons(trackData.album.title)}`); // the same as with --title
+      }
+      if (trackData.album?.artists && trackData.album.artists.length > 0) {
+        eyeD3Options.push('--album-artist', trackData.album.artists.join(', '));
+      }
+      if (trackData.album?.trackNumber) {
+        let albumNumbers = trackData.album.trackNumber.toString();
+        if (trackData.album?.trackTotal) {
+          albumNumbers += `/${trackData.album.trackTotal.toString()}`;
+        }
+        eyeD3Options.push('--text-frame', `TRCK:${albumNumbers}`); // eyeD3 adds leading 0 when using --track & --track-total
+        // '--track', trackData.album.trackNumber,
+        // '--track-total', trackData.album.trackTotal,
+        // '--no-zero-padding',  // there is no such option in eyeD3 anymore?
+        // '--disc-num', '???',  // there is no disc information on beatport? (and other streaming like Amazon?)
+        // '--disc-total', '???',
+      }
+      if (trackData.year) {
+        // '--release-year', trackData.year,
+        // '--text-frame', `TDRC:${trackData.year}`,
+        eyeD3Options.push('--text-frame', `TYER:${trackData.year}`);
+      }
+      if (trackData.released) {
+        const releasedString = formatLocalDateToIsoDateString(trackData.released);
+        eyeD3Options.push('--text-frame', `TORY:${releasedString}`);
+        eyeD3Options.push('--text-frame', `TRDA:${releasedString}`);
+        eyeD3Options.push('--text-frame', `TDAT:${releasedString}`);
+        eyeD3Options.push('--text-frame', `TDRC:${releasedString}`);
+        eyeD3Options.push('--text-frame', `TDOR:${releasedString}`);
+        eyeD3Options.push('--text-frame', `TDRL:${releasedString}`);
+        // '--release-date', trackData.released,
+        // '--orig-release-date', trackData.released,
+      }
+      if (trackData.url) {
+        eyeD3Options.push('--url-frame', `WOAF:${escapeUnescapedColons(trackData.url.toString())}`); // file webpage
+      }
+      if (trackData.publisher?.url) {
+        eyeD3Options.push('--url-frame', `WPUB:${escapeUnescapedColons(trackData.publisher.url.toString())}`); // publisher webpage
+      }
+      if (trackData.bpm) {
+        eyeD3Options.push('--bpm', trackData.bpm.toString());
+      }
+      if (trackData.key) {
+        eyeD3Options.push('--text-frame', `TKEY:${trackData.key}`);
+        eyeD3Options.push('--user-text-frame', `INITIALKEY:${trackData.key}`); // TKEY is not recoginzed in foobar2000
+      }
+      if (trackData.album?.catalogNumber) {
+        // https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
+        eyeD3Options.push('--user-text-frame', `CATALOGNUMBER:${escapeUnescapedColons(trackData.album.catalogNumber)}`);
+        eyeD3Options.push('--user-text-frame', `CATALOG #:${escapeUnescapedColons(trackData.album.catalogNumber)}`);
+      }
 
-    if (imagePaths.frontCover && await isSupportedArtworkFile(imagePaths.frontCover)) {
-      eyeD3Options.push('--add-image', `${imagePaths.frontCover}:FRONT_COVER:Front Cover`); // front cover
-    }
-    if (imagePaths.waveform && await isSupportedArtworkFile(imagePaths.waveform)) {
-      eyeD3Options.push('--add-image', `${imagePaths.waveform}:BRIGHT_COLORED_FISH:Waveform`); // waveform
-    }
-    if (imagePaths.publisherLogotype && await isSupportedArtworkFile(imagePaths.publisherLogotype)) {
-      eyeD3Options.push('--add-image', `${imagePaths.publisherLogotype}:PUBLISHER_LOGO:Publisher Logotype`); // publisher logo
-    }
+      if (imagePaths.frontCover && await isSupportedArtworkFile(imagePaths.frontCover)) {
+        eyeD3Options.push('--add-image', `${imagePaths.frontCover}:FRONT_COVER:Front Cover`); // front cover
+      }
+      if (imagePaths.waveform && await isSupportedArtworkFile(imagePaths.waveform)) {
+        eyeD3Options.push('--add-image', `${imagePaths.waveform}:BRIGHT_COLORED_FISH:Waveform`); // waveform
+      }
+      if (imagePaths.publisherLogotype && await isSupportedArtworkFile(imagePaths.publisherLogotype)) {
+        eyeD3Options.push('--add-image', `${imagePaths.publisherLogotype}:PUBLISHER_LOGO:Publisher Logotype`); // publisher logo
+      }
 
-    const genreTag = buildGenreTag(trackData.genre, trackData.subgenre);
-    if (genreTag) {
-      eyeD3Options.push('--genre', genreTag);
-    }
-    if (trackData.publisher?.name) {
-      eyeD3Options.push('--publisher', trackData.publisher.name);
-      eyeD3Options.push('--text-frame', `TIT1:${escapeUnescapedColons(trackData.publisher.name)}`); // TIT1 => CONTENTGROUP
-    }
-    if (trackData.isrc) {
-      eyeD3Options.push('--text-frame', `TSRC:${escapeUnescapedColons(trackData.isrc)}`);
-    }
-    if (trackData.ufid) {
-      // '--unique-file-id', `http${colonEscapeChar}://www.id3.org/dummy/ufid.html:${trackData.ufid}`,
-      eyeD3Options.push('--unique-file-id', `${escapeUnescapedColons(this.options.domainURL)}:${trackData.ufid}`);
-    }
+      const genreTag = buildGenreTag(trackData.genre, trackData.subgenre);
+      if (genreTag) {
+        eyeD3Options.push('--genre', genreTag);
+      }
+      if (trackData.publisher?.name) {
+        eyeD3Options.push('--publisher', trackData.publisher.name);
+        eyeD3Options.push('--text-frame', `TIT1:${escapeUnescapedColons(trackData.publisher.name)}`); // TIT1 => CONTENTGROUP
+      }
+      if (trackData.isrc) {
+        eyeD3Options.push('--text-frame', `TSRC:${escapeUnescapedColons(trackData.isrc)}`);
+      }
+      if (trackData.ufid) {
+        // '--unique-file-id', `http${colonEscapeChar}://www.id3.org/dummy/ufid.html:${trackData.ufid}`,
+        eyeD3Options.push('--unique-file-id', `${escapeUnescapedColons(this.options.domainURL)}:${trackData.ufid}`);
+      }
 
-    eyeD3Options.push(trackPath);
+      eyeD3Options.push(trackPath);
 
-    if (id3v2) {
-      // Remove embedded images (only id3v2 has image frames)
-      BearTunesTagger.executeEyeD3Tool(
-        ID3Version.ID3v2_4,
-        [
-          '--remove-all-images',
-        ],
-        `All picture blocks of ID3v${ID3Version.ID3v2_4} MP3 tag removed in "${path.basename(trackPath)}"`,
-        this.options.eyed3Verbose,
-      );
+      if (id3v2) {
+        // Remove embedded images (only id3v2 has image frames)
+        BearTunesTagger.executeEyeD3Tool(
+          ID3Version.ID3v2_4,
+          [
+            '--remove-all-images',
+          ],
+          `All picture blocks of ID3v${ID3Version.ID3v2_4} MP3 tag removed in "${path.basename(trackPath)}"`,
+          this.options.eyed3Verbose,
+        );
 
-      BearTunesTagger.executeEyeD3Tool(
-        ID3Version.ID3v2_4,
-        eyeD3Options,
-        `MP3 ID3v${ID3Version.ID3v2_4} tag was saved to "${trackFilename}"`,
-        this.options.eyed3Verbose,
-      );
+        BearTunesTagger.executeEyeD3Tool(
+          ID3Version.ID3v2_4,
+          eyeD3Options,
+          `MP3 ID3v${ID3Version.ID3v2_4} tag was saved to "${trackFilename}"`,
+          this.options.eyed3Verbose,
+        );
+      }
+
+      if (id3v1) {
+        BearTunesTagger.executeEyeD3Tool(
+          ID3Version.ID3v1_1,
+          eyeD3Options,
+          `MP3 ID3v${ID3Version.ID3v1_1} tag was saved to "${trackFilename}"`,
+          this.options.eyed3Verbose,
+        );
+      }
+    } finally {
+      BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
     }
-
-    if (id3v1) {
-      BearTunesTagger.executeEyeD3Tool(
-        ID3Version.ID3v1_1,
-        eyeD3Options,
-        `MP3 ID3v${ID3Version.ID3v1_1} tag was saved to "${trackFilename}"`,
-        this.options.eyed3Verbose,
-      );
-    }
-
-    BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
   }
 
   static executeEyeD3Tool(
@@ -1511,140 +1513,142 @@ export class BearTunesTagger {
   async saveId3TagToFlacFile(trackPath: string, trackData: TrackInfo, { verbose = false } = {}): Promise<void> {
     const imagePaths: TrackArtworkFiles = {};
 
-    imagePaths.publisherLogotype = await BearTunesTagger.tryDownloadImageAsset({
-      imageUrl: trackData.publisher?.logotype,
-      sourcePageUrl: trackData.publisher?.url,
-      label: 'publisher logotype',
-      verbose,
-    });
+    try {
+      imagePaths.publisherLogotype = await BearTunesTagger.tryDownloadImageAsset({
+        imageUrl: trackData.publisher?.logotype,
+        sourcePageUrl: trackData.publisher?.url,
+        label: 'publisher logotype',
+        verbose,
+      });
 
-    imagePaths.frontCover = await BearTunesTagger.tryDownloadImageAsset({
-      imageUrl: trackData.album?.artwork,
-      sourcePageUrl: trackData.album?.url,
-      label: 'album artwork',
-      verbose,
-    });
+      imagePaths.frontCover = await BearTunesTagger.tryDownloadImageAsset({
+        imageUrl: trackData.album?.artwork,
+        sourcePageUrl: trackData.album?.url,
+        label: 'album artwork',
+        verbose,
+      });
 
-    imagePaths.waveform = await BearTunesTagger.tryDownloadImageAsset({
-      imageUrl: trackData.waveform,
-      sourcePageUrl: trackData.url,
-      label: 'waveform',
-      verbose,
-    });
+      imagePaths.waveform = await BearTunesTagger.tryDownloadImageAsset({
+        imageUrl: trackData.waveform,
+        sourcePageUrl: trackData.url,
+        label: 'waveform',
+        verbose,
+      });
 
-    const metaflacOptions: string[] = [
-      '--remove-tag=PRIV', '--remove-tag=COMMENT',
-      '--remove-tag=DESCRIPTION', '--remove-tag=COPYRIGHT',
-      '--remove-tag=DISCNUMBER', '--remove-tag=DISCTOTAL', '--remove-tag=COMPOSER', '--remove-tag=LYRICS', // tags set by tidal-dl
-      '--remove-tag=COMPATIBLE_BRANDS', '--remove-tag=MAJOR_BRAND', '--remove-tag=MINOR_VERSION', '--remove-tag=ENCODER', // tags set by tidal-dl-ng
-      '--remove-replay-gain',
-      // '--remove-all-tags',
-    ];
+      const metaflacOptions: string[] = [
+        '--remove-tag=PRIV', '--remove-tag=COMMENT',
+        '--remove-tag=DESCRIPTION', '--remove-tag=COPYRIGHT',
+        '--remove-tag=DISCNUMBER', '--remove-tag=DISCTOTAL', '--remove-tag=COMPOSER', '--remove-tag=LYRICS', // tags set by tidal-dl
+        '--remove-tag=COMPATIBLE_BRANDS', '--remove-tag=MAJOR_BRAND', '--remove-tag=MINOR_VERSION', '--remove-tag=ENCODER', // tags set by tidal-dl-ng
+        '--remove-replay-gain',
+        // '--remove-all-tags',
+      ];
 
-    if (trackData.artists && trackData.artists.length > 0) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ARTIST', trackData.artists.join(', '));
+      if (trackData.artists && trackData.artists.length > 0) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ARTIST', trackData.artists.join(', '));
+      }
+
+      if (trackData.title) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'TITLE', trackData.title);
+      }
+
+      if (trackData.remixers && trackData.remixers.length > 0) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'REMIXED BY', trackData.remixers.join(', '));
+      }
+
+      if (trackData.album?.title) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ALBUM', trackData.album.title);
+      }
+
+      if (trackData.album?.artists && trackData.album.artists.length > 0) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ALBUMARTIST', trackData.album.artists.join(', '));
+      }
+
+      if (trackData.album?.trackNumber) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'TRACKNUMBER', trackData.album.trackNumber.toString());
+      }
+      if (trackData.album?.trackTotal) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'TRACKTOTAL', trackData.album.trackTotal.toString());
+      }
+
+      if (trackData.year) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'DATE', trackData.year.toString()); // DATE = Year <= same as in mp3 tag
+      }
+
+      if (trackData.released) {
+        const releasedString = formatLocalDateToIsoDateString(trackData.released);
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'RELEASE DATE', releasedString);
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ORIGINAL RELEASE DATE', releasedString);
+      }
+
+      if (trackData.url) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'FILE WEBPAGE URL', trackData.url.toString());
+      }
+
+      if (trackData.publisher?.url) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'PUBLISHER URL', trackData.publisher.url.toString());
+      }
+
+      if (trackData.bpm) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'BPM', trackData.bpm.toString());
+      }
+
+      if (trackData.key) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'INITIAL KEY', trackData.key);
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'INITIALKEY', trackData.key);
+      }
+
+      if (trackData.album?.catalogNumber) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'CATALOGNUMBER', trackData.album.catalogNumber);
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'CATALOG #', trackData.album.catalogNumber);
+      }
+
+      const genreTag = buildGenreTag(trackData.genre, trackData.subgenre);
+      if (genreTag) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'GENRE', genreTag);
+      }
+
+      if (trackData.publisher?.name) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'PUBLISHER', trackData.publisher.name);
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'GROUPING', trackData.publisher.name);
+      }
+
+      if (trackData.ufid) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'UFID', trackData.ufid);
+      }
+
+      if (trackData.isrc) {
+        BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ISRC', trackData.isrc);
+      }
+
+      // removing all embedded images
+      if (imagePaths.frontCover || imagePaths.waveform || imagePaths.publisherLogotype) {
+        BearTunesTagger.executeMetaflacTool(
+          [
+            '--remove', '--block-type=PICTURE,PADDING',
+            trackPath,
+          ],
+          `All picture blocks removed in "${path.basename(trackPath)}"`,
+          this.options.metaflacVerbose,
+        );
+      }
+
+      if (imagePaths.frontCover && await isSupportedArtworkFile(imagePaths.frontCover)) {
+        metaflacOptions.push(`--import-picture-from=3||Front Cover||${imagePaths.frontCover}`); // front cover
+      }
+      if (imagePaths.waveform && await isSupportedArtworkFile(imagePaths.waveform)) {
+        metaflacOptions.push(`--import-picture-from=17||Waveform||${imagePaths.waveform}`); // waveform
+      }
+      if (imagePaths.publisherLogotype && await isSupportedArtworkFile(imagePaths.publisherLogotype)) {
+        metaflacOptions.push(`--import-picture-from=20||Publisher Logotype||${imagePaths.publisherLogotype}`); // publisher logo
+      }
+
+      metaflacOptions.push(trackPath);
+
+      BearTunesTagger.executeMetaflacTool(metaflacOptions, `FLAC tag was saved to "${path.basename(trackPath)}"`, this.options.metaflacVerbose);
+    } finally {
+      BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
     }
-
-    if (trackData.title) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'TITLE', trackData.title);
-    }
-
-    if (trackData.remixers && trackData.remixers.length > 0) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'REMIXED BY', trackData.remixers.join(', '));
-    }
-
-    if (trackData.album?.title) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ALBUM', trackData.album.title);
-    }
-
-    if (trackData.album?.artists && trackData.album.artists.length > 0) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ALBUMARTIST', trackData.album.artists.join(', '));
-    }
-
-    if (trackData.album?.trackNumber) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'TRACKNUMBER', trackData.album.trackNumber.toString());
-    }
-    if (trackData.album?.trackTotal) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'TRACKTOTAL', trackData.album.trackTotal.toString());
-    }
-
-    if (trackData.year) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'DATE', trackData.year.toString()); // DATE = Year <= same as in mp3 tag
-    }
-
-    if (trackData.released) {
-      const releasedString = formatLocalDateToIsoDateString(trackData.released);
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'RELEASE DATE', releasedString);
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ORIGINAL RELEASE DATE', releasedString);
-    }
-
-    if (trackData.url) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'FILE WEBPAGE URL', trackData.url.toString());
-    }
-
-    if (trackData.publisher?.url) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'PUBLISHER URL', trackData.publisher.url.toString());
-    }
-
-    if (trackData.bpm) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'BPM', trackData.bpm.toString());
-    }
-
-    if (trackData.key) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'INITIAL KEY', trackData.key);
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'INITIALKEY', trackData.key);
-    }
-
-    if (trackData.album?.catalogNumber) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'CATALOGNUMBER', trackData.album.catalogNumber);
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'CATALOG #', trackData.album.catalogNumber);
-    }
-
-    const genreTag = buildGenreTag(trackData.genre, trackData.subgenre);
-    if (genreTag) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'GENRE', genreTag);
-    }
-
-    if (trackData.publisher?.name) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'PUBLISHER', trackData.publisher.name);
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'GROUPING', trackData.publisher.name);
-    }
-
-    if (trackData.ufid) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'UFID', trackData.ufid);
-    }
-
-    if (trackData.isrc) {
-      BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ISRC', trackData.isrc);
-    }
-
-    // removing all embedded images
-    if (imagePaths.frontCover || imagePaths.waveform || imagePaths.publisherLogotype) {
-      BearTunesTagger.executeMetaflacTool(
-        [
-          '--remove', '--block-type=PICTURE,PADDING',
-          trackPath,
-        ],
-        `All picture blocks removed in "${path.basename(trackPath)}"`,
-        this.options.metaflacVerbose,
-      );
-    }
-
-    if (imagePaths.frontCover && await isSupportedArtworkFile(imagePaths.frontCover)) {
-      metaflacOptions.push(`--import-picture-from=3||Front Cover||${imagePaths.frontCover}`); // front cover
-    }
-    if (imagePaths.waveform && await isSupportedArtworkFile(imagePaths.waveform)) {
-      metaflacOptions.push(`--import-picture-from=17||Waveform||${imagePaths.waveform}`); // waveform
-    }
-    if (imagePaths.publisherLogotype && await isSupportedArtworkFile(imagePaths.publisherLogotype)) {
-      metaflacOptions.push(`--import-picture-from=20||Publisher Logotype||${imagePaths.publisherLogotype}`); // publisher logo
-    }
-
-    metaflacOptions.push(trackPath);
-
-    BearTunesTagger.executeMetaflacTool(metaflacOptions, `FLAC tag was saved to "${path.basename(trackPath)}"`, this.options.metaflacVerbose);
-
-    BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
   }
 
   static addMetaflacTaggingOption(optionArray: string[], tagName: string, tagValue: string): void {
