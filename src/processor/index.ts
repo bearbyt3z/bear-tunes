@@ -6,7 +6,6 @@ import logger from '#logger';
 import {
   AudioFileType,
   downloadAndSaveArtwork,
-  isEmptyPlainObject,
   tryGetAudioFileTypeFromFile,
 } from '#tools';
 
@@ -20,7 +19,7 @@ import {
 
 import type { BearTunesConverterFailureResult } from '#converter';
 import type { BearTunesRenamerFailureResult } from '#renamer';
-import type { TrackInfo } from '#shared-types';
+import type { BearTunesTaggerFailureResult } from '#tagger';
 
 import type {
   BearTunesProcessorDependencies,
@@ -188,24 +187,26 @@ export class BearTunesProcessor {
   }
 
   /**
-   * Reads track metadata and converts tagger exceptions into a failed
-   * per-file processing outcome.
+   * Logs a standardized warning for a failed track-tagging operation.
    *
-   * This is a temporary boundary while BearTunesTagger still exposes an
-   * exception-based API. It prevents one tagger failure from aborting
-   * directory traversal.
+   * The warning includes the affected file path, the tagger failure code, and
+   * the error message. Any optional failure details and the original error are
+   * attached as structured log metadata for diagnostic purposes.
    *
-   * @param filePath - Path of the audio file whose metadata should be read.
-   * @returns Resolved track metadata, or `undefined` when metadata could not
-   * be read because the tagger threw.
+   * @param filePath - Path of the audio file whose tagging operation failed.
+   * @param result - Failed result returned by the tagger.
    */
-  private async tryProcessTrack(filePath: string): Promise<TrackInfo | undefined> {
-    try {
-      return await this.dependencies.tagger.processTrack(filePath);
-    } catch (error) {
-      logger.warn(`Reading track metadata failed: ${filePath}`, { error });
-      return undefined;
-    }
+  private static logTaggingFailure(
+    filePath: string,
+    result: BearTunesTaggerFailureResult,
+  ): void {
+    logger.warn(
+      `Processing track ${filePath} failed with code ${result.failureCode} and message:\n${result.error.message}`,
+      {
+        ...result.details,
+        error: result.error,
+      },
+    );
   }
 
   /**
@@ -226,18 +227,18 @@ export class BearTunesProcessor {
       return false;
     }
 
-    const trackInfo = await this.tryProcessTrack(filePath);
+    const taggerResult = await this.dependencies.tagger.processTrack(filePath);
 
-    if (trackInfo === undefined) {
+    if (!taggerResult.ok) {
+      BearTunesProcessor.logTaggingFailure(filePath, taggerResult);
       return false;
     }
 
-    if (isEmptyPlainObject(trackInfo)) {
-      logger.warn(`No track info found for MP3 file: ${filePath}`);
-      return false;
-    }
-
-    const renameResult = this.dependencies.renamer.rename(filePath, trackInfo, outputDirectory);
+    const renameResult = this.dependencies.renamer.rename(
+      filePath,
+      taggerResult.trackInfo,
+      outputDirectory,
+    );
 
     if (!renameResult.ok) {
       BearTunesProcessor.logRenamingFailure(filePath, renameResult);
@@ -246,30 +247,29 @@ export class BearTunesProcessor {
 
     await BearTunesProcessor.downloadArtworkForTrack(
       renameResult.targetPath,
-      trackInfo.album?.artwork,
-      trackInfo.album?.url,
+      taggerResult.trackInfo.album?.artwork,
+      taggerResult.trackInfo.album?.url,
     );
 
     return true;
   }
 
   /**
-   * Processes a FLAC file by optionally converting it to MP3 for metadata extraction,
-   * then saving refreshed tags back to the original FLAC file, renaming outputs,
-   * and downloading artwork.
+   * Processes a FLAC file by optionally converting it to MP3, resolving and
+   * applying track metadata, renaming output files, and downloading artwork.
    *
    * When `convertFlacToMp3` is enabled, the function converts the FLAC file to MP3,
-   * extracts track metadata from the converted MP3, and tracks the generated MP3 path,
+   * resolves track metadata from the converted MP3, and tracks the generated MP3 path,
    * and later its renamed path, in `convertedMp3Paths` so directory traversal does not
    * process the same logical track again when that MP3 file is encountered later.
    *
-   * When `convertFlacToMp3` is disabled, the function extracts track metadata directly
+   * When `convertFlacToMp3` is disabled, the function resolves track metadata directly
    * from the FLAC file instead and skips MP3 conversion entirely.
    *
    * @param filePath - The FLAC file to process.
    * @param outputDirectory - An optional destination directory for renamed output files.
    * @returns A promise resolving to `true` when the FLAC file was successfully processed,
-   * or to `false` when conversion, metadata extraction, tag saving, or subsequent
+   * or to `false` when conversion, track tagging, tag saving, renaming, or subsequent
    * processing failed.
    */
   private async processFlacFile(filePath: string, outputDirectory?: string): Promise<boolean> {
@@ -295,26 +295,22 @@ export class BearTunesProcessor {
       this.convertedMp3Paths.add(convertedMp3Path);
     }
 
-    const trackInfo = await this.tryProcessTrack(trackInfoSourcePath);
+    const taggerResult = await this.dependencies.tagger.processTrack(trackInfoSourcePath);
 
-    if (trackInfo === undefined) {
+    if (!taggerResult.ok) {
       if (convertedMp3Path) {
         this.convertedMp3Paths.delete(convertedMp3Path);
-      }
 
-      return false;
-    }
-
-    if (isEmptyPlainObject(trackInfo)) {
-      if (convertedMp3Path) {
-        this.convertedMp3Paths.delete(convertedMp3Path);
         logger.warn(`No track info found for converted FLAC/MP3 pair: ${filePath}`);
       } else {
         logger.warn(`No track info found for FLAC file: ${filePath}`);
       }
 
+      BearTunesProcessor.logTaggingFailure(trackInfoSourcePath, taggerResult);
       return false;
     }
+
+    const trackInfo = taggerResult.trackInfo;
 
     if (convertedMp3Path) {
       const mp3RenameResult = this.dependencies.renamer.rename(

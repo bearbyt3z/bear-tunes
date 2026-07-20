@@ -35,6 +35,7 @@ import {
   formatZodErrorIssues,
   generateRandomHexString,
   getFirstLine,
+  isEmptyPlainObject,
   isSupportedArtworkFile,
   normalizeUnknownError,
   prompt,
@@ -246,107 +247,172 @@ export class BearTunesTagger {
     }
   }
 
-  async processTrack(trackPath: string): Promise<TrackInfo> {
-    let forceRadioEdit = false;
+  async processTrack(trackPath: string): Promise<BearTunesTaggerResult> {
+    try {
+      let forceRadioEdit = false;
 
-    const trackFilename = path.basename(trackPath);
-    const trackFilenameWithoutExtension = removeFilenameExtension(trackFilename);
-    const trackFilenameKeywords = extractTrackNameKeywords(normalizeTextCharacters(trackFilenameWithoutExtension));
+      const trackFilename = path.basename(trackPath);
+      const trackFilenameWithoutExtension = removeFilenameExtension(trackFilename);
+      const trackFilenameKeywords = extractTrackNameKeywords(
+        normalizeTextCharacters(trackFilenameWithoutExtension),
+      );
 
-    logger.silly('########################################');
-    logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
+      logger.silly('########################################');
+      logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
 
-    const trackUrlFilename = path.join(path.dirname(trackPath), `${trackFilenameWithoutExtension}.url`);
-    let trackUrl: URL | undefined;
+      const trackUrlFilename = path.join(
+        path.dirname(trackPath),
+        `${trackFilenameWithoutExtension}.url`,
+      );
+      let trackUrl: URL | undefined;
 
-    if (fs.existsSync(trackUrlFilename)) {
-      trackUrl = await tryGetUrlFromFile(trackUrlFilename);
+      if (fs.existsSync(trackUrlFilename)) {
+        trackUrl = await tryGetUrlFromFile(trackUrlFilename);
 
-      if (trackUrl === null) {
-        logger.warn(`URL file is present but no URL found inside (skipping): ${trackUrlFilename}`);
-        return {};
-      }
+        if (trackUrl === null) {
+          return BearTunesTagger.createFailureResult(
+            BearTunesTaggerFailureCode.TrackUrlFileInvalid,
+            new Error(
+              `${this.constructor.name}: URL file is present but no URL was found inside: ${trackUrlFilename}`,
+            ),
+          );
+        }
 
-      logger.info(`Using URL from file: ${trackUrl}`);
-    } else {
-      const readTagResult = await this.readTag(trackPath);
+        logger.info(`Using URL from file: ${trackUrl}`);
+      } else {
+        const readTagResult = await this.readTag(trackPath);
 
-      if (!readTagResult.ok) {
-        logger.error(`Cannot read local tags for "${trackFilename}"`, {
-          ...readTagResult.details,
-          failureCode: readTagResult.failureCode,
-          error: readTagResult.error,
-        });
-        return {};
-      }
+        if (!readTagResult.ok) {
+          return readTagResult;
+        }
 
-      const trackInfo = readTagResult.trackInfo;
+        const localTrackInfo = readTagResult.trackInfo;
 
-      let bestMatchingTrack;
-      try {
-        bestMatchingTrack = await this.findBestMatchingTrack(
-          trackInfo,
-          trackFilenameKeywords,
+        let bestMatchingTrack: MatchingTrack | undefined;
+
+        try {
+          bestMatchingTrack = await this.findBestMatchingTrack(
+            localTrackInfo,
+            trackFilenameKeywords,
+          );
+        } catch (error: unknown) {
+          return BearTunesTagger.createFailureResult(
+            BearTunesTaggerFailureCode.TrackMatchFailed,
+            new Error(
+              `${this.constructor.name}: Cannot match track "${trackFilename}"`,
+              { cause: normalizeUnknownError(error) },
+            ),
+          );
+        }
+
+        if (!bestMatchingTrack) {
+          return BearTunesTagger.createFailureResult(
+            BearTunesTaggerFailureCode.TrackMatchFailed,
+            new Error(
+              `${this.constructor.name}: Could not find a matching Beatport track for "${trackFilename}"`,
+            ),
+          );
+        }
+
+        trackUrl = bestMatchingTrack.url;
+
+        if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
+          let warnMessage = `Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n`;
+          warnMessage += `${buildTrackFullName(bestMatchingTrack)}\n`;
+          warnMessage += `Score keywords: ${bestMatchingTrack.scoreKeywords.join(', ')}\n`;
+          warnMessage += `Name keywords: ${trackFilenameKeywords.join(', ')}`;
+
+          if (trackUrl) {
+            warnMessage += `\nURL: ${trackUrl}`;
+          }
+
+          logger.warn(warnMessage);
+
+          const proceedWithFound = await prompt('Proceed with the found track? (y/n) ');
+
+          if (proceedWithFound !== 'y' && proceedWithFound !== 'yes') {
+            return BearTunesTagger.createFailureResult(
+              BearTunesTaggerFailureCode.TrackMatchRejected,
+              new Error(
+                `${this.constructor.name}: Matching track was rejected for "${trackFilename}"`,
+              ),
+            );
+          }
+        }
+
+        logger.info(
+          `Matched [${bestMatchingTrack.score}]: ${buildTrackFullName(bestMatchingTrack)}`,
         );
+        logger.info(`Matched URL: ${bestMatchingTrack.url ?? 'Undefined'}`);
+
+        if (
+          localTrackInfo.details
+          && bestMatchingTrack.details
+          && Math.abs(
+            bestMatchingTrack.details.duration - localTrackInfo.details.duration,
+          ) > this.options.lengthDifferenceAccepted
+        ) {
+          logger.warn(
+            `Matched track has different duration: ${secondsToTimeFormat(bestMatchingTrack.details.duration)}`
+            + ` vs. ${secondsToTimeFormat(localTrackInfo.details.duration)} (original)\nURL: ${trackUrl}`,
+          );
+
+          const changeToRadioEdit = await prompt(
+            'Change it to "Radio Edit"? (y)es/(n)o/(s)kip: ',
+          );
+
+          if (changeToRadioEdit === 's' || changeToRadioEdit === 'skip') {
+            return BearTunesTagger.createFailureResult(
+              BearTunesTaggerFailureCode.TrackMatchRejected,
+              new Error(
+                `${this.constructor.name}: Matching track was skipped for "${trackFilename}"`,
+              ),
+            );
+          }
+
+          forceRadioEdit = changeToRadioEdit === 'y' || changeToRadioEdit === 'yes';
+        }
+      }
+
+      if (!trackUrl) {
+        return BearTunesTagger.createFailureResult(
+          BearTunesTaggerFailureCode.TrackDataFetchFailed,
+          new Error(
+            `${this.constructor.name}: URL of the matching track was not found for "${trackFilename}"`,
+          ),
+        );
+      }
+
+      const trackInfo = await this.extractTrackData(trackUrl, forceRadioEdit);
+
+      if (isEmptyPlainObject(trackInfo)) {
+        return BearTunesTagger.createFailureResult(
+          BearTunesTaggerFailureCode.TrackDataFetchFailed,
+          new Error(
+            `${this.constructor.name}: Cannot retrieve track metadata from ${trackUrl}`,
+          ),
+        );
+      }
+
+      try {
+        await this.saveId3TagToMp3File(trackPath, trackInfo);
       } catch (error: unknown) {
-        logger.error(`Track matching failed for "${trackFilename}"`, { error });
-        return {};
+        return BearTunesTagger.createFailureResult(
+          BearTunesTaggerFailureCode.TagWriteFailed,
+          new Error(
+            `${this.constructor.name}: Cannot save ID3 tag to "${trackFilename}"`,
+            { cause: normalizeUnknownError(error) },
+          ),
+        );
       }
 
-      if (!bestMatchingTrack) {
-        logger.warn(`Could not find any matching Beatport track for "${trackFilename}"`);
-        return {};
-      }
-
-      trackUrl = bestMatchingTrack.url ?? undefined;
-
-      if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
-        let warnMessage = `Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n`;
-        warnMessage += `${buildTrackFullName(bestMatchingTrack)}\n`;
-        warnMessage += `Score keywords: ${bestMatchingTrack.scoreKeywords.join(', ')}\n`;
-        warnMessage += `Name  keywords: ${trackFilenameKeywords.join(', ')}`;
-        if (trackUrl) {
-          warnMessage += `\nURL: ${trackUrl}`;
-        }
-
-        logger.warn(warnMessage);
-
-        const proceedWithFound = await prompt('Proceed with the found track? (y/n) ');
-        if (proceedWithFound !== 'y' && proceedWithFound !== 'yes') {
-          return {};
-        }
-      }
-
-      logger.info(`Matched  [${bestMatchingTrack.score}]: ${buildTrackFullName(bestMatchingTrack)}`);
-      logger.info(`Matched  URL: ${bestMatchingTrack.url ?? 'Undefined'}`);
-
-      if (
-        trackInfo.details
-        && bestMatchingTrack.details
-        && Math.abs(bestMatchingTrack.details.duration - trackInfo.details.duration) > this.options.lengthDifferenceAccepted
-      ) {
-        logger.warn(`Matched track has different duration: ${secondsToTimeFormat(bestMatchingTrack.details.duration)}`
-          + ` vs. ${secondsToTimeFormat(trackInfo.details.duration)} (original)\nURL: ${trackUrl}`);
-
-        const changeToRadioEdit = await prompt('Change it to "Radio Edit"? (y)es/(n)o/(s)kip: ');
-        if (changeToRadioEdit === 's' || changeToRadioEdit === 'skip') {
-          return {};
-        }
-
-        forceRadioEdit = (changeToRadioEdit === 'y') || (changeToRadioEdit === 'yes');
-      }
+      return BearTunesTagger.createSuccessResult(trackInfo);
+    } catch (error: unknown) {
+      return BearTunesTagger.createFailureResult(
+        BearTunesTaggerFailureCode.UnexpectedExecutionError,
+        normalizeUnknownError(error),
+      );
     }
-
-    if (!trackUrl) {
-      logger.error('URL of the matching track not found.');
-      return {};
-    }
-
-    const trackInfo = await this.extractTrackData(trackUrl, forceRadioEdit);
-
-    await this.saveId3TagToMp3File(trackPath, trackInfo);
-
-    return trackInfo;
   }
 
   /**
