@@ -1285,6 +1285,16 @@ export class BearTunesTagger {
     }
   }
 
+  /**
+   * Removes temporary artwork files created while preparing track tags.
+   *
+   * The cleanup is best-effort: a failure to remove one file is logged and does
+   * not prevent cleanup of the remaining files or affect the result of the
+   * tagging operation.
+   *
+   * @param imagePaths - Paths of temporary artwork files to remove. Undefined
+   * entries are ignored.
+   */
   static cleanupTrackArtworkFiles(imagePaths: TrackArtworkFiles): void {
     Object.values(imagePaths).forEach((imagePath) => {
       if (imagePath !== undefined) {
