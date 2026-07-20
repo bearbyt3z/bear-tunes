@@ -329,7 +329,7 @@ export class BearTunesProcessor {
     }
 
     try {
-      await this.dependencies.tagger.saveId3TagToFlacFile(filePath, trackInfo);
+      await this.dependencies.tagger.saveTagToFlacFile(filePath, trackInfo);
     } catch (error) {
       logger.warn(`Saving ID3 tags to FLAC file failed: ${filePath}`, { error });
       return false;

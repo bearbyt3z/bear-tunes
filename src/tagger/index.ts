@@ -395,7 +395,7 @@ export class BearTunesTagger {
       }
 
       try {
-        await this.saveId3TagToMp3File(trackPath, trackInfo);
+        await this.saveTagToMp3File(trackPath, trackInfo);
       } catch (error: unknown) {
         return BearTunesTagger.createFailureResult(
           BearTunesTaggerFailureCode.TagWriteFailed,
@@ -1322,7 +1322,7 @@ export class BearTunesTagger {
     });
   }
 
-  async saveId3TagToMp3File(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}): Promise<void> {
+  async saveTagToMp3File(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}): Promise<void> {
     const imagePaths: TrackArtworkFiles = {};
 
     try {
@@ -1510,7 +1510,7 @@ export class BearTunesTagger {
     }
   }
 
-  async saveId3TagToFlacFile(trackPath: string, trackData: TrackInfo, { verbose = false } = {}): Promise<void> {
+  async saveTagToFlacFile(trackPath: string, trackData: TrackInfo, { verbose = false } = {}): Promise<void> {
     const imagePaths: TrackArtworkFiles = {};
 
     try {
