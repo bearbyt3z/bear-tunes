@@ -1477,6 +1477,14 @@ export class BearTunesTagger {
           this.options.eyed3Verbose,
         );
       }
+    } catch (error: unknown) {
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TagWriteFailed,
+        new Error(
+          `${this.constructor.name} Cannot save tag to MP3 file ${path.basename(trackPath)}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
     } finally {
       BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
     }
@@ -1649,6 +1657,14 @@ export class BearTunesTagger {
       metaflacOptions.push(trackPath);
 
       BearTunesTagger.executeMetaflacTool(metaflacOptions, `FLAC tag was saved to "${path.basename(trackPath)}"`, this.options.metaflacVerbose);
+    } catch (error: unknown) {
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TagWriteFailed,
+        new Error(
+          `${this.constructor.name} Cannot save tag to FLAC file ${path.basename(trackPath)}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
     } finally {
       BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
     }
