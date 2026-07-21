@@ -394,20 +394,18 @@ export class BearTunesTagger {
         );
       }
 
-      try {
-        await this.saveTagToMp3File(trackPath, trackInfo);
-      } catch (error: unknown) {
-        return BearTunesTagger.createFailureResult(
-          BearTunesTaggerFailureCode.TagWriteFailed,
-          new Error(
-            `${this.constructor.name}: Cannot save ID3 tag to "${trackFilename}"`,
-            { cause: normalizeUnknownError(error) },
-          ),
-        );
-      }
+      await this.saveTagToMp3File(trackPath, trackInfo);
 
       return BearTunesTagger.createSuccessResult(trackInfo);
     } catch (error: unknown) {
+      if (error instanceof TaggerGuardError) {
+        return BearTunesTagger.createFailureResult(
+          error.failureCode,
+          error.cause,
+          error.details,
+        );
+      }
+
       return BearTunesTagger.createFailureResult(
         BearTunesTaggerFailureCode.UnexpectedExecutionError,
         normalizeUnknownError(error),
