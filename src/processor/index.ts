@@ -328,10 +328,14 @@ export class BearTunesProcessor {
       this.convertedMp3Paths.add(mp3RenameResult.targetPath);
     }
 
-    try {
-      await this.dependencies.tagger.saveTagToFlacFile(filePath, trackInfo);
-    } catch (error) {
-      logger.warn(`Saving tags to FLAC file failed: ${filePath}`, { error });
+    const flacTagResult = await this.dependencies.tagger.saveTag(
+      filePath,
+      trackInfo,
+    );
+
+    if (!flacTagResult.ok) {
+      BearTunesProcessor.logTaggingFailure(filePath, flacTagResult);
+
       return false;
     }
 
