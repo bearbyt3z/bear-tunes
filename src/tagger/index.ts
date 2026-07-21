@@ -1482,6 +1482,19 @@ export class BearTunesTagger {
     }
   }
 
+  /**
+   * Executes eyeD3 with the requested ID3 version and command-line options.
+   *
+   * Logs either the tool output or the supplied success message, depending on
+   * the verbose flag. Command execution failures are intentionally propagated
+   * to the caller so the enclosing tag write operation can handle them.
+   *
+   * @param version - ID3 version written by eyeD3.
+   * @param options - Additional eyeD3 command-line options, including the input file path.
+   * @param successMessage - Message logged when the command completes and verbose logging is disabled.
+   * @param verbose - Whether to log eyeD3 standard output instead of the success message.
+   * @throws Error When eyeD3 cannot be executed or exits unsuccessfully.
+   */
   static executeEyeD3Tool(
     version: ID3Version,
     options: string[],
@@ -1646,6 +1659,19 @@ export class BearTunesTagger {
     optionArray.push(`--set-tag=${tagName}=${tagValue}`);
   }
 
+  /**
+   * Executes metaflac with the requested command-line options.
+   *
+   * Adds the common metadata-preservation options before executing metaflac.
+   * Logs either the tool output or the supplied success message, depending on
+   * the verbose flag. Command execution failures are intentionally propagated
+   * to the caller so the enclosing tag write operation can handle them.
+   *
+   * @param options - Additional metaflac command-line options, including the input file path.
+   * @param successMessage - Message logged when the command completes and verbose logging is disabled.
+   * @param verbose - Whether to log metaflac standard output instead of the success message.
+   * @throws Error When metaflac cannot be executed or exits unsuccessfully.
+   */
   static executeMetaflacTool(
     options: string[],
     successMessage: string,
