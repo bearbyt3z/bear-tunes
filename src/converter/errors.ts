@@ -14,6 +14,8 @@ import {
  * Public converter methods may catch this error and map it to a
  * {@link BearTunesConverterFailureResult}, preserving the converter failure
  * code while exposing the underlying error as part of the returned result.
+ *
+ * @internal
  */
 export class ConverterGuardError extends Error {
   /** Converter-specific code classifying the guard failure. */

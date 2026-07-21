@@ -14,6 +14,8 @@ import {
  * Public renamer methods may catch this error and map it to a
  * {@link BearTunesRenamerFailureResult}, preserving the renamer failure
  * code while exposing the underlying error as part of the returned result.
+ *
+ * @internal
  */
 export class RenamerGuardError extends Error {
   /** Renamer-specific code classifying the guard failure. */
