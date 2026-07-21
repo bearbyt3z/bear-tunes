@@ -488,9 +488,7 @@ export class BearTunesTagger {
         );
       }
 
-      await this.saveTagToMp3File(trackPath, trackInfo);
-
-      return BearTunesTagger.createSuccessResult(trackInfo);
+      return await this.saveTag(trackPath, trackInfo);
     } catch (error: unknown) {
       if (error instanceof TaggerGuardError) {
         return BearTunesTagger.createFailureResult(
