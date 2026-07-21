@@ -46,9 +46,14 @@ export enum BearTunesTaggerFailureCode {
   // 420-429: tag writing
 
   /**
+   * The input audio file type does not match the format required by the tag writer.
+   */
+  TagWriteInputFileTypeMismatch = 421,
+
+  /**
    * Metadata or artwork could not be written to the input audio file.
    */
-  TagWriteFailed = 421,
+  TagWriteFailed = 422,
 
   // 430-439: unexpected errors
 

@@ -248,6 +248,37 @@ export class BearTunesTagger {
   }
 
   /**
+   * Asserts that a file has the expected audio type before a
+   * format-specific tag writer is invoked.
+   *
+   * @throws {TaggerGuardError}
+   * When the input cannot be identified as the expected audio type.
+   */
+  private async assertInputAudioFileType(
+    trackPath: string,
+    expectedAudioFileType: AudioFileType,
+  ): Promise<void> {
+    const actualAudioFileType = await tryGetAudioFileTypeFromFile(trackPath);
+
+    if (actualAudioFileType === expectedAudioFileType) {
+      return;
+    }
+
+    throw new TaggerGuardError(
+      BearTunesTaggerFailureCode.TagWriteInputFileTypeMismatch,
+      new TypeError(
+        `${this.constructor.name}: Cannot write ${expectedAudioFileType.toUpperCase()} tag to `
+        + `${actualAudioFileType?.toUpperCase() ?? 'unknown'} audio file "${trackPath}"`,
+      ),
+      {
+        expectedAudioFileType,
+        actualAudioFileType,
+        trackPath,
+      },
+    );
+  }
+
+  /**
    * Writes provided track metadata to a supported local audio file.
    *
    * The method validates that `trackPath` points to an accessible regular file,
@@ -1384,6 +1415,8 @@ export class BearTunesTagger {
   }
 
   async saveTagToMp3File(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}): Promise<void> {
+    await this.assertInputAudioFileType(trackPath, AudioFileType.Mp3);
+
     const imagePaths: TrackArtworkFiles = {};
 
     try {
@@ -1539,6 +1572,10 @@ export class BearTunesTagger {
         );
       }
     } catch (error: unknown) {
+      if (error instanceof TaggerGuardError) {
+        throw error;
+      }
+
       throw new TaggerGuardError(
         BearTunesTaggerFailureCode.TagWriteFailed,
         new Error(
@@ -1583,6 +1620,8 @@ export class BearTunesTagger {
   }
 
   async saveTagToFlacFile(trackPath: string, trackData: TrackInfo, { verbose = false } = {}): Promise<void> {
+    await this.assertInputAudioFileType(trackPath, AudioFileType.Flac);
+
     const imagePaths: TrackArtworkFiles = {};
 
     try {
@@ -1719,6 +1758,10 @@ export class BearTunesTagger {
 
       BearTunesTagger.executeMetaflacTool(metaflacOptions, `FLAC tag was saved to "${path.basename(trackPath)}"`, this.options.metaflacVerbose);
     } catch (error: unknown) {
+      if (error instanceof TaggerGuardError) {
+        throw error;
+      }
+
       throw new TaggerGuardError(
         BearTunesTaggerFailureCode.TagWriteFailed,
         new Error(
