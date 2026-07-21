@@ -1487,27 +1487,17 @@ export class BearTunesTagger {
     options: string[],
     successMessage: string,
     verbose = false,
-  ): boolean {
-    try {
-      const result = executeCommandSync(
-        'eyeD3',
-        [
-          '--v2',
-          `--to-v${version.toString()}`, // overwrite other versions of id3
-          ...options,
-        ],
-      );
+  ): void {
+    const result = executeCommandSync(
+      'eyeD3',
+      [
+        '--v2',
+        `--to-v${version.toString()}`, // overwrite other versions of id3
+        ...options,
+      ],
+    );
 
-      logger.info(verbose ? result.stdout : successMessage);
-      return true;
-    } catch (error: unknown) {
-      logger.error('Failed to save MP3 ID3 tag.', {
-        tool: 'eyeD3',
-        id3Version: version,
-        error,
-      });
-      return false;
-    }
+    logger.info(verbose ? result.stdout : successMessage);
   }
 
   async saveTagToFlacFile(trackPath: string, trackData: TrackInfo, { verbose = false } = {}): Promise<void> {
@@ -1660,25 +1650,16 @@ export class BearTunesTagger {
     options: string[],
     successMessage: string,
     verbose = false,
-  ): boolean {
-    try {
-      const result = executeCommandSync(
-        'metaflac',
-        [
-          '--preserve-modtime',
-          '--dont-use-padding',
-          ...options,
-        ],
-      );
+  ): void {
+    const result = executeCommandSync(
+      'metaflac',
+      [
+        '--preserve-modtime',
+        '--dont-use-padding',
+        ...options,
+      ],
+    );
 
-      logger.info(verbose ? result.stdout : successMessage);
-      return true;
-    } catch (error: unknown) {
-      logger.error('Failed to save FLAC tag', {
-        tool: 'metaflac',
-        error,
-      });
-      return false;
-    }
+    logger.info(verbose ? result.stdout : successMessage);
   }
 }
