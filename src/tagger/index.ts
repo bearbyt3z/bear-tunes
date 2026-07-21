@@ -247,6 +247,69 @@ export class BearTunesTagger {
     }
   }
 
+  /**
+   * Writes provided track metadata to a supported local audio file.
+   *
+   * The method validates that `trackPath` points to an accessible regular file,
+   * detects the file audio type, and dispatches tag writing to the appropriate
+   * format-specific writer. MP3 files are written through the ID3 writer and
+   * FLAC files through the FLAC tag writer. AIFF files and unrecognized audio
+   * formats are rejected as unsupported for tag writing.
+   *
+   * The public contract is result-based: internal guard failures are caught and
+   * mapped to a classified {@link BearTunesTaggerFailureResult}, so callers do
+   * not need to know about {@link TaggerGuardError}. Unexpected write-time
+   * failures are normalized and mapped to `TagWriteFailed`.
+   *
+   * @param trackPath - Path to the local audio file that should receive the provided metadata.
+   * @param trackInfo - Canonical track metadata to write into the target audio file.
+   * @returns A result containing the written track metadata on success, or a classified failure.
+   */
+  async saveTag(
+    trackPath: string,
+    trackInfo: TrackInfo,
+  ): Promise<BearTunesTaggerResult> {
+    try {
+      this.assertAccessibleInputFile(trackPath);
+
+      const audioFileType = await tryGetAudioFileTypeFromFile(trackPath);
+
+      switch (audioFileType) {
+        case AudioFileType.Mp3:
+          await this.saveTagToMp3File(trackPath, trackInfo);
+          break;
+
+        case AudioFileType.Flac:
+          await this.saveTagToFlacFile(trackPath, trackInfo);
+          break;
+
+        case AudioFileType.Aiff:
+        case undefined:
+          return BearTunesTagger.createFailureResult(
+            BearTunesTaggerFailureCode.UnsupportedAudioFileType,
+            new TypeError(
+              `${this.constructor.name}: Unsupported audio file type for tag writing ${audioFileType ?? 'unknown'} ${trackPath}`,
+            ),
+          );
+      }
+
+      return BearTunesTagger.createSuccessResult(trackInfo);
+    } catch (error: unknown) {
+      if (error instanceof TaggerGuardError) {
+        return BearTunesTagger.createFailureResult(
+          error.failureCode,
+          error.cause,
+          error.details,
+        );
+      }
+
+      return BearTunesTagger.createFailureResult(
+        BearTunesTaggerFailureCode.TagWriteFailed,
+        normalizeUnknownError(error),
+      );
+    }
+  }
+
   async processTrack(trackPath: string): Promise<BearTunesTaggerResult> {
     try {
       let forceRadioEdit = false;
