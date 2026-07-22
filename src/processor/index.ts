@@ -328,15 +328,17 @@ export class BearTunesProcessor {
       this.convertedMp3Paths.add(mp3RenameResult.targetPath);
     }
 
-    const flacTagResult = await this.dependencies.tagger.saveTag(
-      filePath,
-      trackInfo,
-    );
+    if (convertedMp3Path) {
+      const flacTagResult = await this.dependencies.tagger.saveTag(
+        filePath,
+        trackInfo,
+      );
 
-    if (!flacTagResult.ok) {
-      BearTunesProcessor.logTaggingFailure(filePath, flacTagResult);
+      if (!flacTagResult.ok) {
+        BearTunesProcessor.logTaggingFailure(filePath, flacTagResult);
 
-      return false;
+        return false;
+      }
     }
 
     const flacRenameResult = this.dependencies.renamer.rename(
