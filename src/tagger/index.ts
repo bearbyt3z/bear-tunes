@@ -341,7 +341,17 @@ export class BearTunesTagger {
     }
   }
 
-  async processTrack(trackPath: string): Promise<BearTunesTaggerResult> {
+  /**
+   * Resolves canonical track metadata for a local audio file without modifying it.
+   *
+   * The method reads a sibling URL file when available. Otherwise, it reads local
+   * tags, finds the best matching Beatport track, optionally asks the user to
+   * confirm a weak match or select a radio edit, and fetches canonical metadata.
+   *
+   * @param trackPath - Path to the local audio file used to resolve metadata.
+   * @returns Resolved canonical track metadata or a classified failure result.
+   */
+  async resolveTrackInfo(trackPath: string): Promise<BearTunesTaggerResult> {
     try {
       let forceRadioEdit = false;
 
@@ -488,7 +498,7 @@ export class BearTunesTagger {
         );
       }
 
-      return await this.saveTag(trackPath, trackInfo);
+      return BearTunesTagger.createSuccessResult(trackInfo);
     } catch (error: unknown) {
       if (error instanceof TaggerGuardError) {
         return BearTunesTagger.createFailureResult(
@@ -503,6 +513,22 @@ export class BearTunesTagger {
         normalizeUnknownError(error),
       );
     }
+  }
+
+  /**
+   * Resolves canonical track metadata and saves it to a local audio file.
+   *
+   * @param trackPath - Path to the audio file to resolve and tag.
+   * @returns Written track metadata or a classified failure result.
+   */
+  async processTrack(trackPath: string): Promise<BearTunesTaggerResult> {
+    const trackInfoResult = await this.resolveTrackInfo(trackPath);
+
+    if (!trackInfoResult.ok) {
+      return trackInfoResult;
+    }
+
+    return await this.saveTag(trackPath, trackInfoResult.trackInfo);
   }
 
   /**
