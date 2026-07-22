@@ -1438,7 +1438,7 @@ export class BearTunesTagger {
     });
   }
 
-  async saveTagToMp3File(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}): Promise<void> {
+  private async saveTagToMp3File(trackPath: string, trackData: TrackInfo, { id3v2 = true, id3v1 = true, verbose = false } = {}): Promise<void> {
     await this.assertInputAudioFileType(trackPath, AudioFileType.Mp3);
 
     const imagePaths: TrackArtworkFiles = {};
@@ -1625,7 +1625,7 @@ export class BearTunesTagger {
    * @param verbose - Whether to log eyeD3 standard output instead of the success message.
    * @throws Error When eyeD3 cannot be executed or exits unsuccessfully.
    */
-  static executeEyeD3Tool(
+  private static executeEyeD3Tool(
     version: ID3Version,
     options: string[],
     successMessage: string,
@@ -1643,7 +1643,7 @@ export class BearTunesTagger {
     logger.info(verbose ? result.stdout : successMessage);
   }
 
-  async saveTagToFlacFile(trackPath: string, trackData: TrackInfo, { verbose = false } = {}): Promise<void> {
+  private async saveTagToFlacFile(trackPath: string, trackData: TrackInfo, { verbose = false } = {}): Promise<void> {
     await this.assertInputAudioFileType(trackPath, AudioFileType.Flac);
 
     const imagePaths: TrackArtworkFiles = {};
@@ -1798,7 +1798,7 @@ export class BearTunesTagger {
     }
   }
 
-  static addMetaflacTaggingOption(optionArray: string[], tagName: string, tagValue: string): void {
+  private static addMetaflacTaggingOption(optionArray: string[], tagName: string, tagValue: string): void {
     optionArray.push(`--remove-tag=${tagName}`);
     optionArray.push(`--set-tag=${tagName}=${tagValue}`);
   }
@@ -1816,7 +1816,7 @@ export class BearTunesTagger {
    * @param verbose - Whether to log metaflac standard output instead of the success message.
    * @throws Error When metaflac cannot be executed or exits unsuccessfully.
    */
-  static executeMetaflacTool(
+  private static executeMetaflacTool(
     options: string[],
     successMessage: string,
     verbose = false,
