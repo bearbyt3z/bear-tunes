@@ -335,7 +335,7 @@ export class BearTunesTagger {
       }
 
       return BearTunesTagger.createFailureResult(
-        BearTunesTaggerFailureCode.TagWriteFailed,
+        BearTunesTaggerFailureCode.UnexpectedExecutionError,
         normalizeUnknownError(error),
       );
     }
@@ -1601,7 +1601,7 @@ export class BearTunesTagger {
       }
 
       throw new TaggerGuardError(
-        BearTunesTaggerFailureCode.TagWriteFailed,
+        BearTunesTaggerFailureCode.EyeD3TagWriteExecutionFailed,
         new Error(
           `${this.constructor.name} Cannot save tag to MP3 file ${path.basename(trackPath)}`,
           { cause: normalizeUnknownError(error) },
@@ -1787,7 +1787,7 @@ export class BearTunesTagger {
       }
 
       throw new TaggerGuardError(
-        BearTunesTaggerFailureCode.TagWriteFailed,
+        BearTunesTaggerFailureCode.MetaflacTagWriteExecutionFailed,
         new Error(
           `${this.constructor.name} Cannot save tag to FLAC file ${path.basename(trackPath)}`,
           { cause: normalizeUnknownError(error) },
