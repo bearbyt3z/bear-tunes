@@ -421,7 +421,7 @@ export class BearTunesTagger {
         trackUrl = bestMatchingTrack.url;
 
         if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
-          let warnMessage = `Couldn't match any track, the higgest score was ${bestMatchingTrack.score} for track:\n`;
+          let warnMessage = `Couldn't match any track, the highest score was ${bestMatchingTrack.score} for track:\n`;
           warnMessage += `${buildTrackFullName(bestMatchingTrack)}\n`;
           warnMessage += `Score keywords: ${bestMatchingTrack.scoreKeywords.join(', ')}\n`;
           warnMessage += `Name keywords: ${trackFilenameKeywords.join(', ')}`;
