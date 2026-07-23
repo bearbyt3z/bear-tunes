@@ -70,6 +70,11 @@ export enum BearTunesTaggerFailureCode {
    */
   TagWriteInputFileTypeMismatch = 423,
 
+  /**
+   * Artwork could not be downloaded from its declared URL.
+   */
+  ArtworkDownloadFailed = 424,
+
   // 430-439: unexpected errors
 
   /**

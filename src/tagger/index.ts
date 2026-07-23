@@ -1381,14 +1381,18 @@ export class BearTunesTagger {
   /**
    * Attempts to download an image asset.
    *
-   * Returns `undefined` when the image URL is missing or when the download fails.
-   * Logs a warning for missing image URLs and an error for failed downloads.
-   * When provided, `sourcePageUrl` is passed as the HTTP `Referer` value for the image request.
+   * Returns `undefined` and logs a warning when the image URL is missing.
+   * Throws a TaggerGuardError with ArtworkDownloadFailed when downloading an
+   * image from a declared URL fails. When provided, `sourcePageUrl` is passed
+   * as the HTTP `Referer` value for the image request.
    *
    * @param options - Image asset download options.
-   * @returns Downloaded image filename, or `undefined` when the image could not be downloaded.
+   * @returns Downloaded image filename, or `undefined` when the image URL is missing.
+   * @throws TaggerGuardError When the image cannot be downloaded from its declared URL.
    */
-  private static async tryDownloadImageAsset(options: DownloadImageAssetOptions): Promise<string | undefined> {
+  private static async tryDownloadImageAsset(
+    options: DownloadImageAssetOptions,
+  ): Promise<string | undefined> {
     const {
       imageUrl,
       sourcePageUrl,
@@ -1417,13 +1421,18 @@ export class BearTunesTagger {
 
       return filename;
     } catch (error: unknown) {
-      logger.error(`Failed to download ${label}.`, {
-        imageUrl: imageUrl.toString(),
-        sourcePageUrl: sourcePageUrl?.toString(),
-        error,
-      });
-
-      return undefined;
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.ArtworkDownloadFailed,
+        new Error(
+          `Cannot download ${label} from ${imageUrl}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+        {
+          imageUrl: imageUrl.toString(),
+          sourcePageUrl: sourcePageUrl?.toString(),
+          label,
+        },
+      );
     }
   }
 
