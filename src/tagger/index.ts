@@ -289,8 +289,8 @@ export class BearTunesTagger {
    *
    * The public contract is result-based: internal guard failures are caught and
    * mapped to a classified {@link BearTunesTaggerFailureResult}, so callers do
-   * not need to know about {@link TaggerGuardError}. Unexpected write-time
-   * failures are normalized and mapped to `TagWriteFailed`.
+   * not need to know about {@link TaggerGuardError}. Unexpected write-time failures
+   * are normalized and mapped to `UnexpectedExecutionError`.
    *
    * @param trackPath - Path to the local audio file that should receive the provided metadata.
    * @param trackInfo - Canonical track metadata to write into the target audio file.
