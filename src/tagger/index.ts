@@ -344,9 +344,12 @@ export class BearTunesTagger {
   /**
    * Resolves canonical track metadata for a local audio file without modifying it.
    *
-   * The method reads a sibling URL file when available. Otherwise, it reads local
-   * tags, finds the best matching Beatport track, optionally asks the user to
-   * confirm a weak match or select a radio edit, and fetches canonical metadata.
+   * When a sibling URL file exists, the method reads the track URL from that file.
+   * An unreadable URL file produces a TrackUrlFileReadFailed result, while a file
+   * without a valid URL produces a TrackUrlFileInvalid result. Otherwise, the
+   * method reads local tags, finds the best matching Beatport track, optionally
+   * asks the user to confirm a weak match or select a radio edit, and fetches
+   * canonical metadata.
    *
    * @param trackPath - Path to the local audio file used to resolve metadata.
    * @returns Resolved canonical track metadata or a classified failure result.
@@ -371,7 +374,17 @@ export class BearTunesTagger {
       let trackUrl: URL | undefined;
 
       if (fs.existsSync(trackUrlFilename)) {
-        trackUrl = await tryGetUrlFromFile(trackUrlFilename);
+        try {
+          trackUrl = await tryGetUrlFromFile(trackUrlFilename);
+        } catch (error: unknown) {
+          throw new TaggerGuardError(
+            BearTunesTaggerFailureCode.TrackUrlFileReadFailed,
+            new Error(
+              `${this.constructor.name}: Cannot read URL file ${trackUrlFilename}`,
+              { cause: normalizeUnknownError(error) },
+            ),
+          );
+        }
 
         if (trackUrl === null) {
           return BearTunesTagger.createFailureResult(

@@ -43,6 +43,11 @@ export enum BearTunesTaggerFailureCode {
    */
   TrackDataFetchFailed = 415,
 
+  /**
+   * The companion URL file could not be read.
+   */
+  TrackUrlFileReadFailed = 416,
+
   // 420-429: tag writing
 
   /**
