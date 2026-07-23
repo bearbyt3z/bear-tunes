@@ -48,6 +48,11 @@ export enum BearTunesTaggerFailureCode {
    */
   TrackUrlFileReadFailed = 416,
 
+  /**
+   * A request for metadata of the selected remote track failed.
+   */
+  TrackDataRequestFailed = 417,
+
   // 420-429: tag writing
 
   /**

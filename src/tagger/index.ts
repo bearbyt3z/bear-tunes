@@ -349,7 +349,8 @@ export class BearTunesTagger {
    * without a valid URL produces a TrackUrlFileInvalid result. Otherwise, the
    * method reads local tags, finds the best matching Beatport track, optionally
    * asks the user to confirm a weak match or select a radio edit, and fetches
-   * canonical metadata.
+   * canonical metadata. A failed metadata request produces a
+   * TrackDataRequestFailed result.
    *
    * @param trackPath - Path to the local audio file used to resolve metadata.
    * @returns Resolved canonical track metadata or a classified failure result.
@@ -500,7 +501,19 @@ export class BearTunesTagger {
         );
       }
 
-      const trackInfo = await this.extractTrackData(trackUrl, forceRadioEdit);
+      let trackInfo: TrackInfo;
+
+      try {
+        trackInfo = await this.extractTrackData(trackUrl, forceRadioEdit);
+      } catch (error: unknown) {
+        throw new TaggerGuardError(
+          BearTunesTaggerFailureCode.TrackDataRequestFailed,
+          new Error(
+            `${this.constructor.name}: Cannot request track metadata from ${trackUrl}`,
+            { cause: normalizeUnknownError(error) },
+          ),
+        );
+      }
 
       if (isEmptyPlainObject(trackInfo)) {
         return BearTunesTagger.createFailureResult(
