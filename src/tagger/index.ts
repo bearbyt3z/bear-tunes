@@ -1529,6 +1529,9 @@ export class BearTunesTagger {
         eyeD3Options.push('--album-artist', trackData.album.artists.join(', '));
       }
       if (trackData.album?.trackNumber) {
+        // Remove non-standard TXXX:TOTALTRACKS frame before writing the standard TRCK frame
+        eyeD3Options.push('--user-text-frame', 'TOTALTRACKS:');
+
         let albumNumbers = trackData.album.trackNumber.toString();
         if (trackData.album?.trackTotal) {
           albumNumbers += `/${trackData.album.trackTotal.toString()}`;
@@ -1546,6 +1549,9 @@ export class BearTunesTagger {
         eyeD3Options.push('--text-frame', `TYER:${trackData.year}`);
       }
       if (trackData.released) {
+        // Remove non-standard TXXX:RELEASETIME frame before writing the standard release date frames
+        eyeD3Options.push('--user-text-frame', 'RELEASETIME:');
+
         const releasedString = formatLocalDateToIsoDateString(trackData.released);
         eyeD3Options.push('--text-frame', `TORY:${releasedString}`);
         eyeD3Options.push('--text-frame', `TRDA:${releasedString}`);
@@ -1563,9 +1569,15 @@ export class BearTunesTagger {
         eyeD3Options.push('--url-frame', `WPUB:${escapeUnescapedColons(trackData.publisher.url.toString())}`); // publisher webpage
       }
       if (trackData.bpm) {
+        // Remove non-standard TXXX:BPM frame before writing the standard TBPM frame
+        eyeD3Options.push('--user-text-frame', 'BPM:');
+
         eyeD3Options.push('--bpm', trackData.bpm.toString());
       }
       if (trackData.key) {
+        // Remove non-standard TXXX:KEY frame before writing the standard TKEY frame
+        eyeD3Options.push('--user-text-frame', 'KEY:');
+
         eyeD3Options.push('--text-frame', `TKEY:${trackData.key}`);
         eyeD3Options.push('--user-text-frame', `INITIALKEY:${trackData.key}`); // TKEY is not recoginzed in foobar2000
       }
@@ -1590,10 +1602,16 @@ export class BearTunesTagger {
         eyeD3Options.push('--genre', genreTag);
       }
       if (trackData.publisher?.name) {
+        // Remove non-standard TXXX:LABEL frame before writing the standard TPUB frame
+        eyeD3Options.push('--user-text-frame', 'LABEL:');
+
         eyeD3Options.push('--publisher', trackData.publisher.name);
         eyeD3Options.push('--text-frame', `TIT1:${escapeUnescapedColons(trackData.publisher.name)}`); // TIT1 => CONTENTGROUP
       }
       if (trackData.isrc) {
+        // Remove non-standard TXXX:ISRC frame before writing the standard TSRC frame
+        eyeD3Options.push('--user-text-frame', 'ISRC:');
+
         eyeD3Options.push('--text-frame', `TSRC:${escapeUnescapedColons(trackData.isrc)}`);
       }
       if (trackData.ufid) {
