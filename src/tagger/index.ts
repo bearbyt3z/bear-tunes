@@ -1609,6 +1609,7 @@ export class BearTunesTagger {
           ID3Version.ID3v2_4,
           [
             '--remove-all-images',
+            trackPath,
           ],
           `All picture blocks of ID3v${ID3Version.ID3v2_4} MP3 tag removed in "${path.basename(trackPath)}"`,
           this.options.eyed3Verbose,
