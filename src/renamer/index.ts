@@ -221,6 +221,42 @@ export class BearTunesRenamer {
   }
 
   /**
+   * Asserts that the input path points to an accessible regular file.
+   *
+   * This helper acts as a fail-fast guard for rename preparation. It aborts
+   * the current rename flow by throwing {@link RenamerGuardError} when the
+   * input path cannot be accessed or does not point to a regular file.
+   *
+   * @param trackPath - Path to the source track file.
+   * @throws RenamerGuardError When the input path is inaccessible or does not
+   * point to a regular file.
+   */
+  private assertValidInputFilePath(trackPath: string): void {
+    let trackPathStats: fs.Stats;
+
+    try {
+      trackPathStats = fs.lstatSync(trackPath);
+    } catch (error: unknown) {
+      throw new RenamerGuardError(
+        BearTunesRenamerFailureCode.InputFileAccessError,
+        new Error(
+          `${this.constructor.name} Cannot access input track path ${trackPath}.`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
+    }
+
+    if (!trackPathStats.isFile()) {
+      throw new RenamerGuardError(
+        BearTunesRenamerFailureCode.InvalidInputFile,
+        new TypeError(
+          `${this.constructor.name} Specified input track path ${trackPath} is not a file.`,
+        ),
+      );
+    }
+  }
+
+  /**
    * Asserts that the target directory base path is accessible and points to a directory.
    *
    * This helper acts as a fail-fast guard for target directory resolution
@@ -476,13 +512,15 @@ export class BearTunesRenamer {
   }
 
   /**
-   * Renames or moves a track file according to the configured renamer patterns.
+   * Renames or moves an accessible source track file according to the configured
+   * renamer patterns.
    *
-   * The method prepares the final target path from the provided track metadata
-   * and optional target base directory, then authorizes writing to that path
-   * according to `forceOverwriteTargetFile`. An existing target file is rejected
-   * unless forced overwrite is enabled.
+   * The method validates that trackPath points to a regular file, prepares the
+   * final target path from the provided track metadata and optional target base
+   * directory, then authorizes writing to that path according to
+   * forceOverwriteTargetFile.
    *
+   * An existing target file is rejected unless forced overwrite is enabled.
    * After the target path is authorized, the method executes the filesystem
    * rename operation and returns a discriminated result describing either
    * success or failure.
@@ -501,6 +539,8 @@ export class BearTunesRenamer {
     let targetPath: string;
 
     try {
+      this.assertValidInputFilePath(trackPath);
+
       targetPath = this.resolveTargetPath(
         trackPath,
         targetBaseDirectory,

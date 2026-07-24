@@ -25,6 +25,12 @@ export enum BearTunesRenamerFailureCode {
   /** The resolved target file path already exists. */
   TargetFileAlreadyExists = 307,
 
+  /** The input track file could not be accessed. */
+  InputFileAccessError = 308,
+
+  /** The input track path does not point to a regular file. */
+  InvalidInputFile = 309,
+
   // 310-319: rename execution
 
   /** Renaming or moving the track file failed. */
