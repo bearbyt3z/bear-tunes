@@ -622,9 +622,9 @@ export class BearTunesTagger {
    *
    * @param trackPath - Path to the MP3 file to inspect.
    * @returns Parsed and validated local track metadata.
-   * @throws {TaggerGuardError} When the ID3 reader cannot read the requested
-   * metadata, its output cannot be parsed, or the normalized metadata does not
-   * satisfy the track schema.
+   * @throws {TaggerGuardError} With `ID3TagReadExecutionFailed` when the MP3
+   * tag reader cannot read the requested metadata, or with `TagReadOutputInvalid`
+   * when its output cannot be parsed, normalized, or validated.
    */
   // Unfortunately display plugin is not available anymore in eyeD3 v0.9.7: https://github.com/nicfit/eyeD3/pull/585
   // This is mentioned also in history file: https://github.com/nicfit/eyeD3/blob/6ae155405770afbc1446432e71782d761218baa4/HISTORY.rst
@@ -660,7 +660,7 @@ export class BearTunesTagger {
         ?? `ID3 reader exited with status ${String(displayPluginOutput.status)}`;
 
       throw new TaggerGuardError(
-        BearTunesTaggerFailureCode.TagReadFailed,
+        BearTunesTaggerFailureCode.ID3TagReadExecutionFailed,
         new Error(
           `${this.constructor.name}: Cannot read ID3 tag of ${path.basename(trackPath)}: `
           + readerErrorMessage,
@@ -683,7 +683,7 @@ export class BearTunesTagger {
 
       if (!parsedTrackInfo.success) {
         throw new TaggerGuardError(
-          BearTunesTaggerFailureCode.TagReadFailed,
+          BearTunesTaggerFailureCode.TagReadOutputInvalid,
           new TypeError(
             `${this.constructor.name}: Cannot validate ID3 tag output from ${trackPath}`,
           ),
@@ -700,7 +700,7 @@ export class BearTunesTagger {
       }
 
       throw new TaggerGuardError(
-        BearTunesTaggerFailureCode.TagReadFailed,
+        BearTunesTaggerFailureCode.TagReadOutputInvalid,
         new Error(
           `${this.constructor.name}: Cannot parse ID3 tag output from ${trackPath}`,
           { cause: normalizeUnknownError(error) },
@@ -866,8 +866,9 @@ export class BearTunesTagger {
    *
    * @param flacFilePath - Path to the FLAC file to inspect.
    * @returns Parsed and validated local track metadata.
-   * @throws {TaggerGuardError} When metaflac cannot read the requested tags, or
-   * the normalized metadata does not satisfy the track schema.
+   * @throws {TaggerGuardError} With `MetaflacTagReadExecutionFailed` when
+   * `metaflac` cannot read the requested tags, or with `TagReadOutputInvalid`
+   * when the resulting metadata cannot be normalized or validated.
    */
   private extractFlacTag(flacFilePath: string): TrackInfo {
     const metaflacResult = childProcess.spawnSync(
@@ -902,7 +903,7 @@ export class BearTunesTagger {
         ?? `metaflac exited with status ${String(metaflacResult.status)}`;
 
       throw new TaggerGuardError(
-        BearTunesTaggerFailureCode.TagReadFailed,
+        BearTunesTaggerFailureCode.MetaflacTagReadExecutionFailed,
         new Error(
           `${this.constructor.name}: Cannot read FLAC tag from ${flacFilePath}: `
           + metaflacErrorMessage,
@@ -935,7 +936,7 @@ export class BearTunesTagger {
 
     if (!parsedTrackInfo.success) {
       throw new TaggerGuardError(
-        BearTunesTaggerFailureCode.TagReadFailed,
+        BearTunesTaggerFailureCode.TagReadOutputInvalid,
         new TypeError(
           `${this.constructor.name}: Cannot validate FLAC tag output from ${flacFilePath}`,
         ),

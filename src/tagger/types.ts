@@ -16,52 +16,32 @@ export enum BearTunesTaggerFailureCode {
    */
   UnsupportedAudioFileType = 402,
 
-  // 410-419: tag reading and remote track resolution
+  // 410-419: tag reading
 
   /**
-   * Local metadata could not be read from the input audio file.
-   */
-  TagReadFailed = 411,
+  * Executing the MP3 tag reader to read tags from an MP3 file failed.
+  */
+  ID3TagReadExecutionFailed = 411,
 
   /**
-   * A companion URL file exists but does not contain a valid track URL.
-   */
-  TrackUrlFileInvalid = 412,
+  * Executing the `metaflac` tool to read tags from a FLAC file failed.
+  */
+  MetaflacTagReadExecutionFailed = 412,
 
   /**
-   * Matching the local track with a remote track failed.
-   */
-  TrackMatchFailed = 413,
-
-  /**
-   * A candidate remote track was rejected during interactive matching.
-   */
-  TrackMatchRejected = 414,
-
-  /**
-   * Metadata for the selected remote track could not be retrieved or validated.
-   */
-  TrackDataFetchFailed = 415,
-
-  /**
-   * The companion URL file could not be read.
-   */
-  TrackUrlFileReadFailed = 416,
-
-  /**
-   * A request for metadata of the selected remote track failed.
-   */
-  TrackDataRequestFailed = 417,
+  * Tag reader output could not be parsed, normalized, or validated.
+  */
+  TagReadOutputInvalid = 413,
 
   // 420-429: tag writing
 
   /**
-   * Executing the eyeD3 tool to write tags to an MP3 file failed.
+   * Executing the `eyeD3` tool to write tags to an MP3 file failed.
    */
   EyeD3TagWriteExecutionFailed = 421,
 
   /**
-   * Executing the metaflac tool to write tags to a FLAC file failed.
+   * Executing the `metaflac` tool to write tags to a FLAC file failed.
    */
   MetaflacTagWriteExecutionFailed = 422,
 
@@ -80,17 +60,49 @@ export enum BearTunesTaggerFailureCode {
   */
   ArtworkValidationFailed = 425,
 
-  // 430-439: unexpected errors
+  // 430-439: remote track resolution
+
+  /**
+   * The companion URL file could not be read.
+   */
+  TrackUrlFileReadFailed = 431,
+
+  /**
+   * The companion URL file does not contain a valid track URL.
+   */
+  TrackUrlFileInvalid = 432,
+
+  /**
+   * Matching the local track with a remote track failed.
+   */
+  TrackMatchFailed = 433,
+
+  /**
+   * A candidate remote track was rejected during interactive matching.
+   */
+  TrackMatchRejected = 434,
+
+  /**
+   * Metadata for the selected remote track could not be retrieved or validated.
+   */
+  TrackDataFetchFailed = 435,
+
+  /**
+   * A request for metadata of the selected remote track failed.
+   */
+  TrackDataRequestFailed = 436,
+
+  // 440-449: unexpected errors
 
   /**
    * An unexpected error occurred while preparing a tagger operation.
    */
-  UnexpectedPreparationError = 431,
+  UnexpectedPreparationError = 441,
 
   /**
    * An unexpected error occurred while executing a tagger operation.
    */
-  UnexpectedExecutionError = 432,
+  UnexpectedExecutionError = 442,
 }
 
 /**
