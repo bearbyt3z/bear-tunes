@@ -1621,46 +1621,48 @@ export class BearTunesTagger {
 
       eyeD3Options.push(trackPath);
 
-      if (id3v2) {
-        // Remove embedded images (only id3v2 has image frames)
-        BearTunesTagger.executeEyeD3Tool(
-          ID3Version.ID3v2_4,
-          [
-            '--remove-all-images',
-            trackPath,
-          ],
-          `All picture blocks of ID3v${ID3Version.ID3v2_4} MP3 tag removed in "${path.basename(trackPath)}"`,
-          this.options.eyed3Verbose,
-        );
+      try {
+        if (id3v2) {
+          // Remove embedded images (only id3v2 has image frames)
+          BearTunesTagger.executeEyeD3Tool(
+            ID3Version.ID3v2_4,
+            [
+              '--remove-all-images',
+              trackPath,
+            ],
+            `All picture blocks of ID3v${ID3Version.ID3v2_4} MP3 tag removed in "${path.basename(trackPath)}"`,
+            this.options.eyed3Verbose,
+          );
 
-        BearTunesTagger.executeEyeD3Tool(
-          ID3Version.ID3v2_4,
-          eyeD3Options,
-          `MP3 ID3v${ID3Version.ID3v2_4} tag was saved to "${trackFilename}"`,
-          this.options.eyed3Verbose,
+          BearTunesTagger.executeEyeD3Tool(
+            ID3Version.ID3v2_4,
+            eyeD3Options,
+            `MP3 ID3v${ID3Version.ID3v2_4} tag was saved to "${trackFilename}"`,
+            this.options.eyed3Verbose,
+          );
+        }
+
+        if (id3v1) {
+          BearTunesTagger.executeEyeD3Tool(
+            ID3Version.ID3v1_1,
+            eyeD3Options,
+            `MP3 ID3v${ID3Version.ID3v1_1} tag was saved to "${trackFilename}"`,
+            this.options.eyed3Verbose,
+          );
+        }
+      } catch (error: unknown) {
+        if (error instanceof TaggerGuardError) {
+          throw error;
+        }
+
+        throw new TaggerGuardError(
+          BearTunesTaggerFailureCode.EyeD3TagWriteExecutionFailed,
+          new Error(
+            `${this.constructor.name} Cannot save tag to MP3 file ${path.basename(trackPath)}`,
+            { cause: normalizeUnknownError(error) },
+          ),
         );
       }
-
-      if (id3v1) {
-        BearTunesTagger.executeEyeD3Tool(
-          ID3Version.ID3v1_1,
-          eyeD3Options,
-          `MP3 ID3v${ID3Version.ID3v1_1} tag was saved to "${trackFilename}"`,
-          this.options.eyed3Verbose,
-        );
-      }
-    } catch (error: unknown) {
-      if (error instanceof TaggerGuardError) {
-        throw error;
-      }
-
-      throw new TaggerGuardError(
-        BearTunesTaggerFailureCode.EyeD3TagWriteExecutionFailed,
-        new Error(
-          `${this.constructor.name} Cannot save tag to MP3 file ${path.basename(trackPath)}`,
-          { cause: normalizeUnknownError(error) },
-        ),
-      );
     } finally {
       BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
     }
@@ -1810,18 +1812,6 @@ export class BearTunesTagger {
         BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ISRC', trackData.isrc);
       }
 
-      // removing all embedded images
-      if (imagePaths.frontCover || imagePaths.waveform || imagePaths.publisherLogotype) {
-        BearTunesTagger.executeMetaflacTool(
-          [
-            '--remove', '--block-type=PICTURE,PADDING',
-            trackPath,
-          ],
-          `All picture blocks removed in "${path.basename(trackPath)}"`,
-          this.options.metaflacVerbose,
-        );
-      }
-
       if (imagePaths.frontCover && await isSupportedArtworkFile(imagePaths.frontCover)) {
         metaflacOptions.push(`--import-picture-from=3||Front Cover||${imagePaths.frontCover}`); // front cover
       }
@@ -1834,19 +1824,37 @@ export class BearTunesTagger {
 
       metaflacOptions.push(trackPath);
 
-      BearTunesTagger.executeMetaflacTool(metaflacOptions, `FLAC tag was saved to "${path.basename(trackPath)}"`, this.options.metaflacVerbose);
-    } catch (error: unknown) {
-      if (error instanceof TaggerGuardError) {
-        throw error;
-      }
+      try {
+        // removing all embedded images
+        if (imagePaths.frontCover || imagePaths.waveform || imagePaths.publisherLogotype) {
+          BearTunesTagger.executeMetaflacTool(
+            [
+              '--remove', '--block-type=PICTURE,PADDING',
+              trackPath,
+            ],
+            `All picture blocks removed in "${path.basename(trackPath)}"`,
+            this.options.metaflacVerbose,
+          );
+        }
 
-      throw new TaggerGuardError(
-        BearTunesTaggerFailureCode.MetaflacTagWriteExecutionFailed,
-        new Error(
-          `${this.constructor.name} Cannot save tag to FLAC file ${path.basename(trackPath)}`,
-          { cause: normalizeUnknownError(error) },
-        ),
-      );
+        BearTunesTagger.executeMetaflacTool(
+          metaflacOptions,
+          `FLAC tag was saved to "${path.basename(trackPath)}"`,
+          this.options.metaflacVerbose,
+        );
+      } catch (error: unknown) {
+        if (error instanceof TaggerGuardError) {
+          throw error;
+        }
+
+        throw new TaggerGuardError(
+          BearTunesTaggerFailureCode.MetaflacTagWriteExecutionFailed,
+          new Error(
+            `${this.constructor.name} Cannot save tag to FLAC file ${path.basename(trackPath)}`,
+            { cause: normalizeUnknownError(error) },
+          ),
+        );
+      }
     } finally {
       BearTunesTagger.cleanupTrackArtworkFiles(imagePaths);
     }
