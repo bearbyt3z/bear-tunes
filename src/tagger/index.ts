@@ -342,21 +342,27 @@ export class BearTunesTagger {
   }
 
   /**
-   * Resolves canonical track metadata for a local audio file without modifying it.
+   * Resolves canonical track metadata for an accessible local audio file without
+   * modifying it.
    *
-   * When a sibling URL file exists, the method reads the track URL from that file.
-   * An unreadable URL file produces a TrackUrlFileReadFailed result, while a file
-   * without a valid URL produces a TrackUrlFileInvalid result. Otherwise, the
-   * method reads local tags, finds the best matching Beatport track, optionally
-   * asks the user to confirm a weak match or select a radio edit, and fetches
-   * canonical metadata. A failed metadata request produces a
-   * TrackDataRequestFailed result.
+   * The method first verifies that `trackPath` points to an accessible regular
+   * file. When a sibling URL file exists, the method reads the track URL from
+   * that file. An unreadable URL file produces a `TrackUrlFileReadFailed`
+   * result, while a file without a valid URL produces a `TrackUrlFileInvalid`
+   * result.
+   *
+   * When no sibling URL file exists, the method reads local tags, finds the best
+   * matching Beatport track, optionally asks the user to confirm a weak match or
+   * select a radio edit, and fetches canonical metadata. A failed metadata
+   * request produces a `TrackDataRequestFailed` result.
    *
    * @param trackPath - Path to the local audio file used to resolve metadata.
    * @returns Resolved canonical track metadata or a classified failure result.
    */
   async resolveTrackInfo(trackPath: string): Promise<BearTunesTaggerResult> {
     try {
+      this.assertAccessibleInputFile(trackPath);
+
       let forceRadioEdit = false;
 
       const trackFilename = path.basename(trackPath);
