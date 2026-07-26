@@ -75,6 +75,11 @@ export enum BearTunesTaggerFailureCode {
    */
   ArtworkDownloadFailed = 424,
 
+  /**
+  * Artwork file could not be validated or is not supported for tag embedding.
+  */
+  ArtworkValidationFailed = 425,
+
   // 430-439: unexpected errors
 
   /**

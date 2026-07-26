@@ -1437,6 +1437,56 @@ export class BearTunesTagger {
   }
 
   /**
+  * Asserts that a downloaded artwork file can be embedded in audio tags.
+  *
+  * Throws a TaggerGuardError with ArtworkValidationFailed when the file
+  * cannot be validated or is not supported for embedding.
+  *
+  * @param imagePath - Local path of the downloaded artwork file.
+  * @param label - Human-readable artwork label used in the error message.
+  * @throws TaggerGuardError When the artwork file cannot be validated or is unsupported.
+  */
+  private static async assertSupportedArtworkFile(
+    imagePath: string,
+    label: string,
+  ): Promise<void> {
+    try {
+      const isSupported = await isSupportedArtworkFile(imagePath);
+
+      if (isSupported) {
+        return;
+      }
+
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.ArtworkValidationFailed,
+        new Error(
+          `Unsupported ${label} artwork file: ${imagePath}`,
+        ),
+        {
+          imagePath,
+          label,
+        },
+      );
+    } catch (error: unknown) {
+      if (error instanceof TaggerGuardError) {
+        throw error;
+      }
+
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.ArtworkValidationFailed,
+        new Error(
+          `Cannot validate ${label} artwork file: ${imagePath}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+        {
+          imagePath,
+          label,
+        },
+      );
+    }
+  }
+
+  /**
    * Removes temporary artwork files created while preparing track tags.
    *
    * The cleanup is best-effort: a failure to remove one file is logged and does
@@ -1587,13 +1637,21 @@ export class BearTunesTagger {
         eyeD3Options.push('--user-text-frame', `CATALOG #:${escapeUnescapedColons(trackData.album.catalogNumber)}`);
       }
 
-      if (imagePaths.frontCover && await isSupportedArtworkFile(imagePaths.frontCover)) {
+      if (imagePaths.frontCover) {
+        await BearTunesTagger.assertSupportedArtworkFile(imagePaths.frontCover, 'front cover');
+
         eyeD3Options.push('--add-image', `${imagePaths.frontCover}:FRONT_COVER:Front Cover`); // front cover
       }
-      if (imagePaths.waveform && await isSupportedArtworkFile(imagePaths.waveform)) {
+
+      if (imagePaths.waveform) {
+        await BearTunesTagger.assertSupportedArtworkFile(imagePaths.waveform, 'waveform');
+
         eyeD3Options.push('--add-image', `${imagePaths.waveform}:BRIGHT_COLORED_FISH:Waveform`); // waveform
       }
-      if (imagePaths.publisherLogotype && await isSupportedArtworkFile(imagePaths.publisherLogotype)) {
+
+      if (imagePaths.publisherLogotype) {
+        await BearTunesTagger.assertSupportedArtworkFile(imagePaths.publisherLogotype, 'publisher logotype');
+
         eyeD3Options.push('--add-image', `${imagePaths.publisherLogotype}:PUBLISHER_LOGO:Publisher Logotype`); // publisher logo
       }
 
@@ -1812,13 +1870,21 @@ export class BearTunesTagger {
         BearTunesTagger.addMetaflacTaggingOption(metaflacOptions, 'ISRC', trackData.isrc);
       }
 
-      if (imagePaths.frontCover && await isSupportedArtworkFile(imagePaths.frontCover)) {
+      if (imagePaths.frontCover) {
+        await BearTunesTagger.assertSupportedArtworkFile(imagePaths.frontCover, 'front cover');
+
         metaflacOptions.push(`--import-picture-from=3||Front Cover||${imagePaths.frontCover}`); // front cover
       }
-      if (imagePaths.waveform && await isSupportedArtworkFile(imagePaths.waveform)) {
+
+      if (imagePaths.waveform) {
+        await BearTunesTagger.assertSupportedArtworkFile(imagePaths.waveform, 'waveform');
+
         metaflacOptions.push(`--import-picture-from=17||Waveform||${imagePaths.waveform}`); // waveform
       }
-      if (imagePaths.publisherLogotype && await isSupportedArtworkFile(imagePaths.publisherLogotype)) {
+
+      if (imagePaths.publisherLogotype) {
+        await BearTunesTagger.assertSupportedArtworkFile(imagePaths.publisherLogotype, 'publisher logotype');
+
         metaflacOptions.push(`--import-picture-from=20||Publisher Logotype||${imagePaths.publisherLogotype}`); // publisher logo
       }
 
