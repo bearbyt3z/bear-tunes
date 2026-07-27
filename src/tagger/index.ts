@@ -1071,28 +1071,28 @@ export class BearTunesTagger {
     const tagOptions = ['--add-id3v2'];
 
     if (flacTrackInfo.title) {
-      tagOptions.push(`--tt "${flacTrackInfo.title}"`);
+      tagOptions.push('--tt', flacTrackInfo.title);
     }
 
     if (flacTrackInfo.artists && flacTrackInfo.artists.length > 0) {
-      tagOptions.push(`--ta "${flacTrackInfo.artists.join(', ')}"`);
+      tagOptions.push('--ta', flacTrackInfo.artists.join(', '));
     }
 
     if (flacTrackInfo.genre) {
-      tagOptions.push(`--tg "${flacTrackInfo.genre}"`);
+      tagOptions.push('--tg', flacTrackInfo.genre);
     }
 
     if (flacTrackInfo.year) {
-      tagOptions.push(`--ty "${flacTrackInfo.year}"`);
+      tagOptions.push('--ty', flacTrackInfo.year.toString());
     }
 
     if (flacTrackInfo.released) {
-      tagOptions.push(`--tv TORY=${formatLocalDateToIsoDateString(flacTrackInfo.released)}`);
+      tagOptions.push('--tv', `TORY=${formatLocalDateToIsoDateString(flacTrackInfo.released)}`);
     }
 
     if (flacTrackInfo.album) {
       if (flacTrackInfo.album.title) {
-        tagOptions.push(`--tl "${flacTrackInfo.album.title}"`);
+        tagOptions.push('--tl', flacTrackInfo.album.title);
       }
 
       if (flacTrackInfo.album.trackNumber) {
@@ -1102,7 +1102,7 @@ export class BearTunesTagger {
           albumNumbers += `/${flacTrackInfo.album.trackTotal.toString()}`;
         }
 
-        tagOptions.push(`--tn "${albumNumbers}"`);
+        tagOptions.push('--tn', albumNumbers);
       }
     }
 
@@ -1113,7 +1113,7 @@ export class BearTunesTagger {
     );
 
     if (exportedFlacPictures.length > 0) {
-      tagOptions.push(`--ti "${exportedFlacPictures[0].imagePath}"`);
+      tagOptions.push('--ti', exportedFlacPictures[0].imagePath);
       result.temporaryFiles.push(...exportedFlacPictures.map((imageInfo) => imageInfo.imagePath));
     }
 
