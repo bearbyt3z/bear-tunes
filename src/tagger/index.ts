@@ -31,6 +31,7 @@ import {
   escapeUnescapedColons,
   executeCommandSync,
   extractTrackNameKeywords,
+  formatCommandArgumentsForLogging,
   formatLocalDateToIsoDateString,
   formatZodErrorIssues,
   generateRandomHexString,
@@ -1121,7 +1122,9 @@ export class BearTunesTagger {
     result.lameTagOptions = (tagOptions.length > 1) ? tagOptions : [];
 
     if (this.options.verbose) {
-      logger.info(`Using following tag options: ${result.lameTagOptions.join(' ')}`);
+      logger.info(
+        `Using following tag options: ${formatCommandArgumentsForLogging(result.lameTagOptions)}`,
+      );
     }
 
     return result;

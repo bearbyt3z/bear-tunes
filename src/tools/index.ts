@@ -58,6 +58,8 @@ export {
 } from './utils/error.js';
 
 export {
+  formatCommandArgumentForLogging,
+  formatCommandArgumentsForLogging,
   formatLocalDateToIsoDateString,
   getFirstLine,
   roundToDecimalPlaces,

@@ -34,6 +34,38 @@ export function formatLocalDateToIsoDateString(date: Date): string {
 }
 
 /**
+ * Formats one command-line argument for human-readable diagnostic output.
+ *
+ * Values containing whitespace, quotation marks, or backslashes are JSON
+ * serialized so that their boundaries and special characters are visible.
+ * The returned value is for display only and is not shell-escaped.
+ *
+ * @param argument - Command-line argument to format.
+ * @returns Readable display representation of the argument.
+ */
+export function formatCommandArgumentForLogging(argument: string): string {
+  return /[\s"'\\]/u.test(argument)
+    ? JSON.stringify(argument)
+    : argument;
+}
+
+/**
+ * Formats command-line arguments for human-readable diagnostic output.
+ *
+ * Each argument is formatted independently, then the resulting values are
+ * joined with spaces. The returned string is for logging only and must not be
+ * used as a shell command.
+ *
+ * @param args - Command-line arguments to format.
+ * @returns A space-separated diagnostic representation of the arguments.
+ */
+export function formatCommandArgumentsForLogging(
+  args: readonly string[],
+): string {
+  return args.map(formatCommandArgumentForLogging).join(' ');
+}
+
+/**
  * Converts a duration in seconds to a human-readable time string.
  *
  * The result uses `m:ss` format for durations shorter than one hour and
