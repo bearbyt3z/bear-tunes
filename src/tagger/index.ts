@@ -1117,7 +1117,7 @@ export class BearTunesTagger {
       result.temporaryFiles.push(...exportedFlacPictures.map((imageInfo) => imageInfo.imagePath));
     }
 
-    // length > 1 means there is at least one tag entry to set (the fist one is --add-id3v2)
+    // length > 1 means there is at least one tag entry to set (the first one is --add-id3v2)
     result.lameTagOptions = (tagOptions.length > 1) ? tagOptions : [];
 
     if (this.options.verbose) {
