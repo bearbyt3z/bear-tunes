@@ -331,23 +331,6 @@ export async function executeCommandPipeline(
     );
   }
 
-  if (firstProcessResult.status !== 0) {
-    const stderr = firstStderr?.toString('utf8') ?? '';
-
-    throw new FirstPipelineCommandFailedError(
-      buildProcessExitError(
-        firstCommand.commandName,
-        firstProcessResult.status,
-        firstProcessResult.signal,
-        stderr,
-      ).message,
-      firstCommand.commandName,
-      firstProcessResult.status,
-      firstProcessResult.signal,
-      stderr,
-    );
-  }
-
   if (secondProcessResult.status !== 0) {
     const stderr = secondStderr?.toString('utf8') ?? '';
 
@@ -361,6 +344,23 @@ export async function executeCommandPipeline(
       secondCommand.commandName,
       secondProcessResult.status,
       secondProcessResult.signal,
+      stderr,
+    );
+  }
+
+  if (firstProcessResult.status !== 0) {
+    const stderr = firstStderr?.toString('utf8') ?? '';
+
+    throw new FirstPipelineCommandFailedError(
+      buildProcessExitError(
+        firstCommand.commandName,
+        firstProcessResult.status,
+        firstProcessResult.signal,
+        stderr,
+      ).message,
+      firstCommand.commandName,
+      firstProcessResult.status,
+      firstProcessResult.signal,
       stderr,
     );
   }
