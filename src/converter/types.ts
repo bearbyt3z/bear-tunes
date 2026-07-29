@@ -49,10 +49,10 @@ export enum BearTunesConverterFailureCode {
   /** The conversion pipeline failed due to infrastructure issues. */
   ConversionPipelineInfrastructureFailed = 131,
 
-  /** The FLAC decoder process failed. */
+  /** The `FLAC` decoder process failed. */
   FlacDecodeProcessFailed = 132,
 
-  /** The LAME encoder process failed. */
+  /** The `LAME` encoder process failed. */
   LameEncodeProcessFailed = 133,
 
   /** An unexpected error occurred while executing the conversion pipeline. */
