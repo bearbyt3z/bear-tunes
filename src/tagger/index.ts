@@ -957,46 +957,67 @@ export class BearTunesTagger {
   }
 
   /**
-   * Exports selected PICTURE blocks from a FLAC file to image files.
+   * Exports selected PICTURE blocks from a FLAC file to temporary image files.
    *
-   * Only blocks whose type is included in `blockTypes` are exported.
+   * Picture blocks are selected by their semantic PICTURE type, such as front
+   * cover or publisher logotype. Each selected image is exported by its FLAC
+   * metadata block number, which is independent of the PICTURE type.
    *
    * @param flacFilePath - Path to the source FLAC file.
-   * @param blockTypes - FLAC PICTURE block types to export.
-   * @returns Metadata of successfully exported picture blocks, including image file paths.
+   * @param pictureTypes - Semantic FLAC PICTURE types to export.
+   * @returns Metadata of successfully exported picture blocks, including paths
+   * to their exported image files.
    */
   static exportFlacPictureBlocks(
     flacFilePath: string,
-    blockTypes: FlacPictureBlockType[],
+    pictureTypes: readonly FlacPictureBlockType[],
   ): ExportedFlacPictureBlock[] {
     const result: ExportedFlacPictureBlock[] = [];
 
-    const flacPictureBlocks = BearTunesTagger.listFlacPictureBlocks(flacFilePath);
-    if (flacPictureBlocks.length < 1) {
-      return result;
-    }
+    const matchingPictureBlocks = BearTunesTagger
+      .listFlacPictureBlocks(flacFilePath)
+      .filter((pictureBlock) => pictureTypes.includes(pictureBlock.pictureType));
 
-    const matchingPictureBlocks = flacPictureBlocks.filter((info) => blockTypes.includes(info.blockType));
-    if (matchingPictureBlocks.length < 1) {
-      return result;
-    }
+    for (const pictureBlock of matchingPictureBlocks) {
+      const imageExtension = pictureBlock.mimeType
+        .replace(/^image\//u, '')
+        .toLowerCase();
 
-    for (const pictureBlockInfo of matchingPictureBlocks) {
-      const imageFileExtension = pictureBlockInfo.mimeType.replace('image/', '');
-      const imagePath = `${generateRandomHexString()}.${imageFileExtension}`;
+      if (imageExtension.length === 0) {
+        logger.warn('Skipping FLAC PICTURE block with unsupported MIME type.', {
+          flacFilePath,
+          metadataBlockNumber: pictureBlock.metadataBlockNumber,
+          pictureType: pictureBlock.pictureType,
+          mimeType: pictureBlock.mimeType,
+        });
+        continue;
+      }
+
+      const imagePath = `${generateRandomHexString()}.${imageExtension}`;
 
       const metaflacResult = childProcess.spawnSync('metaflac', [
-        `--block-number=${pictureBlockInfo.blockType.toString()}`,
+        `--block-number=${pictureBlock.metadataBlockNumber.toString()}`,
         `--export-picture-to=${imagePath}`,
         flacFilePath,
       ]);
 
-      if (metaflacResult.status === 0) {
+      if (metaflacResult.status === 0 && !metaflacResult.error) {
         result.push({
-          ...pictureBlockInfo,
+          ...pictureBlock,
           imagePath,
         });
+        continue;
       }
+
+      logger.warn('Cannot export FLAC PICTURE block.', {
+        flacFilePath,
+        metadataBlockNumber: pictureBlock.metadataBlockNumber,
+        pictureType: pictureBlock.pictureType,
+        mimeType: pictureBlock.mimeType,
+        status: metaflacResult.status,
+        error: metaflacResult.error,
+        stderr: metaflacResult.stderr?.toString('utf8'),
+      });
     }
 
     return result;
@@ -1005,42 +1026,74 @@ export class BearTunesTagger {
   /**
    * Lists PICTURE blocks embedded in a FLAC file.
    *
-   * The returned metadata contains the FLAC picture block type and declared MIME type
-   * for each block that could be parsed from `metaflac` output.
+   * Each result separately retains the physical metadata block number required
+   * by `metaflac --block-number` and the semantic PICTURE type used to identify
+   * artwork such as a front cover.
    *
-   * @param flacFilePath - Path to the FLAC file.
-   * @returns Metadata of embedded FLAC PICTURE blocks.
+   * @param flacFilePath - Path to the source FLAC file.
+   * @returns Metadata for each valid PICTURE block found in the file.
    */
   static listFlacPictureBlocks(flacFilePath: string): FlacPictureBlockInfo[] {
+    const metaflacResult = childProcess.spawnSync('metaflac', [
+      '--list',
+      '--block-type=PICTURE',
+      flacFilePath,
+    ], {
+      encoding: 'utf8',
+    });
+
+    if (metaflacResult.status !== 0 || metaflacResult.error) {
+      logger.warn('Cannot list FLAC PICTURE blocks.', {
+        flacFilePath,
+        status: metaflacResult.status,
+        error: metaflacResult.error,
+        stderr: metaflacResult.stderr,
+      });
+
+      return [];
+    }
+
     const result: FlacPictureBlockInfo[] = [];
+    const metadataBlocks = metaflacResult.stdout
+      .split(/^METADATA block #/mu)
+      .slice(1);
 
-    const metaflacResult = childProcess.spawnSync(
-      `metaflac --list --block-type=PICTURE "${flacFilePath}" | grep -A8 -i metadata`,
-      { shell: true },
-    );
+    for (const metadataBlock of metadataBlocks) {
+      const metadataBlockNumberMatch = metadataBlock.match(/^(?<number>\d+)\r?$/mu);
+      const metadataBlockNumber = Number.parseInt(
+        metadataBlockNumberMatch?.groups?.number ?? '',
+        10,
+      );
 
-    if (metaflacResult.status !== 0) {
-      return result;
-    }
+      const pictureTypeMatches = [
+        ...metadataBlock.matchAll(/^\s+type: (?<type>\d+) \(.+\)\r?$/gmu),
+      ];
+      const pictureType = Number.parseInt(
+        pictureTypeMatches.at(-1)?.groups?.type ?? '',
+        10,
+      );
 
-    const stdoutAsString = metaflacResult.stdout.toString();
-    const blockNumbers = stdoutAsString.match(/(?<=METADATA block #)\d/gi) ?? [];
-    const mimeTypes = stdoutAsString.match(/(?<=MIME type: )[a-z]*\/[a-z]*/gi) ?? [];
+      const mimeType = metadataBlock
+        .match(/^\s+MIME type: (?<mimeType>\S+)\r?$/mu)
+        ?.groups
+        ?.mimeType;
 
-    const minLength = Math.min(blockNumbers.length, mimeTypes.length);
+      if (
+        !Number.isSafeInteger(metadataBlockNumber)
+        || !Number.isSafeInteger(pictureType)
+        || mimeType === undefined
+      ) {
+        logger.warn('Cannot parse FLAC PICTURE block metadata.', {
+          flacFilePath,
+          metadataBlock,
+        });
+        continue;
+      }
 
-    if (minLength === 0) { // no images found
-      return result;
-    }
-
-    if (blockNumbers.length !== mimeTypes.length) {
-      logger.warn(`Amount of block numbers different than amount of mime types: only ${minLength} will be used`);
-    }
-
-    for (let i = 0; i < minLength; i += 1) {
       result.push({
-        blockType: Number(blockNumbers[i]) as FlacPictureBlockType,
-        mimeType: mimeTypes[i],
+        metadataBlockNumber,
+        pictureType: pictureType as FlacPictureBlockType,
+        mimeType,
       });
     }
 
@@ -1108,14 +1161,14 @@ export class BearTunesTagger {
     }
 
     // lame codec supports only front cover option:
-    const exportedFlacPictures = BearTunesTagger.exportFlacPictureBlocks(
+    const exportedFrontCovers = BearTunesTagger.exportFlacPictureBlocks(
       flacFilePath,
       [FlacPictureBlockType.CoverFront],
     );
 
-    if (exportedFlacPictures.length > 0) {
-      tagOptions.push('--ti', exportedFlacPictures[0].imagePath);
-      result.temporaryFiles.push(...exportedFlacPictures.map((imageInfo) => imageInfo.imagePath));
+    if (exportedFrontCovers.length > 0) {
+      tagOptions.push('--ti', exportedFrontCovers[0].imagePath);
+      result.temporaryFiles.push(...exportedFrontCovers.map((imageInfo) => imageInfo.imagePath));
     }
 
     // length > 1 means there is at least one tag entry to set (the first one is --add-id3v2)

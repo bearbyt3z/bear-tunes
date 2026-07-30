@@ -363,21 +363,34 @@ export enum FlacPictureBlockType {
 }
 
 /**
- * Basic metadata of a PICTURE block embedded in a FLAC file.
+ * Metadata describing a PICTURE block embedded in a FLAC file.
  *
- * Contains the FLAC picture block type and declared MIME type.
+ * `metadataBlockNumber` identifies the physical FLAC metadata block and is
+ * used with `metaflac --block-number`. `pictureType` identifies the semantic
+ * role declared inside that PICTURE block, such as front cover or publisher
+ * logotype.
  */
 export interface FlacPictureBlockInfo {
-  blockType: FlacPictureBlockType;
+  /**
+   * Zero-based position of this metadata block in the FLAC metadata chain.
+   *
+   * This value is specific to the file layout and must be used when exporting
+   * the block through `metaflac --block-number`.
+   */
+  metadataBlockNumber: number;
+
+  /** Semantic PICTURE type declared by the FLAC PICTURE block. */
+  pictureType: FlacPictureBlockType;
+
+  /** MIME type declared by the FLAC PICTURE block. */
   mimeType: string;
 }
 
 /**
- * Metadata of an exported FLAC PICTURE block.
- *
- * Extends {@link FlacPictureBlockInfo} with the path to the exported image file.
+ * Metadata of a FLAC PICTURE block exported to a temporary image file.
  */
 export interface ExportedFlacPictureBlock extends FlacPictureBlockInfo {
+  /** Path of the exported image file. */
   imagePath: string;
 }
 
