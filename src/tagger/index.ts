@@ -321,6 +321,38 @@ export class BearTunesTagger {
   }
 
   /**
+   * Requests confirmation when a selected candidate has a weak keyword score.
+   *
+   * @param candidate - Selected candidate track.
+   * @param filenameKeywords - Keywords extracted from the source file name.
+   * @returns Whether the selected candidate was accepted.
+   */
+  private static async confirmTrackMatch(
+    candidate: MatchingTrack,
+    filenameKeywords: readonly string[],
+  ): Promise<boolean> {
+    if (candidate.score >= Math.max(2, filenameKeywords.length)) {
+      return true;
+    }
+
+    let warningMessage = `Couldn't match any track, the highest score was ${candidate.score} for track:\n`;
+
+    warningMessage += `${buildTrackFullName(candidate)}\n`;
+    warningMessage += `Score keywords: ${candidate.scoreKeywords.join(', ')}\n`;
+    warningMessage += `Name keywords: ${filenameKeywords.join(', ')}`;
+
+    if (candidate.url) {
+      warningMessage += `\nURL: ${candidate.url.toString()}`;
+    }
+
+    logger.warn(warningMessage);
+
+    const proceedWithFound = await prompt('Proceed with the found track? (y/n) ');
+
+    return proceedWithFound === 'y' || proceedWithFound === 'yes';
+  }
+
+  /**
    * Resolves canonical track metadata for an accessible local audio file without
    * modifying it.
    *
@@ -419,28 +451,19 @@ export class BearTunesTagger {
 
         trackUrl = bestMatchingTrack.url;
 
-        if (bestMatchingTrack.score < Math.max(2, trackFilenameKeywords.length)) {
-          let warnMessage = `Couldn't match any track, the highest score was ${bestMatchingTrack.score} for track:\n`;
-          warnMessage += `${buildTrackFullName(bestMatchingTrack)}\n`;
-          warnMessage += `Score keywords: ${bestMatchingTrack.scoreKeywords.join(', ')}\n`;
-          warnMessage += `Name keywords: ${trackFilenameKeywords.join(', ')}`;
+        const isTrackMatchConfirmed = await BearTunesTagger.confirmTrackMatch(
+          bestMatchingTrack,
+          trackFilenameKeywords,
+        );
 
-          if (trackUrl) {
-            warnMessage += `\nURL: ${trackUrl}`;
-          }
-
-          logger.warn(warnMessage);
-
-          const proceedWithFound = await prompt('Proceed with the found track? (y/n) ');
-
-          if (proceedWithFound !== 'y' && proceedWithFound !== 'yes') {
-            return BearTunesTagger.createFailureResult(
-              BearTunesTaggerFailureCode.TrackMatchRejected,
-              new Error(
-                `${this.constructor.name}: Matching track was rejected for "${trackFilename}"`,
-              ),
-            );
-          }
+        if (!isTrackMatchConfirmed) {
+          return BearTunesTagger.createFailureResult(
+            BearTunesTaggerFailureCode.TrackMatchRejected,
+            new Error(
+              `${this.constructor.name}: Matching track was rejected for `
+              + `"${trackFilename}"`,
+            ),
+          );
         }
 
         logger.info(
