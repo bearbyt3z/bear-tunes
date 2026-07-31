@@ -99,8 +99,6 @@ import type {
 export {
   BearTunesTaggerFailureCode,
   BeatportSearchResultArtistType,
-  FlacPictureBlockType,
-  ID3Version,
 };
 
 export type {
@@ -108,8 +106,8 @@ export type {
   BearTunesTaggerOptions,
   BearTunesTaggerResult,
   BearTunesTaggerSuccessResult,
+
   MatchingTrack,
-  TrackArtworkFiles,
   BeatportSearchResultArtistInfo,
   BeatportSearchResultTrackInfo,
   BeatportSearchResultGenreInfo,
@@ -117,9 +115,6 @@ export type {
   BeatportTrackInfo,
   BeatportAlbumInfo,
   BeatportPublisherInfo,
-  ExportedFlacPictureBlock,
-  FlacPictureBlockInfo,
-  PreparedMp3TagTransfer,
 };
 
 /**

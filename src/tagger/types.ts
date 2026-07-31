@@ -171,12 +171,22 @@ export interface MatchingTrack extends TrackInfo {
   url?: URL;
 }
 
+/**
+ * Paths of temporary artwork files used during internal tag-writing flows.
+ *
+ * @internal
+ */
 export interface TrackArtworkFiles {
   frontCover?: string; // TODO: File?
   waveform?: string;
   publisherLogotype?: string;
 }
 
+/**
+ * ID3 tag versions supported by the internal eyeD3 integration.
+ *
+ * @internal
+ */
 export enum ID3Version {
   ID3v1_0 = '1.0',
   ID3v1_1 = '1.1',
@@ -332,7 +342,8 @@ export interface BeatportPublisherInfo {
 
 /**
  * Options for downloading an image asset with optional source page context.
- * @internal Not re-exported from tagger module.
+ *
+ * @internal
  *
  * @property imageUrl - Image URL to download. The property is required, but its value may be `undefined`.
  * @property sourcePageUrl - Optional URL of the page from which the image asset originates.
@@ -353,6 +364,8 @@ export interface DownloadImageAssetOptions {
  * embedded picture blocks from a FLAC file.
  *
  * @see https://xiph.org/flac/format.html
+ *
+ * @internal
  */
 export enum FlacPictureBlockType {
   FileIcon = 1, // 32x32 PNG only
@@ -369,6 +382,8 @@ export enum FlacPictureBlockType {
  * used with `metaflac --block-number`. `pictureType` identifies the semantic
  * role declared inside that PICTURE block, such as front cover or publisher
  * logotype.
+ *
+ * @internal
  */
 export interface FlacPictureBlockInfo {
   /**
@@ -388,6 +403,8 @@ export interface FlacPictureBlockInfo {
 
 /**
  * Metadata of a FLAC PICTURE block exported to a temporary image file.
+ *
+ * @internal
  */
 export interface ExportedFlacPictureBlock extends FlacPictureBlockInfo {
   /** Path of the exported image file. */
@@ -396,6 +413,8 @@ export interface ExportedFlacPictureBlock extends FlacPictureBlockInfo {
 
 /**
  * Prepared metadata transfer payload for FLAC-to-MP3 conversion.
+ *
+ * @internal
  *
  * @property lameTagOptions - `lame` CLI options used to write MP3 tag fields
  * derived from the source FLAC metadata.
