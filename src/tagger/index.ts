@@ -966,7 +966,7 @@ export class BearTunesTagger {
    * @param flacFilePath - Path to the source FLAC file.
    * @returns Metadata for each valid PICTURE block found in the file.
    */
-  static listFlacPictureBlocks(flacFilePath: string): FlacPictureBlockInfo[] {
+  private static listFlacPictureBlocks(flacFilePath: string): FlacPictureBlockInfo[] {
     const metaflacResult = childProcess.spawnSync('metaflac', [
       '--list',
       '--block-type=PICTURE',
@@ -1045,7 +1045,7 @@ export class BearTunesTagger {
    * @returns Metadata of successfully exported picture blocks, including paths
    * to their exported image files.
    */
-  static exportFlacPictureBlocks(
+  private static exportFlacPictureBlocks(
     flacFilePath: string,
     pictureTypes: readonly FlacPictureBlockType[],
   ): ExportedFlacPictureBlock[] {
@@ -1123,6 +1123,8 @@ export class BearTunesTagger {
    * The returned payload contains both the prepared `lame` options and paths
    * to temporary files created while exporting artwork. The caller is
    * responsible for removing those temporary files after conversion completes.
+   *
+   * @internal
    *
    * @param flacFilePath - Path to the source FLAC file.
    * @returns Prepared MP3 tag transfer payload for use during FLAC-to-MP3 conversion.
@@ -1258,7 +1260,7 @@ export class BearTunesTagger {
     };
   }
 
-  async findBestMatchingTrack(
+  private async findBestMatchingTrack(
     trackInfo: TrackInfo,
     inputKeywords: string[],
   ): Promise<MatchingTrack | undefined> {
@@ -1337,7 +1339,7 @@ export class BearTunesTagger {
     return winner;
   }
 
-  async extractTrackData(
+  private async extractTrackData(
     trackUrl: URL,
     forceRadioEdit: boolean,
   ): Promise<TrackInfo> {
@@ -1378,7 +1380,7 @@ export class BearTunesTagger {
     return parsedTrackInfo.data;
   }
 
-  async extractAlbumData(
+  private async extractAlbumData(
     releaseInfo: BeatportReleaseInfo,
     trackNumber: number,
   ): Promise<AlbumInfo | undefined> {
@@ -1417,7 +1419,7 @@ export class BearTunesTagger {
     return parsedAlbumInfo.data;
   }
 
-  async extractPublisherData(
+  private async extractPublisherData(
     labelInfo: BeatportLabelInfo,
   ): Promise<PublisherInfo | undefined> {
     const beatportPublisherPayload = await fetchBeatportPublisherPayload(
@@ -1572,7 +1574,7 @@ export class BearTunesTagger {
    * @param imagePaths - Paths of temporary artwork files to remove. Undefined
    * entries are ignored.
    */
-  static cleanupTrackArtworkFiles(imagePaths: TrackArtworkFiles): void {
+  private static cleanupTrackArtworkFiles(imagePaths: TrackArtworkFiles): void {
     Object.values(imagePaths).forEach((imagePath) => {
       if (imagePath !== undefined) {
         try {
