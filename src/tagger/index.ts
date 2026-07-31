@@ -52,7 +52,6 @@ import {
 } from './errors.js';
 import {
   BearTunesTaggerFailureCode,
-  BeatportSearchResultArtistType,
   FlacPictureBlockType,
   ID3Version,
 } from './types.js';
@@ -72,15 +71,8 @@ import type {
   BearTunesTaggerOptions,
   BearTunesTaggerResult,
   BearTunesTaggerSuccessResult,
-  BeatportAlbumInfo,
-  BeatportArtistInfo,
   BeatportLabelInfo,
-  BeatportPublisherInfo,
   BeatportReleaseInfo,
-  BeatportSearchResultArtistInfo,
-  BeatportSearchResultGenreInfo,
-  BeatportSearchResultTrackInfo,
-  BeatportTrackInfo,
   DownloadImageAssetOptions, // @internal
   ExportedFlacPictureBlock,
   FlacPictureBlockInfo,
@@ -95,10 +87,10 @@ import type {
   PublisherInfo,
 } from '#shared-types';
 
+// Public tagger API
 // exporting enums & types, so they will be included in the tagger import
 export {
   BearTunesTaggerFailureCode,
-  BeatportSearchResultArtistType,
 };
 
 export type {
@@ -106,15 +98,6 @@ export type {
   BearTunesTaggerOptions,
   BearTunesTaggerResult,
   BearTunesTaggerSuccessResult,
-
-  MatchingTrack,
-  BeatportSearchResultArtistInfo,
-  BeatportSearchResultTrackInfo,
-  BeatportSearchResultGenreInfo,
-  BeatportArtistInfo,
-  BeatportTrackInfo,
-  BeatportAlbumInfo,
-  BeatportPublisherInfo,
 };
 
 /**

@@ -165,6 +165,12 @@ export interface BearTunesTaggerOptions {
   metaflacVerbose?: boolean; // metaflag command logs
 }
 
+/**
+ * Internal candidate track selected while matching local metadata against
+ * remote provider search results.
+ *
+ * @internal
+ */
 export interface MatchingTrack extends TrackInfo {
   score: number;
   scoreKeywords: string[];
