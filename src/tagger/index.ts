@@ -957,6 +957,83 @@ export class BearTunesTagger {
   }
 
   /**
+   * Lists PICTURE blocks embedded in a FLAC file.
+   *
+   * Each result separately retains the physical metadata block number required
+   * by `metaflac --block-number` and the semantic PICTURE type used to identify
+   * artwork such as a front cover.
+   *
+   * @param flacFilePath - Path to the source FLAC file.
+   * @returns Metadata for each valid PICTURE block found in the file.
+   */
+  static listFlacPictureBlocks(flacFilePath: string): FlacPictureBlockInfo[] {
+    const metaflacResult = childProcess.spawnSync('metaflac', [
+      '--list',
+      '--block-type=PICTURE',
+      flacFilePath,
+    ], {
+      encoding: 'utf8',
+    });
+
+    if (metaflacResult.status !== 0 || metaflacResult.error) {
+      logger.warn('Cannot list FLAC PICTURE blocks.', {
+        flacFilePath,
+        status: metaflacResult.status,
+        error: metaflacResult.error,
+        stderr: metaflacResult.stderr,
+      });
+
+      return [];
+    }
+
+    const result: FlacPictureBlockInfo[] = [];
+    const metadataBlocks = metaflacResult.stdout
+      .split(/^METADATA block #/mu)
+      .slice(1);
+
+    for (const metadataBlock of metadataBlocks) {
+      const metadataBlockNumberMatch = metadataBlock.match(/^(?<number>\d+)\r?$/mu);
+      const metadataBlockNumber = Number.parseInt(
+        metadataBlockNumberMatch?.groups?.number ?? '',
+        10,
+      );
+
+      const pictureTypeMatches = [
+        ...metadataBlock.matchAll(/^\s+type: (?<type>\d+) \(.+\)\r?$/gmu),
+      ];
+      const pictureType = Number.parseInt(
+        pictureTypeMatches.at(-1)?.groups?.type ?? '',
+        10,
+      );
+
+      const mimeType = metadataBlock
+        .match(/^\s+MIME type: (?<mimeType>\S+)\r?$/mu)
+        ?.groups
+        ?.mimeType;
+
+      if (
+        !Number.isSafeInteger(metadataBlockNumber)
+        || !BearTunesTagger.isFlacPictureBlockType(pictureType)
+        || mimeType === undefined
+      ) {
+        logger.warn('Cannot parse FLAC PICTURE block metadata.', {
+          flacFilePath,
+          metadataBlock,
+        });
+        continue;
+      }
+
+      result.push({
+        metadataBlockNumber,
+        pictureType,
+        mimeType,
+      });
+    }
+
+    return result;
+  }
+
+  /**
    * Exports selected PICTURE blocks from a FLAC file to temporary image files.
    *
    * Picture blocks are selected by their semantic PICTURE type, such as front
@@ -1034,83 +1111,6 @@ export class BearTunesTagger {
     value: number,
   ): value is FlacPictureBlockType {
     return Object.values(FlacPictureBlockType).includes(value);
-  }
-
-  /**
-   * Lists PICTURE blocks embedded in a FLAC file.
-   *
-   * Each result separately retains the physical metadata block number required
-   * by `metaflac --block-number` and the semantic PICTURE type used to identify
-   * artwork such as a front cover.
-   *
-   * @param flacFilePath - Path to the source FLAC file.
-   * @returns Metadata for each valid PICTURE block found in the file.
-   */
-  static listFlacPictureBlocks(flacFilePath: string): FlacPictureBlockInfo[] {
-    const metaflacResult = childProcess.spawnSync('metaflac', [
-      '--list',
-      '--block-type=PICTURE',
-      flacFilePath,
-    ], {
-      encoding: 'utf8',
-    });
-
-    if (metaflacResult.status !== 0 || metaflacResult.error) {
-      logger.warn('Cannot list FLAC PICTURE blocks.', {
-        flacFilePath,
-        status: metaflacResult.status,
-        error: metaflacResult.error,
-        stderr: metaflacResult.stderr,
-      });
-
-      return [];
-    }
-
-    const result: FlacPictureBlockInfo[] = [];
-    const metadataBlocks = metaflacResult.stdout
-      .split(/^METADATA block #/mu)
-      .slice(1);
-
-    for (const metadataBlock of metadataBlocks) {
-      const metadataBlockNumberMatch = metadataBlock.match(/^(?<number>\d+)\r?$/mu);
-      const metadataBlockNumber = Number.parseInt(
-        metadataBlockNumberMatch?.groups?.number ?? '',
-        10,
-      );
-
-      const pictureTypeMatches = [
-        ...metadataBlock.matchAll(/^\s+type: (?<type>\d+) \(.+\)\r?$/gmu),
-      ];
-      const pictureType = Number.parseInt(
-        pictureTypeMatches.at(-1)?.groups?.type ?? '',
-        10,
-      );
-
-      const mimeType = metadataBlock
-        .match(/^\s+MIME type: (?<mimeType>\S+)\r?$/mu)
-        ?.groups
-        ?.mimeType;
-
-      if (
-        !Number.isSafeInteger(metadataBlockNumber)
-        || !BearTunesTagger.isFlacPictureBlockType(pictureType)
-        || mimeType === undefined
-      ) {
-        logger.warn('Cannot parse FLAC PICTURE block metadata.', {
-          flacFilePath,
-          metadataBlock,
-        });
-        continue;
-      }
-
-      result.push({
-        metadataBlockNumber,
-        pictureType,
-        mimeType,
-      });
-    }
-
-    return result;
   }
 
   /**
