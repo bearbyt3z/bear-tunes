@@ -1024,6 +1024,19 @@ export class BearTunesTagger {
   }
 
   /**
+   * Checks whether a numeric FLAC PICTURE type is declared in
+   * {@link FlacPictureBlockType}.
+   *
+   * @param value - Parsed numeric PICTURE type.
+   * @returns Whether the value is a declared FLAC PICTURE type.
+   */
+  private static isFlacPictureBlockType(
+    value: number,
+  ): value is FlacPictureBlockType {
+    return Object.values(FlacPictureBlockType).includes(value);
+  }
+
+  /**
    * Lists PICTURE blocks embedded in a FLAC file.
    *
    * Each result separately retains the physical metadata block number required
@@ -1080,7 +1093,7 @@ export class BearTunesTagger {
 
       if (
         !Number.isSafeInteger(metadataBlockNumber)
-        || !Number.isSafeInteger(pictureType)
+        || !BearTunesTagger.isFlacPictureBlockType(pictureType)
         || mimeType === undefined
       ) {
         logger.warn('Cannot parse FLAC PICTURE block metadata.', {
@@ -1092,7 +1105,7 @@ export class BearTunesTagger {
 
       result.push({
         metadataBlockNumber,
-        pictureType: pictureType as FlacPictureBlockType,
+        pictureType,
         mimeType,
       });
     }
