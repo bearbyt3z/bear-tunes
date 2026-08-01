@@ -166,6 +166,17 @@ export interface BearTunesTaggerOptions {
 }
 
 /**
+ * Resolution selected for a significant duration mismatch between a local
+ * track and its matched remote candidate.
+ *
+ * @internal
+ */
+export type TrackMatchDurationResolution =
+  | 'keep-match'
+  | 'use-radio-edit'
+  | 'skip-match';
+
+/**
  * Internal candidate track selected while matching local metadata against
  * remote provider search results.
  *

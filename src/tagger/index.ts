@@ -79,6 +79,7 @@ import type {
   MatchingTrack,
   PreparedMp3TagTransfer,
   TrackArtworkFiles,
+  TrackMatchDurationResolution, // @internal
 } from './types.js';
 
 import type {
@@ -353,6 +354,48 @@ export class BearTunesTagger {
   }
 
   /**
+   * Resolves a significant duration mismatch between a local track and its
+   * selected candidate.
+   *
+   * @param localTrackInfo - Metadata read from the local audio file.
+   * @param candidate - Selected candidate track.
+   * @param trackUrl - URL of the selected candidate, when available.
+   * @returns How the duration mismatch should be handled.
+   */
+  private async resolveTrackMatchDurationMismatch(
+    localTrackInfo: TrackInfo,
+    candidate: MatchingTrack,
+    trackUrl: URL | undefined,
+  ): Promise<TrackMatchDurationResolution> {
+    if (
+      !localTrackInfo.details
+      || !candidate.details
+      || Math.abs(candidate.details.duration - localTrackInfo.details.duration) <= this.options.lengthDifferenceAccepted
+    ) {
+      return 'keep-match';
+    }
+
+    logger.warn(
+      'Matched track has different duration: '
+      + `${secondsToTimeFormat(candidate.details.duration)} vs. `
+      + `${secondsToTimeFormat(localTrackInfo.details.duration)} (original)\n`
+      + `URL: ${trackUrl?.toString() ?? 'Undefined'}`,
+    );
+
+    const changeToRadioEdit = await prompt('Change it to "Radio Edit"? (y)es/(n)o/(s)kip: ');
+
+    if (changeToRadioEdit === 's' || changeToRadioEdit === 'skip') {
+      return 'skip-match';
+    }
+
+    if (changeToRadioEdit === 'y' || changeToRadioEdit === 'yes') {
+      return 'use-radio-edit';
+    }
+
+    return 'keep-match';
+  }
+
+  /**
    * Resolves canonical track metadata for an accessible local audio file without
    * modifying it.
    *
@@ -471,33 +514,23 @@ export class BearTunesTagger {
         );
         logger.info(`Matched URL: ${bestMatchingTrack.url ?? 'Undefined'}`);
 
-        if (
-          localTrackInfo.details
-          && bestMatchingTrack.details
-          && Math.abs(
-            bestMatchingTrack.details.duration - localTrackInfo.details.duration,
-          ) > this.options.lengthDifferenceAccepted
-        ) {
-          logger.warn(
-            `Matched track has different duration: ${secondsToTimeFormat(bestMatchingTrack.details.duration)}`
-            + ` vs. ${secondsToTimeFormat(localTrackInfo.details.duration)} (original)\nURL: ${trackUrl}`,
+        const durationResolution = await this.resolveTrackMatchDurationMismatch(
+          localTrackInfo,
+          bestMatchingTrack,
+          trackUrl,
+        );
+
+        if (durationResolution === 'skip-match') {
+          return BearTunesTagger.createFailureResult(
+            BearTunesTaggerFailureCode.TrackMatchRejected,
+            new Error(
+              `${this.constructor.name}: Matching track was skipped for `
+              + `"${trackFilename}"`,
+            ),
           );
-
-          const changeToRadioEdit = await prompt(
-            'Change it to "Radio Edit"? (y)es/(n)o/(s)kip: ',
-          );
-
-          if (changeToRadioEdit === 's' || changeToRadioEdit === 'skip') {
-            return BearTunesTagger.createFailureResult(
-              BearTunesTaggerFailureCode.TrackMatchRejected,
-              new Error(
-                `${this.constructor.name}: Matching track was skipped for "${trackFilename}"`,
-              ),
-            );
-          }
-
-          forceRadioEdit = changeToRadioEdit === 'y' || changeToRadioEdit === 'yes';
         }
+
+        forceRadioEdit = durationResolution === 'use-radio-edit';
       }
 
       if (!trackUrl) {
