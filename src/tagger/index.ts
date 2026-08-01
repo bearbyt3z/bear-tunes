@@ -322,6 +322,53 @@ export class BearTunesTagger {
   }
 
   /**
+   * Reads a track URL from the sibling `.url` file when one exists.
+   *
+   * @param trackPath - Path to the local audio file.
+   * @returns The URL from the sibling file, or undefined when no sibling file exists.
+   * @throws TaggerGuardError When the sibling file cannot be read or contains no valid URL.
+   */
+  private static async readTrackUrlFromSiblingFile(
+    trackPath: string,
+  ): Promise<URL | undefined> {
+    const trackFilename = path.basename(trackPath);
+    const trackFilenameWithoutExtension = removeFilenameExtension(trackFilename);
+    const trackUrlFilename = path.join(
+      path.dirname(trackPath),
+      `${trackFilenameWithoutExtension}.url`,
+    );
+
+    if (!fs.existsSync(trackUrlFilename)) {
+      return undefined;
+    }
+
+    let trackUrl: URL | undefined;
+
+    try {
+      trackUrl = await tryGetUrlFromFile(trackUrlFilename);
+    } catch (error: unknown) {
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TrackUrlFileReadFailed,
+        new Error(
+          `${this.name} Cannot read URL file ${trackUrlFilename}`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
+    }
+
+    if (trackUrl === undefined) {
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TrackUrlFileInvalid,
+        new Error(
+          `${this.name} URL file is present but no URL was found inside ${trackUrlFilename}`,
+        ),
+      );
+    }
+
+    return trackUrl;
+  }
+
+  /**
    * Requests confirmation when a selected candidate has a weak keyword score.
    *
    * @param candidate - Selected candidate track.
@@ -428,35 +475,10 @@ export class BearTunesTagger {
       logger.silly('########################################');
       logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
 
-      const trackUrlFilename = path.join(
-        path.dirname(trackPath),
-        `${trackFilenameWithoutExtension}.url`,
-      );
-      let trackUrl: URL | undefined;
+      let trackUrl = await BearTunesTagger.readTrackUrlFromSiblingFile(trackPath);
 
-      if (fs.existsSync(trackUrlFilename)) {
-        try {
-          trackUrl = await tryGetUrlFromFile(trackUrlFilename);
-        } catch (error: unknown) {
-          throw new TaggerGuardError(
-            BearTunesTaggerFailureCode.TrackUrlFileReadFailed,
-            new Error(
-              `${this.constructor.name}: Cannot read URL file ${trackUrlFilename}`,
-              { cause: normalizeUnknownError(error) },
-            ),
-          );
-        }
-
-        if (trackUrl === null) {
-          return BearTunesTagger.createFailureResult(
-            BearTunesTaggerFailureCode.TrackUrlFileInvalid,
-            new Error(
-              `${this.constructor.name}: URL file is present but no URL was found inside: ${trackUrlFilename}`,
-            ),
-          );
-        }
-
-        logger.info(`Using URL from file: ${trackUrl}`);
+      if (trackUrl !== undefined) {
+        logger.info('Using URL from file');
       } else {
         const readTagResult = await this.readTag(trackPath);
 
