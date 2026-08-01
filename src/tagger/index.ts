@@ -378,7 +378,7 @@ export class BearTunesTagger {
     logger.warn(
       'Matched track has different duration: '
       + `${secondsToTimeFormat(candidate.details.duration)} vs. `
-      + `${secondsToTimeFormat(localTrackInfo.details.duration)} (original)\n`
+      + `${secondsToTimeFormat(localTrackInfo.details.duration)} (input track)\n`
       + `URL: ${trackUrl?.toString() ?? 'Undefined'}`,
     );
 
