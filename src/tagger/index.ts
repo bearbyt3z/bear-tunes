@@ -473,19 +473,19 @@ export class BearTunesTagger {
       logger.silly('########################################');
       logger.info(`Filename [${trackFilenameKeywords.length}]: ${trackFilename}`);
 
+      const readTagResult = await this.readTag(trackPath);
+
+      if (!readTagResult.ok) {
+        return readTagResult;
+      }
+
+      const localTrackInfo = readTagResult.trackInfo;
+
       let trackUrl = await BearTunesTagger.readTrackUrlFromSiblingFile(trackPath);
 
       if (trackUrl !== undefined) {
         logger.info('Using URL from file');
       } else {
-        const readTagResult = await this.readTag(trackPath);
-
-        if (!readTagResult.ok) {
-          return readTagResult;
-        }
-
-        const localTrackInfo = readTagResult.trackInfo;
-
         let bestMatchingTrack: MatchingTrack | undefined;
 
         try {
