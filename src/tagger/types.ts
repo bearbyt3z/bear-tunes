@@ -167,11 +167,11 @@ export interface BearTunesTaggerOptions {
 
 /**
  * Resolution selected for a significant duration mismatch between a local
- * track and its matched remote candidate.
+ * track and the selected remote track.
  *
  * @internal
  */
-export type TrackMatchDurationResolution =
+export type TrackDurationMismatchResolution =
   | 'keep-match'
   | 'use-radio-edit'
   | 'skip-match';

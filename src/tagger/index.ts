@@ -79,7 +79,7 @@ import type {
   MatchingTrack,
   PreparedMp3TagTransfer,
   TrackArtworkFiles,
-  TrackMatchDurationResolution, // @internal
+  TrackDurationMismatchResolution, // @internal
 } from './types.js';
 
 import type {
@@ -401,32 +401,30 @@ export class BearTunesTagger {
   }
 
   /**
-   * Resolves a significant duration mismatch between a local track and its
-   * selected candidate.
+   * Resolves a significant duration mismatch between a local track and a
+   * selected remote track.
    *
    * @param localTrackInfo - Metadata read from the local audio file.
-   * @param candidate - Selected candidate track.
-   * @param trackUrl - URL of the selected candidate, when available.
+   * @param remoteTrackInfo - Metadata of the selected remote track.
    * @returns How the duration mismatch should be handled.
    */
-  private async resolveTrackMatchDurationMismatch(
+  private async resolveTrackDurationMismatch(
     localTrackInfo: TrackInfo,
-    candidate: MatchingTrack,
-    trackUrl: URL | undefined,
-  ): Promise<TrackMatchDurationResolution> {
+    remoteTrackInfo: TrackInfo,
+  ): Promise<TrackDurationMismatchResolution> {
     if (
       !localTrackInfo.details
-      || !candidate.details
-      || Math.abs(candidate.details.duration - localTrackInfo.details.duration) <= this.options.lengthDifferenceAccepted
+      || !remoteTrackInfo.details
+      || Math.abs(remoteTrackInfo.details.duration - localTrackInfo.details.duration) <= this.options.lengthDifferenceAccepted
     ) {
       return 'keep-match';
     }
 
     logger.warn(
       'Matched track has different duration: '
-      + `${secondsToTimeFormat(candidate.details.duration)} vs. `
+      + `${secondsToTimeFormat(remoteTrackInfo.details.duration)} vs. `
       + `${secondsToTimeFormat(localTrackInfo.details.duration)} (input track)\n`
-      + `URL: ${trackUrl?.toString() ?? 'Undefined'}`,
+      + `URL: ${remoteTrackInfo.url?.toString() ?? 'Undefined'}`,
     );
 
     const changeToRadioEdit = await prompt('Change it to "Radio Edit"? (y)es/(n)o/(s)kip: ');
@@ -536,10 +534,9 @@ export class BearTunesTagger {
         );
         logger.info(`Matched URL: ${bestMatchingTrack.url ?? 'Undefined'}`);
 
-        const durationResolution = await this.resolveTrackMatchDurationMismatch(
+        const durationResolution = await this.resolveTrackDurationMismatch(
           localTrackInfo,
           bestMatchingTrack,
-          trackUrl,
         );
 
         if (durationResolution === 'skip-match') {
