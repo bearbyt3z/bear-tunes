@@ -462,8 +462,6 @@ export class BearTunesTagger {
     try {
       this.assertAccessibleInputFile(trackPath);
 
-      let forceRadioEdit = false;
-
       const trackFilename = path.basename(trackPath);
       const trackFilenameWithoutExtension = removeFilenameExtension(trackFilename);
       const trackFilenameKeywords = extractTrackNameKeywords(
@@ -533,23 +531,6 @@ export class BearTunesTagger {
           `Matched [${bestMatchingTrack.score}]: ${buildTrackFullName(bestMatchingTrack)}`,
         );
         logger.info(`Matched URL: ${bestMatchingTrack.url ?? 'Undefined'}`);
-
-        const durationResolution = await this.resolveTrackDurationMismatch(
-          localTrackInfo,
-          bestMatchingTrack,
-        );
-
-        if (durationResolution === 'skip-match') {
-          return BearTunesTagger.createFailureResult(
-            BearTunesTaggerFailureCode.TrackMatchRejected,
-            new Error(
-              `${this.constructor.name}: Matching track was skipped for `
-              + `"${trackFilename}"`,
-            ),
-          );
-        }
-
-        forceRadioEdit = durationResolution === 'use-radio-edit';
       }
 
       if (!trackUrl) {
@@ -564,7 +545,7 @@ export class BearTunesTagger {
       let trackInfo: TrackInfo;
 
       try {
-        trackInfo = await this.extractTrackData(trackUrl, forceRadioEdit);
+        trackInfo = await this.extractTrackData(trackUrl, false);
       } catch (error: unknown) {
         throw new TaggerGuardError(
           BearTunesTaggerFailureCode.TrackDataRequestFailed,
@@ -582,6 +563,43 @@ export class BearTunesTagger {
             `${this.constructor.name}: Cannot retrieve track metadata from ${trackUrl}`,
           ),
         );
+      }
+
+      const durationResolution = await this.resolveTrackDurationMismatch(
+        localTrackInfo,
+        trackInfo,
+      );
+
+      if (durationResolution === 'skip-match') {
+        return BearTunesTagger.createFailureResult(
+          BearTunesTaggerFailureCode.TrackMatchRejected,
+          new Error(
+            `${this.constructor.name}: Matching track was skipped for ${trackFilename}`,
+          ),
+        );
+      }
+
+      if (durationResolution === 'use-radio-edit') {
+        try {
+          trackInfo = await this.extractTrackData(trackUrl, true);
+        } catch (error: unknown) {
+          throw new TaggerGuardError(
+            BearTunesTaggerFailureCode.TrackDataRequestFailed,
+            new Error(
+              `${this.constructor.name}: Cannot request track metadata from ${trackUrl}`,
+              { cause: normalizeUnknownError(error) },
+            ),
+          );
+        }
+
+        if (isEmptyPlainObject(trackInfo)) {
+          return BearTunesTagger.createFailureResult(
+            BearTunesTaggerFailureCode.TrackDataFetchFailed,
+            new Error(
+              `${this.constructor.name}: Cannot retrieve track metadata from ${trackUrl}`,
+            ),
+          );
+        }
       }
 
       return BearTunesTagger.createSuccessResult(trackInfo);
