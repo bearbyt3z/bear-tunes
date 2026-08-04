@@ -582,7 +582,7 @@ export class BearTunesTagger {
         throw new TaggerGuardError(
           BearTunesTaggerFailureCode.TrackDataRequestFailed,
           new Error(
-            `${this.constructor.name}: Cannot request track metadata from ${trackUrl}`,
+            `${this.constructor.name}: Cannot request track metadata from "${trackUrl}"`,
             { cause: normalizeUnknownError(error) },
           ),
         );
@@ -592,7 +592,7 @@ export class BearTunesTagger {
         return BearTunesTagger.createFailureResult(
           BearTunesTaggerFailureCode.TrackDataFetchFailed,
           new Error(
-            `${this.constructor.name}: Cannot retrieve track metadata from ${trackUrl}`,
+            `${this.constructor.name}: Cannot retrieve track metadata from "${trackUrl}"`,
           ),
         );
       }
@@ -606,7 +606,7 @@ export class BearTunesTagger {
         return BearTunesTagger.createFailureResult(
           BearTunesTaggerFailureCode.TrackMatchRejected,
           new Error(
-            `${this.constructor.name}: Matching track was skipped for ${trackFilename}`,
+            `${this.constructor.name}: Matching track was skipped for "${trackFilename}"`,
           ),
         );
       }
