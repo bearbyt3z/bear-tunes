@@ -442,6 +442,94 @@ export class BearTunesTagger {
   }
 
   /**
+   * Resolves the remote track URL for a local audio file.
+   *
+   * A valid sibling .url file has priority. When it is absent, the method finds
+   * the best remote candidate from local metadata, asks for confirmation when
+   * the match is weak, and returns the candidate URL.
+   *
+   * @param trackPath - Path of the local audio file being resolved.
+   * @param localTrackInfo - Metadata read from the local audio file.
+   * @param filenameKeywords - Keywords extracted from the input filename.
+   * @returns URL of the selected remote track.
+   * @throws {TaggerGuardError} When the URL file is invalid, the track cannot be
+   * matched, the selected match is rejected, or the selected candidate has no URL.
+   */
+  private async resolveTrackUrl(
+    trackPath: string,
+    localTrackInfo: TrackInfo,
+    filenameKeywords: string[],
+  ): Promise<URL> {
+    const trackUrlFromFile = await BearTunesTagger.readTrackUrlFromSiblingFile(
+      trackPath,
+    );
+
+    if (trackUrlFromFile !== undefined) {
+      logger.info('Using URL from file');
+
+      return trackUrlFromFile;
+    }
+
+    const trackFilename = path.basename(trackPath);
+
+    let bestMatchingTrack: MatchingTrack | undefined;
+
+    try {
+      bestMatchingTrack = await this.findBestMatchingTrack(
+        localTrackInfo,
+        filenameKeywords,
+      );
+    } catch (error: unknown) {
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TrackMatchFailed,
+        new Error(
+          `${this.constructor.name}: Cannot match track "${trackFilename}"`,
+          { cause: normalizeUnknownError(error) },
+        ),
+      );
+    }
+
+    if (!bestMatchingTrack) {
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TrackMatchFailed,
+        new Error(
+          `${this.constructor.name}: Could not find a matching Beatport track for "${trackFilename}"`,
+        ),
+      );
+    }
+
+    const isTrackMatchConfirmed = await BearTunesTagger.confirmTrackMatch(
+      bestMatchingTrack,
+      filenameKeywords,
+    );
+
+    if (!isTrackMatchConfirmed) {
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TrackMatchRejected,
+        new Error(
+          `${this.constructor.name}: Matching track was rejected for "${trackFilename}"`,
+        ),
+      );
+    }
+
+    logger.info(
+      `Matched [${bestMatchingTrack.score}]: ${buildTrackFullName(bestMatchingTrack)}`,
+    );
+    logger.info(`Matched URL: ${bestMatchingTrack.url ?? 'Undefined'}`);
+
+    if (!bestMatchingTrack.url) {
+      throw new TaggerGuardError(
+        BearTunesTaggerFailureCode.TrackDataFetchFailed,
+        new Error(
+          `${this.constructor.name}: URL of the matching track was not found for "${trackFilename}"`,
+        ),
+      );
+    }
+
+    return bestMatchingTrack.url;
+  }
+
+  /**
    * Resolves canonical track metadata for an accessible local audio file without
    * modifying it.
    *
@@ -480,68 +568,11 @@ export class BearTunesTagger {
 
       const localTrackInfo = readTagResult.trackInfo;
 
-      let trackUrl = await BearTunesTagger.readTrackUrlFromSiblingFile(trackPath);
-
-      if (trackUrl !== undefined) {
-        logger.info('Using URL from file');
-      } else {
-        let bestMatchingTrack: MatchingTrack | undefined;
-
-        try {
-          bestMatchingTrack = await this.findBestMatchingTrack(
-            localTrackInfo,
-            trackFilenameKeywords,
-          );
-        } catch (error: unknown) {
-          return BearTunesTagger.createFailureResult(
-            BearTunesTaggerFailureCode.TrackMatchFailed,
-            new Error(
-              `${this.constructor.name}: Cannot match track "${trackFilename}"`,
-              { cause: normalizeUnknownError(error) },
-            ),
-          );
-        }
-
-        if (!bestMatchingTrack) {
-          return BearTunesTagger.createFailureResult(
-            BearTunesTaggerFailureCode.TrackMatchFailed,
-            new Error(
-              `${this.constructor.name}: Could not find a matching Beatport track for "${trackFilename}"`,
-            ),
-          );
-        }
-
-        trackUrl = bestMatchingTrack.url;
-
-        const isTrackMatchConfirmed = await BearTunesTagger.confirmTrackMatch(
-          bestMatchingTrack,
-          trackFilenameKeywords,
-        );
-
-        if (!isTrackMatchConfirmed) {
-          return BearTunesTagger.createFailureResult(
-            BearTunesTaggerFailureCode.TrackMatchRejected,
-            new Error(
-              `${this.constructor.name}: Matching track was rejected for `
-              + `"${trackFilename}"`,
-            ),
-          );
-        }
-
-        logger.info(
-          `Matched [${bestMatchingTrack.score}]: ${buildTrackFullName(bestMatchingTrack)}`,
-        );
-        logger.info(`Matched URL: ${bestMatchingTrack.url ?? 'Undefined'}`);
-      }
-
-      if (!trackUrl) {
-        return BearTunesTagger.createFailureResult(
-          BearTunesTaggerFailureCode.TrackDataFetchFailed,
-          new Error(
-            `${this.constructor.name}: URL of the matching track was not found for "${trackFilename}"`,
-          ),
-        );
-      }
+      const trackUrl = await this.resolveTrackUrl(
+        trackPath,
+        localTrackInfo,
+        trackFilenameKeywords,
+      );
 
       let trackInfo: TrackInfo;
 
