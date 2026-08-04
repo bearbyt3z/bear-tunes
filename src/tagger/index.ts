@@ -533,16 +533,17 @@ export class BearTunesTagger {
    * Resolves canonical track metadata for an accessible local audio file without
    * modifying it.
    *
-   * The method first verifies that `trackPath` points to an accessible regular
-   * file. When a sibling URL file exists, the method reads the track URL from
-   * that file. An unreadable URL file produces a `TrackUrlFileReadFailed`
-   * result, while a file without a valid URL produces a `TrackUrlFileInvalid`
-   * result.
+   * The method verifies that `trackPath` points to an accessible regular file,
+   * reads its local tags, and extracts keywords from its filename. It resolves
+   * the remote track URL from a sibling URL file when available; otherwise, it
+   * finds the best matching Beatport track and requests confirmation for a weak
+   * match.
    *
-   * When no sibling URL file exists, the method reads local tags, finds the best
-   * matching Beatport track, optionally asks the user to confirm a weak match or
-   * select a radio edit, and fetches canonical metadata. A failed metadata
-   * request produces a `TrackDataRequestFailed` result.
+   * The method fetches canonical metadata for the resolved URL and compares its
+   * duration with the local track. A significant mismatch can be kept, skipped,
+   * or resolved by changing the resulting title to Radio Edit. URL file,
+   * matching, metadata request, and input-file failures are returned as
+   * classified tagger results.
    *
    * @param trackPath - Path to the local audio file used to resolve metadata.
    * @returns Resolved canonical track metadata or a classified failure result.
