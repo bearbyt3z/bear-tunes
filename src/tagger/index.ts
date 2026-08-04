@@ -18,6 +18,7 @@ import {
 import { USER_AGENT_CACHE_FILE } from '#config';
 import logger from '#logger';
 import {
+  forceTrackTitleRadioEdit,
   normalizeTextCharacters,
 } from '#normalizer';
 import {
@@ -545,7 +546,7 @@ export class BearTunesTagger {
       let trackInfo: TrackInfo;
 
       try {
-        trackInfo = await this.extractTrackData(trackUrl, false);
+        trackInfo = await this.extractTrackData(trackUrl);
       } catch (error: unknown) {
         throw new TaggerGuardError(
           BearTunesTaggerFailureCode.TrackDataRequestFailed,
@@ -579,27 +580,11 @@ export class BearTunesTagger {
         );
       }
 
-      if (durationResolution === 'use-radio-edit') {
-        try {
-          trackInfo = await this.extractTrackData(trackUrl, true);
-        } catch (error: unknown) {
-          throw new TaggerGuardError(
-            BearTunesTaggerFailureCode.TrackDataRequestFailed,
-            new Error(
-              `${this.constructor.name}: Cannot request track metadata from ${trackUrl}`,
-              { cause: normalizeUnknownError(error) },
-            ),
-          );
-        }
-
-        if (isEmptyPlainObject(trackInfo)) {
-          return BearTunesTagger.createFailureResult(
-            BearTunesTaggerFailureCode.TrackDataFetchFailed,
-            new Error(
-              `${this.constructor.name}: Cannot retrieve track metadata from ${trackUrl}`,
-            ),
-          );
-        }
+      if (durationResolution === 'use-radio-edit' && trackInfo.title !== undefined) {
+        trackInfo = {
+          ...trackInfo,
+          title: forceTrackTitleRadioEdit(trackInfo.title),
+        };
       }
 
       return BearTunesTagger.createSuccessResult(trackInfo);
@@ -1412,7 +1397,6 @@ export class BearTunesTagger {
 
   private async extractTrackData(
     trackUrl: URL,
-    forceRadioEdit: boolean,
   ): Promise<TrackInfo> {
     const trackData = await fetchBeatportTrackPayload(trackUrl);
 
@@ -1426,7 +1410,6 @@ export class BearTunesTagger {
     const mappedTrackInfo = mapBeatportTrackToTrackInfo(
       trackData,
       trackUrl,
-      forceRadioEdit,
       album,
       publisher,
     );

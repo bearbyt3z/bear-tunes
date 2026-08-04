@@ -143,26 +143,13 @@ export function mapBeatportPublisherToPublisherInfo(
 export function mapBeatportTrackToTrackInfo(
   trackData: BeatportTrackInfo,
   trackUrl: URL,
-  forceRadioEdit: boolean,
   album: AlbumInfo | undefined,
   publisher: PublisherInfo | undefined,
 ): TrackInfo | undefined {
-  let title = normalizeTrackTitle(trackData.name, trackData.mix_name);
-
-  if (forceRadioEdit) {
-    const match = title.match(/Original Mix|Extended Mix/i);
-
-    if (match != null && match.length >= 1) {
-      title = title.replace(match[0], 'Radio Edit');
-    } else {
-      title += ' (Radio Edit)';
-    }
-  }
-
   return normalizeTrackInfo({
     url: trackUrl,
     artists: trackData.artists.map((artist: BeatportArtistInfo) => artist.name),
-    title,
+    title: normalizeTrackTitle(trackData.name, trackData.mix_name),
     remixers: trackData.remixers.map((artist: BeatportArtistInfo) => artist.name),
     released: trackData.new_release_date,
     genre: trackData.genre?.name,

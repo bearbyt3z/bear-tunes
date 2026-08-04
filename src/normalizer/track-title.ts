@@ -215,3 +215,28 @@ export function normalizeTrackTitle(trackName?: string, trackMixName?: string): 
 
   return normalizeTextCharacters(title);
 }
+
+/**
+ * Marks an already normalized track title as a Radio Edit.
+ *
+ * The input title is expected to be canonical. This function replaces an
+ * existing Original Mix or Extended Mix marker, or appends Radio Edit when
+ * neither marker is present.
+ *
+ * @param title - Canonical track title to adjust.
+ * @returns Title marked as Radio Edit.
+ */
+export function forceTrackTitleRadioEdit(title: string): string {
+  if (/\bRadio Edit\b/iu.test(title)) {
+    return title;
+  }
+
+  const titleWithRadioEdit = title.replace(
+    /\b(?:Original|Extended) Mix\b/iu,
+    'Radio Edit',
+  );
+
+  return titleWithRadioEdit === title
+    ? `${title} (Radio Edit)`
+    : titleWithRadioEdit;
+}

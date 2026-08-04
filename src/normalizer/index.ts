@@ -34,6 +34,7 @@ export {
 } from './track-key.js';
 
 export {
+  forceTrackTitleRadioEdit,
   normalizeTrackTitle,
 } from './track-title.js';
 
