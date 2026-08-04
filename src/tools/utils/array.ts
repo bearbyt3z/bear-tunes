@@ -38,6 +38,6 @@ export function arrayIntersection<T>(array1: readonly T[], array2: readonly T[])
  * @param array The array of strings to convert.
  * @returns A new array where every string is converted to lowercase.
  */
-export function arrayToLowerCase(array: string[]): string[] {
+export function arrayToLowerCase(array: readonly string[]): string[] {
   return array.map((value) => value.toLowerCase());
 }

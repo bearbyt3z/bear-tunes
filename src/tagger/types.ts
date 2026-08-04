@@ -184,7 +184,7 @@ export type TrackDurationMismatchResolution =
  */
 export interface MatchingTrack extends TrackInfo {
   score: number;
-  scoreKeywords: string[];
+  readonly scoreKeywords: readonly string[];
   url?: URL;
 }
 

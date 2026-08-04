@@ -458,7 +458,7 @@ export class BearTunesTagger {
   private async resolveTrackUrl(
     trackPath: string,
     localTrackInfo: TrackInfo,
-    filenameKeywords: string[],
+    filenameKeywords: readonly string[],
   ): Promise<URL> {
     const trackUrlFromFile = await BearTunesTagger.readTrackUrlFromSiblingFile(
       trackPath,
@@ -1327,7 +1327,7 @@ export class BearTunesTagger {
   private static createMatchingTrack(
     trackInfo: TrackInfo,
     score: number,
-    scoreKeywords: string[],
+    scoreKeywords: readonly string[],
   ): MatchingTrack {
     return {
       url: trackInfo.url,
@@ -1349,7 +1349,7 @@ export class BearTunesTagger {
 
   private async findBestMatchingTrack(
     trackInfo: TrackInfo,
-    inputKeywords: string[],
+    inputKeywords: readonly string[],
   ): Promise<MatchingTrack | undefined> {
     let winner: MatchingTrack | undefined;
 

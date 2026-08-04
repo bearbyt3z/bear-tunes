@@ -66,7 +66,7 @@ function getProblematicArrayItem<T extends object>(
 
 export async function fetchBeatportSearchTrackPayload(
   searchURL: URL,
-  inputKeywords: string[],
+  inputKeywords: readonly string[],
 ): Promise<BeatportSearchResultTrackInfo[] | undefined> {
   const requestURL = new URL(searchURL);
   requestURL.search += encodeURIComponent(inputKeywords.join('+'));
