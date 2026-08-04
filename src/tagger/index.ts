@@ -351,7 +351,7 @@ export class BearTunesTagger {
       throw new TaggerGuardError(
         BearTunesTaggerFailureCode.TrackUrlFileReadFailed,
         new Error(
-          `${this.name} Cannot read URL file ${trackUrlFilename}`,
+          `${this.name} Cannot read URL file "${trackUrlFilename}"`,
           { cause: normalizeUnknownError(error) },
         ),
       );
@@ -361,7 +361,7 @@ export class BearTunesTagger {
       throw new TaggerGuardError(
         BearTunesTaggerFailureCode.TrackUrlFileInvalid,
         new Error(
-          `${this.name} URL file is present but no URL was found inside ${trackUrlFilename}`,
+          `${this.name} URL file is present but no URL was found inside "${trackUrlFilename}"`,
         ),
       );
     }
