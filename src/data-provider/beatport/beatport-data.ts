@@ -13,23 +13,13 @@ import {
 } from './types.schema.js';
 
 import type {
-  BeatportAlbumInfo,
+  BeatportAlbumPayloadResult,
   BeatportLabelInfo,
-  BeatportPublisherInfo,
+  BeatportPublisherPayloadResult,
   BeatportReleaseInfo,
   BeatportSearchResultTrackInfo,
   BeatportTrackInfo,
 } from './types.js';
-
-export interface BeatportAlbumPayloadResult {
-  albumUrl: URL;
-  albumData: BeatportAlbumInfo;
-}
-
-export interface BeatportPublisherPayloadResult {
-  publisherUrl: URL;
-  publisherData: BeatportPublisherInfo;
-}
 
 /**
  * Returns the first array item referenced by validation issues.

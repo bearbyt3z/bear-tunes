@@ -1,3 +1,34 @@
+/**
+ * Configuration used by BeatportDataProvider to access Beatport metadata.
+ */
+export interface BeatportDataProviderOptions {
+  /**
+   * Base Beatport URL used to build track, release, label, and search URLs.
+   */
+  domainURL: string;
+
+  /**
+   * Beatport path and static query parameters used for track searches.
+   */
+  trackSearchPath: string;
+}
+
+/**
+ * Raw Beatport album payload together with its resolved source URL.
+ */
+export interface BeatportAlbumPayloadResult {
+  albumUrl: URL;
+  albumData: BeatportAlbumInfo;
+}
+
+/**
+ * Raw Beatport publisher payload together with its resolved source URL.
+ */
+export interface BeatportPublisherPayloadResult {
+  publisherUrl: URL;
+  publisherData: BeatportPublisherInfo;
+}
+
 // Beatport search result object
 
 export enum BeatportSearchResultArtistType {
