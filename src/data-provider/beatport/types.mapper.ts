@@ -1,6 +1,6 @@
 import {
   BeatportSearchResultArtistType,
-} from './types.js';
+} from '../../tagger/types.js';
 
 import {
   normalizeTrackTitle,
@@ -22,7 +22,7 @@ import type {
   BeatportPublisherInfo,
   BeatportSearchResultTrackInfo,
   BeatportTrackInfo,
-} from './types.js';
+} from '../../tagger/types.js';
 
 import type {
   AlbumInfo,

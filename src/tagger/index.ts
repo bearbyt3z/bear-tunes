@@ -7,13 +7,13 @@ import {
   fetchBeatportPublisherPayload,
   fetchBeatportSearchTrackPayload,
   fetchBeatportTrackPayload,
-} from './beatport-data.js';
+} from '../data-provider/beatport/beatport-data.js';
 import {
   mapBeatportAlbumToAlbumInfo,
   mapBeatportPublisherToPublisherInfo,
   mapBeatportSearchResultTrackToTrackInfo,
   mapBeatportTrackToTrackInfo,
-} from './types.mapper.js';
+} from '../data-provider/beatport/types.mapper.js';
 
 import { USER_AGENT_CACHE_FILE } from '#config';
 import logger from '#logger';
