@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import {
   BeatportSearchResultArtistType,
-} from '../../tagger/types.js';
+} from './types.js';
 
 /**
  * Runtime validation schema for raw `BeatportSearchResultArtistType` input.

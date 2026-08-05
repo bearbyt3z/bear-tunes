@@ -72,8 +72,6 @@ import type {
   BearTunesTaggerOptions,
   BearTunesTaggerResult,
   BearTunesTaggerSuccessResult,
-  BeatportLabelInfo,
-  BeatportReleaseInfo,
   DownloadImageAssetOptions, // @internal
   ExportedFlacPictureBlock,
   FlacPictureBlockInfo,
@@ -82,6 +80,11 @@ import type {
   TrackArtworkFiles,
   TrackDurationMismatchResolution, // @internal
 } from './types.js';
+
+import type {
+  BeatportLabelInfo,
+  BeatportReleaseInfo,
+} from '../data-provider/beatport/types.js';
 
 import type {
   TrackInfo,

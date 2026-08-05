@@ -19,7 +19,7 @@ import type {
   BeatportReleaseInfo,
   BeatportSearchResultTrackInfo,
   BeatportTrackInfo,
-} from '../../tagger/types.js';
+} from './types.js';
 
 export interface BeatportAlbumPayloadResult {
   albumUrl: URL;
