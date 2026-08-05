@@ -1,3 +1,7 @@
+import type {
+  DataProvider,
+} from '../data-provider/index.js';
+
 import type { TrackInfo } from '#shared-types';
 
 /**
@@ -155,9 +159,7 @@ export type BearTunesTaggerResult =
   | BearTunesTaggerFailureResult;
 
 export interface BearTunesTaggerOptions {
-  domainURL: string;
-  trackSearchPath: string;
-  searchURL: URL;
+  defaultDataProvider: DataProvider;
   eyeD3DisplayPluginPatternFile: string;
   lengthDifferenceAccepted: number; // seconds
   verbose: boolean; // tagger logs

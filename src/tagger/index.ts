@@ -3,17 +3,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import {
-  fetchBeatportAlbumPayload,
-  fetchBeatportPublisherPayload,
-  fetchBeatportSearchTrackPayload,
-  fetchBeatportTrackPayload,
-} from '../data-provider/beatport/beatport-data.js';
-import {
-  mapBeatportAlbumToAlbumInfo,
-  mapBeatportPublisherToPublisherInfo,
-  mapBeatportSearchResultTrackToTrackInfo,
-  mapBeatportTrackToTrackInfo,
-} from '../data-provider/beatport/types.mapper.js';
+  BeatportDataProvider,
+} from '../data-provider/beatport/index.js';
 
 import { USER_AGENT_CACHE_FILE } from '#config';
 import logger from '#logger';
@@ -37,7 +28,6 @@ import {
   formatZodErrorIssues,
   generateRandomHexString,
   getFirstLine,
-  isEmptyPlainObject,
   isSupportedArtworkFile,
   normalizeUnknownError,
   prompt,
@@ -62,8 +52,6 @@ import {
 } from '#shared-types-normalizer';
 
 import {
-  albumInfoSchema,
-  publisherInfoSchema,
   trackInfoSchema,
 } from '#shared-types-schema';
 
@@ -82,14 +70,7 @@ import type {
 } from './types.js';
 
 import type {
-  BeatportLabelInfo,
-  BeatportReleaseInfo,
-} from '../data-provider/beatport/types.js';
-
-import type {
   TrackInfo,
-  AlbumInfo,
-  PublisherInfo,
 } from '#shared-types';
 
 // Public tagger API
@@ -106,21 +87,6 @@ export type {
 };
 
 /**
- * Builds the Beatport track search URL from the current tagger options.
- *
- * Combines the configured `trackSearchPath` with `domainURL` and returns a new
- * `URL` instance on each call, so callers can safely extend or modify the
- * returned value without mutating the underlying options object.
- *
- * @this {BearTunesTaggerOptions} Tagger options providing the Beatport domain
- * and track search path.
- * @returns A new URL instance pointing to the Beatport track search endpoint.
- */
-function getTrackSearchURL(this: BearTunesTaggerOptions): URL {
-  return new URL(this.trackSearchPath, this.domainURL);
-}
-
-/**
  * Default tagger options applied when custom options are not provided.
  */
 // Default options are intentionally defined as immutable:
@@ -128,11 +94,7 @@ function getTrackSearchURL(this: BearTunesTaggerOptions): URL {
 // - `satisfies` checks compatibility with the public options type,
 // - `Object.freeze()` guards against accidental mutation at runtime.
 const defaultTaggerOptions = Object.freeze({
-  domainURL: 'https://www.beatport.com',
-  trackSearchPath: '/search/tracks?per_page=150&q=', // we want tracks only
-  get searchURL() {
-    return getTrackSearchURL.call(this);
-  },
+  defaultDataProvider: new BeatportDataProvider(),
   eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
   lengthDifferenceAccepted: 3,
   verbose: true,
@@ -159,12 +121,6 @@ export class BearTunesTagger {
       ...defaultTaggerOptions,
       ...options,
     };
-
-    Object.defineProperty(this.options, 'searchURL', {
-      get: getTrackSearchURL,
-      enumerable: true,
-      configurable: true,
-    });
   }
 
   /**
@@ -496,7 +452,7 @@ export class BearTunesTagger {
       throw new TaggerGuardError(
         BearTunesTaggerFailureCode.TrackMatchFailed,
         new Error(
-          `${this.constructor.name}: Could not find a matching Beatport track for "${trackFilename}"`,
+          `${this.constructor.name}: Could not find a matching remote track for "${trackFilename}"`,
         ),
       );
     }
@@ -539,7 +495,7 @@ export class BearTunesTagger {
    * The method verifies that `trackPath` points to an accessible regular file,
    * reads its local tags, and extracts keywords from its filename. It resolves
    * the remote track URL from a sibling URL file when available; otherwise, it
-   * finds the best matching Beatport track and requests confirmation for a weak
+   * finds the best matching remote track and requests confirmation for a weak
    * match.
    *
    * The method fetches canonical metadata for the resolved URL and compares its
@@ -578,10 +534,10 @@ export class BearTunesTagger {
         trackFilenameKeywords,
       );
 
-      let trackInfo: TrackInfo;
+      let trackInfo: TrackInfo | undefined;
 
       try {
-        trackInfo = await this.extractTrackData(trackUrl);
+        trackInfo = await this.options.defaultDataProvider.getTrackInfo(trackUrl);
       } catch (error: unknown) {
         throw new TaggerGuardError(
           BearTunesTaggerFailureCode.TrackDataRequestFailed,
@@ -592,7 +548,7 @@ export class BearTunesTagger {
         );
       }
 
-      if (isEmptyPlainObject(trackInfo)) {
+      if (trackInfo === undefined) {
         return BearTunesTagger.createFailureResult(
           BearTunesTaggerFailureCode.TrackDataFetchFailed,
           new Error(
@@ -1357,46 +1313,15 @@ export class BearTunesTagger {
   ): Promise<MatchingTrack | undefined> {
     let winner: MatchingTrack | undefined;
 
-    const trackArray = await fetchBeatportSearchTrackPayload(
-      this.options.searchURL,
+    const trackCandidates = await this.options.defaultDataProvider.findTrackCandidates(
       inputKeywords,
     );
 
-    if (!trackArray) {
+    if (trackCandidates === undefined) {
       return undefined;
     }
 
-    for (const trackEntry of trackArray) {
-      const mappedTrackInfo = mapBeatportSearchResultTrackToTrackInfo(
-        trackEntry,
-        this.options.domainURL,
-      );
-
-      if (!mappedTrackInfo) {
-        logger.warn('Cannot map Beatport search result track to TrackInfo', {
-          trackId: trackEntry.track_id,
-          trackName: trackEntry.track_name,
-        });
-
-        continue;
-      }
-
-      const parsedMappedTrackInfo = trackInfoSchema.safeParse(mappedTrackInfo, {
-        reportInput: true,
-      });
-
-      if (!parsedMappedTrackInfo.success) {
-        logger.warn('Cannot validate mapped TrackInfo from Beatport search result', {
-          trackId: trackEntry.track_id,
-          trackName: trackEntry.track_name,
-          issues: formatZodErrorIssues(parsedMappedTrackInfo.error),
-        });
-
-        continue;
-      }
-
-      const candidateTrack = parsedMappedTrackInfo.data;
-
+    for (const candidateTrack of trackCandidates) {
       if (!candidateTrack.title || !candidateTrack.artists?.length || !candidateTrack.details) {
         continue;
       }
@@ -1428,121 +1353,6 @@ export class BearTunesTagger {
     }
 
     return winner;
-  }
-
-  private async extractTrackData(
-    trackUrl: URL,
-  ): Promise<TrackInfo> {
-    const trackData = await fetchBeatportTrackPayload(trackUrl);
-
-    if (!trackData) {
-      return {};
-    }
-
-    const publisher = await this.extractPublisherData(trackData.release.label);
-    const album = await this.extractAlbumData(trackData.release, trackData.number);
-
-    const mappedTrackInfo = mapBeatportTrackToTrackInfo(
-      trackData,
-      trackUrl,
-      album,
-      publisher,
-    );
-
-    if (!mappedTrackInfo) {
-      return {};
-    }
-
-    const parsedTrackInfo = trackInfoSchema.safeParse(mappedTrackInfo, {
-      reportInput: true,
-    });
-
-    if (!parsedTrackInfo.success) {
-      logger.warn('Cannot validate normalized TrackInfo extracted from Beatport API', {
-        trackUrl: trackUrl.toString(),
-        issues: formatZodErrorIssues(parsedTrackInfo.error),
-      });
-
-      return {};
-    }
-
-    return parsedTrackInfo.data;
-  }
-
-  private async extractAlbumData(
-    releaseInfo: BeatportReleaseInfo,
-    trackNumber: number,
-  ): Promise<AlbumInfo | undefined> {
-    const beatportAlbumPayload = await fetchBeatportAlbumPayload(
-      this.options.domainURL,
-      releaseInfo,
-    );
-
-    if (!beatportAlbumPayload) {
-      return undefined;
-    }
-
-    const mappedAlbumInfo = mapBeatportAlbumToAlbumInfo(
-      beatportAlbumPayload.albumData,
-      beatportAlbumPayload.albumUrl,
-      trackNumber,
-    );
-
-    if (!mappedAlbumInfo) {
-      return undefined;
-    }
-
-    const parsedAlbumInfo = albumInfoSchema.safeParse(mappedAlbumInfo, {
-      reportInput: true,
-    });
-
-    if (!parsedAlbumInfo.success) {
-      logger.warn('Cannot validate normalized AlbumInfo extracted from Beatport API', {
-        albumUrl: beatportAlbumPayload.albumUrl.toString(),
-        issues: formatZodErrorIssues(parsedAlbumInfo.error),
-      });
-
-      return undefined;
-    }
-
-    return parsedAlbumInfo.data;
-  }
-
-  private async extractPublisherData(
-    labelInfo: BeatportLabelInfo,
-  ): Promise<PublisherInfo | undefined> {
-    const beatportPublisherPayload = await fetchBeatportPublisherPayload(
-      this.options.domainURL,
-      labelInfo,
-    );
-
-    if (!beatportPublisherPayload) {
-      return undefined;
-    }
-
-    const mappedPublisherInfo = mapBeatportPublisherToPublisherInfo(
-      beatportPublisherPayload.publisherData,
-      beatportPublisherPayload.publisherUrl,
-    );
-
-    if (!mappedPublisherInfo) {
-      return undefined;
-    }
-
-    const parsedPublisherInfo = publisherInfoSchema.safeParse(mappedPublisherInfo, {
-      reportInput: true,
-    });
-
-    if (!parsedPublisherInfo.success) {
-      logger.warn('Cannot validate normalized PublisherInfo extracted from Beatport API', {
-        publisherUrl: beatportPublisherPayload.publisherUrl.toString(),
-        issues: formatZodErrorIssues(parsedPublisherInfo.error),
-      });
-
-      return undefined;
-    }
-
-    return parsedPublisherInfo.data;
   }
 
   /**
@@ -1839,9 +1649,9 @@ export class BearTunesTagger {
 
         eyeD3Options.push('--text-frame', `TSRC:${escapeUnescapedColons(trackData.isrc)}`);
       }
-      if (trackData.ufid) {
+      if (trackData.ufid && trackData.url) {
         // '--unique-file-id', `http${colonEscapeChar}://www.id3.org/dummy/ufid.html:${trackData.ufid}`,
-        eyeD3Options.push('--unique-file-id', `${escapeUnescapedColons(this.options.domainURL)}:${trackData.ufid}`);
+        eyeD3Options.push('--unique-file-id', `${escapeUnescapedColons(trackData.url.origin)}:${trackData.ufid}`);
       }
 
       eyeD3Options.push(trackPath);
