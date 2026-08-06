@@ -1,7 +1,6 @@
 import type {
   DataProvider,
-} from '../data-provider/index.js';
-
+} from '#data-provider';
 import type { TrackInfo } from '#shared-types';
 
 /**
