@@ -158,13 +158,42 @@ export type BearTunesTaggerResult =
   | BearTunesTaggerSuccessResult
   | BearTunesTaggerFailureResult;
 
+/**
+ * Configuration controlling metadata resolution and tag writing performed by
+ * BearTunesTagger.
+ */
 export interface BearTunesTaggerOptions {
+  /**
+   * Data provider used to search remote track candidates and resolve canonical
+   * metadata for selected tracks.
+   */
   defaultDataProvider: DataProvider;
+
+  /**
+   * Path to the eyeD3 display-plugin pattern file used while reading MP3 tags.
+   */
   eyeD3DisplayPluginPatternFile: string;
-  lengthDifferenceAccepted: number; // seconds
-  verbose: boolean; // tagger logs
-  eyed3Verbose?: boolean; // eyeD3 command logs
-  metaflacVerbose?: boolean; // metaflag command logs
+
+  /**
+   * Maximum accepted duration difference, in seconds, between local and remote
+   * track metadata before user confirmation is requested.
+   */
+  lengthDifferenceAccepted: number;
+
+  /**
+   * Enables diagnostic log messages emitted by the tagger.
+   */
+  verbose: boolean;
+
+  /**
+   * Enables verbose output from eyeD3 commands.
+   */
+  eyed3Verbose?: boolean;
+
+  /**
+   * Enables verbose output from metaflac commands.
+   */
+  metaflacVerbose?: boolean;
 }
 
 /**
