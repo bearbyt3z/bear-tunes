@@ -2,7 +2,9 @@ import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { USER_AGENT_CACHE_FILE } from '#config';
+import {
+  USER_AGENT_CACHE_FILE,
+} from '#config';
 import {
   BeatportDataProvider,
 } from '#data-provider/beatport';

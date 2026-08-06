@@ -1,7 +1,9 @@
 import type {
   DataProvider,
 } from '#data-provider';
-import type { TrackInfo } from '#shared-types';
+import type {
+  TrackInfo,
+} from '#shared-types';
 
 /**
  * Failure codes returned by BearTunes tagger operations.
