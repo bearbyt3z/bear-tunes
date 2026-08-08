@@ -66,7 +66,7 @@ export interface BeatportSearchResultTrackInfo {
   artists: BeatportSearchResultArtistInfo[];
   bpm?: number;
   catalog_number?: string;
-  isrc?: string;
+  isrc?: string | null;
   key_id?: number;
   key_name?: string;
   label: BeatportSearchResultLabelInfo;
@@ -132,7 +132,7 @@ export interface BeatportTrackInfo {
   genre: BeatportGenreInfo;
   id: number;
   image: BeatportImageInfo;
-  isrc?: string;
+  isrc?: string | null;
   key: BeatportKeyInfo;
   length: string; // minutes:seconds
   length_ms: number; // in miliseconds
