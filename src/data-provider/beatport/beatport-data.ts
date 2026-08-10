@@ -44,11 +44,9 @@ function getProblematicArrayItem<T extends object>(
   for (const issue of issues) {
     const [firstPathSegment] = issue.path;
 
-    if (typeof firstPathSegment !== 'number') {
-      continue;
+    if (typeof firstPathSegment === 'number') {
+      return input[firstPathSegment];
     }
-
-    return input[firstPathSegment];
   }
 
   return undefined;
