@@ -18,7 +18,8 @@ export abstract class DataProvider {
    * provider search result. The caller selects the most appropriate candidate.
    *
    * @param inputKeywords - Keywords used to search the remote metadata source.
-   * @returns Candidate track metadata, or `undefined` when no candidates are available.
+   * @returns Candidate track metadata, an empty array when no candidates are
+   * found, or undefined when candidates cannot be retrieved.
    */
   abstract findTrackCandidates(
     inputKeywords: readonly string[],

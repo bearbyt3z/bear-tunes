@@ -94,7 +94,8 @@ export class BeatportDataProvider extends DataProvider {
    * are skipped and logged.
    *
    * @param inputKeywords - Keywords used to search Beatport tracks.
-   * @returns Candidate metadata, or undefined when Beatport search data is unavailable.
+   * @returns Candidate metadata, an empty array when no matching Beatport tracks
+   * are found, or undefined when Beatport search data is unavailable.
    */
   async findTrackCandidates(
     inputKeywords: readonly string[],
