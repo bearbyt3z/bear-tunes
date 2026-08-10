@@ -38,6 +38,11 @@ import type {
   TrackInfo,
 } from '#shared-types';
 
+// Public Beatport DataProvider API
+export type {
+  BeatportDataProviderOptions,
+} from './types.js';
+
 /**
  * Default configuration used by BeatportDataProvider.
  */
