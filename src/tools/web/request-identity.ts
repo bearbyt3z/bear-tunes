@@ -215,7 +215,7 @@ async function getCachedIdentityEntry<K extends IdentityCacheKey>(
     return undefined;
   }
 
-  return entry as IdentityCacheEntry<K>;
+  return entry;
 }
 
 /**
