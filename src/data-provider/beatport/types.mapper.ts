@@ -65,7 +65,10 @@ export function mapBeatportSearchResultTrackToTrackInfo(
   return normalizeTrackInfo({
     url: `${domainURL}/track/${slugify(trackEntry.track_name)}/${trackEntry.track_id}`,
     artists,
-    title: trackEntry.mix_name ? `${trackEntry.track_name} (${trackEntry.mix_name})` : trackEntry.track_name,
+    title: normalizeTrackTitle(
+      trackEntry.track_name,
+      trackEntry.mix_name,
+    ),
     remixers,
     released: trackEntry.release_date,
     bpm: trackEntry.bpm,
