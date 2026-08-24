@@ -95,7 +95,7 @@ export type {
 // - `satisfies` checks compatibility with the public options type,
 // - `Object.freeze()` guards against accidental mutation at runtime.
 const defaultTaggerOptions = Object.freeze({
-  defaultDataProvider: new BeatportDataProvider(),
+  dataProvider: new BeatportDataProvider(),
   eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
   lengthDifferenceAccepted: 3,
   verbose: true,
@@ -538,7 +538,7 @@ export class BearTunesTagger {
       let trackInfo: TrackInfo | undefined;
 
       try {
-        trackInfo = await this.options.defaultDataProvider.getTrackInfo(trackUrl);
+        trackInfo = await this.options.dataProvider.getTrackInfo(trackUrl);
       } catch (error: unknown) {
         throw new TaggerGuardError(
           BearTunesTaggerFailureCode.TrackDataRequestFailed,
@@ -1314,7 +1314,7 @@ export class BearTunesTagger {
   ): Promise<MatchingTrack | undefined> {
     let winner: MatchingTrack | undefined;
 
-    const trackCandidates = await this.options.defaultDataProvider.findTrackCandidates(
+    const trackCandidates = await this.options.dataProvider.findTrackCandidates(
       inputKeywords,
     );
 

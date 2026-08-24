@@ -168,7 +168,7 @@ export interface BearTunesTaggerOptions {
    * Data provider used to search remote track candidates and resolve canonical
    * metadata for selected tracks.
    */
-  defaultDataProvider: DataProvider;
+  dataProvider: DataProvider;
 
   /**
    * Path to the eyeD3 display-plugin pattern file used while reading MP3 tags.
