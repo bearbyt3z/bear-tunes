@@ -138,7 +138,6 @@ export function mapBeatportPublisherToPublisherInfo(
  *
  * @param trackData - Beatport full track object.
  * @param trackUrl - Canonical Beatport track URL.
- * @param forceRadioEdit - Whether to force the track title to Radio Edit.
  * @param album - Canonical mapped album info.
  * @param publisher - Canonical mapped publisher info.
  * @returns Canonical `TrackInfo`, or `undefined` when the mapped value cannot be normalized.
