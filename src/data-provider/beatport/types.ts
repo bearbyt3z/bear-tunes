@@ -8,9 +8,19 @@ export interface BeatportDataProviderOptions {
   domainURL: string;
 
   /**
-   * Beatport path and static query parameters used for track searches.
+   * Beatport path used for track searches.
    */
   trackSearchPath: string;
+
+  /**
+   * Query parameter name used to send track search keywords.
+   */
+  trackSearchQueryParameter: string;
+
+  /**
+   * Static query parameters applied to every track search.
+   */
+  trackSearchParameters: Readonly<Record<string, string>>;
 }
 
 /**

@@ -48,7 +48,11 @@ export type {
  */
 const defaultBeatportDataProviderOptions = Object.freeze({
   domainURL: 'https://www.beatport.com',
-  trackSearchPath: '/search/tracks?per_page=150&q=',
+  trackSearchPath: '/search/tracks',
+  trackSearchQueryParameter: 'q',
+  trackSearchParameters: Object.freeze({
+    per_page: '150',
+  }),
 } satisfies BeatportDataProviderOptions);
 
 /**
@@ -102,6 +106,8 @@ export class BeatportDataProvider extends DataProvider {
   ): Promise<readonly TrackInfo[] | undefined> {
     const trackEntries = await fetchBeatportSearchTrackPayload(
       this.getTrackSearchURL(),
+      this.options.trackSearchQueryParameter,
+      this.options.trackSearchParameters,
       inputKeywords,
     );
 

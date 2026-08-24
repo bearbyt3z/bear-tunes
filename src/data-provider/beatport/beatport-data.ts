@@ -54,10 +54,20 @@ function getProblematicArrayItem<T extends object>(
 
 export async function fetchBeatportSearchTrackPayload(
   searchURL: URL,
+  searchQueryParameter: string,
+  searchParameters: Readonly<Record<string, string>>,
   inputKeywords: readonly string[],
 ): Promise<BeatportSearchResultTrackInfo[] | undefined> {
   const requestURL = new URL(searchURL);
-  requestURL.search += encodeURIComponent(inputKeywords.join('+'));
+
+  for (const [parameterName, parameterValue] of Object.entries(searchParameters)) {
+    requestURL.searchParams.set(parameterName, parameterValue);
+  }
+
+  requestURL.searchParams.set(
+    searchQueryParameter,
+    inputKeywords.join(' '),
+  );
 
   const rawTrackArray = await extractNextJSData(requestURL);
 
