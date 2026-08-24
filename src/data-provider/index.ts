@@ -19,7 +19,8 @@ export abstract class DataProvider {
    *
    * @param inputKeywords - Keywords used to search the remote metadata source.
    * @returns Candidate track metadata, an empty array when no candidates are
-   * found, or undefined when candidates cannot be retrieved.
+   * found, or undefined when no usable candidate payload is available.
+   * @throws {Error} When the provider cannot extract data from the remote source.
    */
   abstract findTrackCandidates(
     inputKeywords: readonly string[],
@@ -29,7 +30,9 @@ export abstract class DataProvider {
    * Resolves canonical metadata for a selected remote track URL.
    *
    * @param trackUrl - URL of the selected remote track.
-   * @returns Canonical track metadata, or `undefined` when it cannot be resolved.
+   * @returns Canonical track metadata, or `undefined` when no usable metadata is
+   * available for the selected track.
+   * @throws {Error} When the provider cannot extract data from the remote source.
    */
   abstract getTrackInfo(
     trackUrl: URL,
