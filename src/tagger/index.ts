@@ -1,3 +1,13 @@
+/**
+ * Public API for BearTunes audio tagging.
+ *
+ * Exposes the tagger, its configuration and result types, and classified
+ * failure codes. File-format readers, writers, matching helpers, and other
+ * implementation details remain internal to the module.
+ *
+ * @module tagger
+ */
+
 import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -74,8 +84,6 @@ import type {
   TrackInfo,
 } from '#shared-types';
 
-// Public tagger API
-// exporting enums & types, so they will be included in the tagger import
 export {
   BearTunesTaggerFailureCode,
 };
