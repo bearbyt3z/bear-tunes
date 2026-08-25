@@ -1,3 +1,13 @@
+/**
+ * Public API for the Beatport track metadata provider.
+ *
+ * Exposes the Beatport provider implementation and its configuration type.
+ * Raw Beatport payload models, validation schemas, mapping functions, and
+ * transport helpers remain internal implementation details.
+ *
+ * @module data-provider/beatport
+ */
+
 import {
   fetchBeatportAlbumPayload,
   fetchBeatportPublisherPayload,
@@ -38,7 +48,6 @@ import type {
   TrackInfo,
 } from '#shared-types';
 
-// Public Beatport DataProvider API
 export type {
   BeatportDataProviderOptions,
 } from './types.js';
