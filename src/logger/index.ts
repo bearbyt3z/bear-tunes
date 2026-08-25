@@ -1,3 +1,13 @@
+/**
+ * Shared application logger for BearTunes.
+ *
+ * Exports the configured Winston logger used across the application. It renders
+ * structured metadata, validation issues, and errors consistently to console
+ * and log files. Formatting and transport configuration remain internal details.
+ *
+ * @module logger
+ */
+
 import process from 'node:process';
 
 import * as winston from 'winston';
