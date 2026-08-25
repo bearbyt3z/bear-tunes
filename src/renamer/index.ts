@@ -1,3 +1,13 @@
+/**
+ * Public API for BearTunes track file renaming.
+ *
+ * Exposes the renamer, its configuration and result types, and directory
+ * pattern and failure-code enums. Placeholder resolution, path sanitization,
+ * filesystem validation, and target path preparation remain internal details.
+ *
+ * @module renamer
+ */
+
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -25,7 +35,6 @@ import type {
 } from './types.js';
 import type { TrackInfo } from '#shared-types';
 
-// reexporting enum & types, so they will be included in the renamer module import
 export {
   BearTunesRenamerDirectoryPatternMode,
   BearTunesRenamerFailureCode,
