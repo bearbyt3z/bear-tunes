@@ -1,3 +1,13 @@
+/**
+ * Public API for BearTunes audio conversion.
+ *
+ * Exposes the converter, its configuration and result types, and conversion
+ * option and failure-code enums. Filesystem validation, encoder command
+ * construction, pipeline execution, and tag transfer remain internal details.
+ *
+ * @module converter
+ */
+
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -35,7 +45,6 @@ import type {
   BearTunesConverterSuccessResult,
 } from './types.js';
 
-// reexporting enums & types, so they will be included in the converter import
 export {
   Mp3BitrateMode,
   BearTunesConverterFailureCode,
