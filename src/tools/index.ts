@@ -1,9 +1,11 @@
 /**
- * Public barrel file for the tools module.
+ * Public API for shared BearTunes utilities.
  *
- * Re-exports the supported helpers from tools submodules so consumers can use:
- * `import { ... } from '#tools'`
- * instead of importing from internal module paths directly.
+ * Re-exports reusable helpers for audio metadata, command execution, file and
+ * path handling, parsing, formatting, type guards, and web access. Internal
+ * submodule paths remain implementation details.
+ *
+ * @module tools
  */
 
 export {
