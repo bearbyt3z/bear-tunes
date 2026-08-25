@@ -1,3 +1,14 @@
+/**
+ * Public API for BearTunes audio processing.
+ *
+ * Exposes the processor, its configuration and dependency types, and directory
+ * processing result types and statuses. Format-specific dispatch, conversion,
+ * tagging, renaming, artwork handling, and directory traversal remain
+ * internal implementation details.
+ *
+ * @module processor
+ */
+
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -27,7 +38,6 @@ import type {
   ReadDirectoryEntriesResult,
 } from './types.js';
 
-// reexporting enums & types, so they will be included in the processor import
 export {
   DirectoryProcessingStatus,
 };
