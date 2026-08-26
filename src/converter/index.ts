@@ -21,10 +21,10 @@ import {
   CommandPipelineInfrastructureError,
   executeCommandPipeline,
   executeCommandSync,
+  FirstPipelineCommandFailedError,
   isErrnoException,
   normalizeTrailingPathSeparators,
   normalizeUnknownError,
-  FirstPipelineCommandFailedError,
   SecondPipelineCommandFailedError,
 } from '#tools';
 
@@ -32,9 +32,9 @@ import {
   ConverterGuardError,
 } from './errors.js';
 import {
-  Mp3BitrateMode,
   BearTunesConverterFailureCode,
   LameQuality,
+  Mp3BitrateMode,
   Mp3ChannelMode,
   ReplayGainMode,
 } from './types.js';
@@ -47,9 +47,9 @@ import type {
 } from './types.js';
 
 export {
-  Mp3BitrateMode,
   BearTunesConverterFailureCode,
   LameQuality,
+  Mp3BitrateMode,
   Mp3ChannelMode,
   ReplayGainMode,
 };

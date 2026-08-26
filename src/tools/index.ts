@@ -100,9 +100,9 @@ export {
 export {
   isEmptyPlainObject,
   isErrnoException,
-  isRecordArray,
   isObjectRecord,
   isReadonlyStringArray,
+  isRecordArray,
   isUnknownArray,
 } from './utils/type-guards.js';
 
@@ -111,8 +111,8 @@ export {
 } from './web/download-file.js';
 
 export {
-  downloadImage,
   downloadAndSaveArtwork,
+  downloadImage,
 } from './web/download-image.js';
 
 export {
