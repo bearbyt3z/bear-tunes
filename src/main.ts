@@ -1,3 +1,11 @@
+/**
+ * BearTunes CLI application entry point.
+ *
+ * Reads the input directory and optional output directory from command-line
+ * arguments, runs the audio processing pipeline, and maps directory processing
+ * outcomes to application logs and process exit codes.
+ */
+
 // https://github.com/aadsm/JavaScript-ID3-Reader
 // ID3 tags reader in JavaScript (ID3v1, ID3v2 and AAC) http://www.aadsm.net/libraries/id3/
 
