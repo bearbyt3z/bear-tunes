@@ -99,7 +99,12 @@ export enum BearTunesRenamerDirectoryPatternMode {
  * Configuration options controlling BearTunes file renaming.
  */
 export interface BearTunesRenamerOptions {
-  /** Pattern used to build the target file name without extension. */
+  /**
+   * Pattern used to build the target file name without extension.
+   *
+   * The default pattern relies on `%title%`, whose normalized value already
+   * includes mix/remix/edit information when present.
+   */
   filenamePattern: string;
 
   /** Pattern used to build the target directory. */

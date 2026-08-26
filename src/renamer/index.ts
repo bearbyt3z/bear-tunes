@@ -55,7 +55,7 @@ export type {
 // - `satisfies` checks compatibility with the public options type,
 // - `Object.freeze()` guards against accidental mutation at runtime.
 const defaultRenamerOptions = Object.freeze({
-  filenamePattern: '%artists% - %title%', // title already contains remixers etc.
+  filenamePattern: '%artists% - %title%',
   directoryPattern: '%genre%/%artists%',
   directoryPatternMode: BearTunesRenamerDirectoryPatternMode.RequiresTargetBaseDirectory,
   forceOverwriteTargetFile: false,
