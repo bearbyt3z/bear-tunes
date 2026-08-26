@@ -1,8 +1,16 @@
 import type { BearTunesTaggerFailureCode } from './types.js';
 
 /**
- * Internal error used to pass a classified tagger failure from a guard or
- * reader helper to the public result-based API.
+ * Internal guard error used to abort tagger flow with a classified failure.
+ *
+ * This error is thrown by internal tagger guards and helpers that need to
+ * stop the current operation while preserving a
+ * {@link BearTunesTaggerFailureCode}, the underlying {@link Error}, and
+ * optional structured diagnostic details.
+ *
+ * Public tagger methods catch this error and map it to a
+ * {@link BearTunesTaggerFailureResult}, preserving the tagger failure code,
+ * underlying error, and diagnostic details in the returned result.
  *
  * @internal
  */
