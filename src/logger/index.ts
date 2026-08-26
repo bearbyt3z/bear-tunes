@@ -184,6 +184,45 @@ function formatIssues(value: unknown): string[] {
 }
 
 /**
+ * Formats the complete cause chain attached to an error.
+ *
+ * The direct cause and each nested Error cause are rendered as
+ * `ErrorName: message`. Circular cause chains are detected to prevent
+ * infinite traversal. A terminal non-Error cause is rendered as a value.
+ *
+ * @param error - Root error whose cause chain should be formatted.
+ * @returns Readable lines describing the nested error causes.
+ */
+function formatErrorCauses(error: Error): string[] {
+  const causes: string[] = [];
+  const seenErrors = new Set<Error>([error]);
+
+  let cause: unknown = error.cause;
+
+  while (cause instanceof Error) {
+    if (seenErrors.has(cause)) {
+      causes.push('[Circular error cause]');
+      return causes;
+    }
+
+    seenErrors.add(cause);
+    causes.push(`${cause.name}: ${cause.message}`);
+
+    cause = cause.cause;
+  }
+
+  if (cause !== undefined) {
+    const renderedCause = isLoggerValue(cause)
+      ? stringifyLogValue(cause)
+      : '[Unsupported error cause]';
+
+    causes.push(renderedCause);
+  }
+
+  return causes;
+}
+
+/**
  * Winston format that moves non-reserved top-level log fields into a dedicated
  * `metadata` object used by the multiline renderer.
  */
@@ -328,6 +367,13 @@ function renderLog(info: LoggerInfo, withTimestamp: boolean): string {
 
   const issueLines = renderSectionLines('issues', formatIssues(issues));
 
+  const causeLines = info.error instanceof Error
+    ? renderSectionLines(
+      'cause',
+      formatErrorCauses(info.error),
+    )
+    : [];
+
   const errorLines = info.errorStack
     ? renderIndentedBlock('stack', info.errorStack.split('\n'))
     : info.errorMessage
@@ -336,6 +382,7 @@ function renderLog(info: LoggerInfo, withTimestamp: boolean): string {
 
   lines.push(...metadataLines);
   lines.push(...issueLines);
+  lines.push(...causeLines);
   lines.push(...errorLines);
 
   return lines.join('\n');
