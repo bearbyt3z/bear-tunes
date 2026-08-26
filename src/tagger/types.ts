@@ -226,7 +226,7 @@ export interface MatchingTrack extends TrackInfo {
  * @internal
  */
 export interface TrackArtworkFiles {
-  frontCover?: string; // TODO: File?
+  frontCover?: string;
   waveform?: string;
   publisherLogotype?: string;
 }
