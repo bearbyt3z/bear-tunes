@@ -13,6 +13,7 @@ import * as path from 'node:path';
 
 import logger from '#logger';
 import {
+  isErrnoException,
   isObjectRecord,
   normalizeTrailingPathSeparators,
   normalizeUnknownError,
@@ -471,9 +472,7 @@ export class BearTunesRenamer {
     try {
       fs.lstatSync(targetPath);
     } catch (error: unknown) {
-      const errnoError = error as NodeJS.ErrnoException;
-
-      if (errnoError.code === 'ENOENT') {
+      if (isErrnoException(error) && error.code === 'ENOENT') {
         return;
       }
 

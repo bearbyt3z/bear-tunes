@@ -25,6 +25,22 @@ export function isEmptyPlainObject(value: unknown): value is Record<string, neve
 }
 
 /**
+ * Checks whether a value is a Node.js error with a string error code.
+ *
+ * @param value - Unknown value to inspect.
+ * @returns `true` when the value is a Node.js error with a string `code`.
+ */
+export function isErrnoException(
+  value: unknown,
+): value is NodeJS.ErrnoException {
+  return (
+    value instanceof Error
+    && 'code' in value
+    && typeof value.code === 'string'
+  );
+}
+
+/**
  * Checks if a value is a non-null object accessible through string keys.
  *
  * Type guard returns `value is Record<string, unknown>`, meaning:

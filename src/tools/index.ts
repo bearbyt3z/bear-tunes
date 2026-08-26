@@ -99,6 +99,7 @@ export {
 
 export {
   isEmptyPlainObject,
+  isErrnoException,
   isRecordArray,
   isObjectRecord,
   isReadonlyStringArray,
