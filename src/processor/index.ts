@@ -505,6 +505,10 @@ export class BearTunesProcessor {
    * format-specific handlers, and aggregates the final processing result for the
    * entire current directory subtree.
    *
+   * Recursive calls must use this method rather than
+   * `processAllFilesInDirectory()`, because the public entry point resets
+   * run-scoped processor state before starting a new traversal.
+   *
    * If any nested directory fails validation or cannot be read, that status is
    * returned immediately and propagated to the top-level caller. Otherwise, the
    * function reports whether at least one supported file was processed anywhere
@@ -515,7 +519,7 @@ export class BearTunesProcessor {
    * @returns A promise resolving to a `DirectoryProcessingStatus` that describes
    * the outcome for the entire current directory subtree.
    */
-  async processAllFilesInDirectory(
+  private async traverseDirectory(
     inputDirectory: string,
     outputDirectory?: string,
   ): Promise<DirectoryProcessingStatus> {
@@ -534,7 +538,7 @@ export class BearTunesProcessor {
       }
 
       if (entry.isDirectory()) {
-        const subtreeResult = await this.processAllFilesInDirectory(filePath, outputDirectory);
+        const subtreeResult = await this.traverseDirectory(filePath, outputDirectory);
 
         switch (subtreeResult) {
           case DirectoryProcessingStatus.FilesProcessed:
@@ -561,5 +565,29 @@ export class BearTunesProcessor {
     return anyFilesWereProcessed
       ? DirectoryProcessingStatus.FilesProcessed
       : DirectoryProcessingStatus.NoSupportedFilesFound;
+  }
+
+  /**
+   * Recursively processes all supported audio files in a directory tree.
+   *
+   * This is the public entry point for one processing run. It clears
+   * run-scoped state before recursively traversing the requested directory and
+   * its nested subdirectories, ensuring that MP3 paths recorded during an
+   * earlier run cannot affect the current one.
+   *
+   * @param inputDirectory - Root directory to scan recursively.
+   * @param outputDirectory - Optional destination directory for renamed output files.
+   * @returns Processing status for the complete directory tree.
+   */
+  async processAllFilesInDirectory(
+    inputDirectory: string,
+    outputDirectory?: string,
+  ): Promise<DirectoryProcessingStatus> {
+    this.convertedMp3Paths.clear();
+
+    return await this.traverseDirectory(
+      inputDirectory,
+      outputDirectory,
+    );
   }
 }
