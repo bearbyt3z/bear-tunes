@@ -585,9 +585,13 @@ export class BearTunesProcessor {
   ): Promise<DirectoryProcessingStatus> {
     this.convertedMp3Paths.clear();
 
-    return await this.traverseDirectory(
-      inputDirectory,
-      outputDirectory,
-    );
+    try {
+      return await this.traverseDirectory(
+        inputDirectory,
+        outputDirectory,
+      );
+    } finally {
+      this.convertedMp3Paths.clear();
+    }
   }
 }
