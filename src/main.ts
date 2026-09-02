@@ -30,6 +30,10 @@ import {
   DirectoryProcessingStatus,
 } from '#processor';
 
+import {
+  normalizeUnknownError,
+} from '#tools';
+
 const inputDirectory = process.argv[2] ?? '.';
 const outputDirectory = process.argv[3] ?? undefined;
 
@@ -42,12 +46,18 @@ const processor = new BearTunesProcessor({ verbose: true });
 // (instead of forcing an immediate shutdown).
 
 process.on('unhandledRejection', (reason) => {
-  logger.error('Unhandled promise rejection:', reason);
+  logger.error('Unhandled promise rejection', {
+    error: normalizeUnknownError(reason),
+  });
+
   process.exitCode = 1;
 });
 
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught exception:', error);
+  logger.error('Uncaught exception', {
+    error,
+  });
+
   process.exitCode = 1;
 });
 
@@ -86,6 +96,9 @@ processor.processAllFilesInDirectory(inputDirectory, outputDirectory)
     }
   })
   .catch((error: unknown) => {
-    logger.error(error);
+    logger.error('Unexpected processor failure', {
+      error: normalizeUnknownError(error),
+    });
+
     process.exitCode = 1;
   });
