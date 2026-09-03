@@ -71,6 +71,15 @@ export async function fetchBeatportSearchTrackPayload(
 
   const rawTrackArray = await extractNextJSData(requestURL);
 
+  if (rawTrackArray === undefined) {
+    logger.warn('No Beatport search results payload available', {
+      searchKeywords: inputKeywords,
+      url: requestURL.toString(),
+    });
+
+    return undefined;
+  }
+
   const parsedTrackArray = beatportSearchResultTrackInfoArraySchema.safeParse(rawTrackArray, {
     reportInput: true,
   });
@@ -96,6 +105,14 @@ export async function fetchBeatportTrackPayload(
   trackUrl: URL,
 ): Promise<BeatportTrackInfo | undefined> {
   const rawTrackData = await extractNextJSData(trackUrl);
+
+  if (rawTrackData === undefined) {
+    logger.warn('No Beatport track payload available', {
+      trackUrl: trackUrl.toString(),
+    });
+
+    return undefined;
+  }
 
   const parsedTrackData = beatportTrackInfoSchema.safeParse(rawTrackData, {
     reportInput: true,
@@ -127,6 +144,14 @@ export async function fetchBeatportAlbumPayload(
 
   const rawAlbumData = await extractNextJSData(albumUrl);
 
+  if (rawAlbumData === undefined) {
+    logger.warn('No Beatport album payload available', {
+      albumUrl: albumUrl.toString(),
+    });
+
+    return undefined;
+  }
+
   const parsedAlbumData = beatportAlbumInfoSchema.safeParse(rawAlbumData);
 
   if (!parsedAlbumData.success) {
@@ -157,6 +182,14 @@ export async function fetchBeatportPublisherPayload(
   }
 
   const rawPublisherData = await extractNextJSData(publisherUrl);
+
+  if (rawPublisherData === undefined) {
+    logger.warn('No Beatport publisher payload available', {
+      publisherUrl: publisherUrl.toString(),
+    });
+
+    return undefined;
+  }
 
   const parsedPublisherData = beatportPublisherInfoSchema.safeParse(rawPublisherData);
 
