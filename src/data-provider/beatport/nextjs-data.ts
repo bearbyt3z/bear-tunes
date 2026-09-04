@@ -10,11 +10,11 @@ import {
 } from '#tools';
 
 /**
- * Extracts the primary dehydrated payload from a Next.js page.
+ * Extracts the payload of the first dehydrated query from a Next.js page.
  *
  * The function loads the target page, reads the `#__NEXT_DATA__` element,
- * parses its JSON content, and returns the first resolved query payload from
- * `props.pageProps.dehydratedState`.
+ * parses its JSON content, and returns the data stored in the first query
+ * under `props.pageProps.dehydratedState.queries`.
  *
  * @param url - Absolute URL of the Next.js page.
  * @returns Extracted query payload, or `undefined` when the page could not be fetched.
