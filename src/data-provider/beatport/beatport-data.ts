@@ -53,28 +53,28 @@ function getProblematicArrayItem<T extends object>(
 }
 
 export async function fetchBeatportSearchTrackPayload(
-  searchURL: URL,
+  searchUrl: URL,
   searchQueryParameter: string,
   searchParameters: Readonly<Record<string, string>>,
   inputKeywords: readonly string[],
 ): Promise<BeatportSearchResultTrackInfo[] | undefined> {
-  const requestURL = new URL(searchURL);
+  const requestUrl = new URL(searchUrl);
 
   for (const [parameterName, parameterValue] of Object.entries(searchParameters)) {
-    requestURL.searchParams.set(parameterName, parameterValue);
+    requestUrl.searchParams.set(parameterName, parameterValue);
   }
 
-  requestURL.searchParams.set(
+  requestUrl.searchParams.set(
     searchQueryParameter,
     inputKeywords.join(' '),
   );
 
-  const rawTrackArray = await extractNextJSData(requestURL);
+  const rawTrackArray = await extractNextJSData(requestUrl);
 
   if (rawTrackArray === undefined) {
     logger.warn('No Beatport search results payload available', {
       searchKeywords: inputKeywords,
-      url: requestURL.toString(),
+      url: requestUrl.toString(),
     });
 
     return undefined;
@@ -131,11 +131,11 @@ export async function fetchBeatportTrackPayload(
 }
 
 export async function fetchBeatportAlbumPayload(
-  domainURL: string,
+  domainUrl: string,
   releaseInfo: BeatportReleaseInfo | undefined,
 ): Promise<BeatportAlbumPayloadResult | undefined> {
   const albumUrl = releaseInfo
-    ? new URL(`${domainURL}/release/${releaseInfo.slug}/${releaseInfo.id}`)
+    ? new URL(`${domainUrl}/release/${releaseInfo.slug}/${releaseInfo.id}`)
     : undefined;
 
   if (!albumUrl) {
@@ -170,11 +170,11 @@ export async function fetchBeatportAlbumPayload(
 }
 
 export async function fetchBeatportPublisherPayload(
-  domainURL: string,
+  domainUrl: string,
   labelInfo: BeatportLabelInfo | undefined,
 ): Promise<BeatportPublisherPayloadResult | undefined> {
   const publisherUrl = labelInfo
-    ? new URL(`${domainURL}/label/${labelInfo.slug}/${labelInfo.id}`)
+    ? new URL(`${domainUrl}/label/${labelInfo.slug}/${labelInfo.id}`)
     : undefined;
 
   if (!publisherUrl) {

@@ -56,7 +56,7 @@ export type {
  * Default configuration used by BeatportDataProvider.
  */
 const defaultBeatportDataProviderOptions = Object.freeze({
-  domainURL: 'https://www.beatport.com',
+  domainUrl: 'https://www.beatport.com',
   trackSearchPath: '/search/tracks',
   trackSearchQueryParameter: 'q',
   trackSearchParameters: Object.freeze({
@@ -92,10 +92,10 @@ export class BeatportDataProvider extends DataProvider {
    *
    * @returns A new URL for the configured Beatport track search endpoint.
    */
-  private getTrackSearchURL(): URL {
+  private getTrackSearchUrl(): URL {
     return new URL(
       this.options.trackSearchPath,
-      this.options.domainURL,
+      this.options.domainUrl,
     );
   }
 
@@ -114,7 +114,7 @@ export class BeatportDataProvider extends DataProvider {
     inputKeywords: readonly string[],
   ): Promise<readonly TrackInfo[] | undefined> {
     const trackEntries = await fetchBeatportSearchTrackPayload(
-      this.getTrackSearchURL(),
+      this.getTrackSearchUrl(),
       this.options.trackSearchQueryParameter,
       this.options.trackSearchParameters,
       inputKeywords,
@@ -129,7 +129,7 @@ export class BeatportDataProvider extends DataProvider {
     for (const trackEntry of trackEntries) {
       const mappedTrackInfo = mapBeatportSearchResultTrackToTrackInfo(
         trackEntry,
-        this.options.domainURL,
+        this.options.domainUrl,
       );
 
       if (mappedTrackInfo === undefined) {
@@ -232,7 +232,7 @@ export class BeatportDataProvider extends DataProvider {
     trackNumber: number,
   ): Promise<AlbumInfo | undefined> {
     const beatportAlbumPayload = await fetchBeatportAlbumPayload(
-      this.options.domainURL,
+      this.options.domainUrl,
       releaseInfo,
     );
 
@@ -277,7 +277,7 @@ export class BeatportDataProvider extends DataProvider {
     labelInfo: BeatportLabelInfo | undefined,
   ): Promise<PublisherInfo | undefined> {
     const beatportPublisherPayload = await fetchBeatportPublisherPayload(
-      this.options.domainURL,
+      this.options.domainUrl,
       labelInfo,
     );
 

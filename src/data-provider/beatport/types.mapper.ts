@@ -38,12 +38,12 @@ import type {
  * does not validate the resulting output schema.
  *
  * @param trackEntry - Beatport search result track object.
- * @param domainURL - Beatport domain URL used to build the canonical track URL.
+ * @param domainUrl - Beatport domain URL used to build the canonical track URL.
  * @returns Canonical `TrackInfo`, or `undefined` when the mapped value cannot be normalized.
  */
 export function mapBeatportSearchResultTrackToTrackInfo(
   trackEntry: BeatportSearchResultTrackInfo,
-  domainURL: string,
+  domainUrl: string,
 ): TrackInfo | undefined {
   const artists = trackEntry.artists
     .filter((artist) => artist.artist_type_name === BeatportSearchResultArtistType.Artist)
@@ -63,7 +63,7 @@ export function mapBeatportSearchResultTrackToTrackInfo(
   const details = (trackEntry.length === undefined) ? undefined : { duration: trackEntry.length / 1000 };
 
   return normalizeTrackInfo({
-    url: `${domainURL}/track/${slugify(trackEntry.track_name)}/${trackEntry.track_id}`,
+    url: `${domainUrl}/track/${slugify(trackEntry.track_name)}/${trackEntry.track_id}`,
     artists,
     title: normalizeTrackTitle(
       trackEntry.track_name,

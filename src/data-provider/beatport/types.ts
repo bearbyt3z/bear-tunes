@@ -5,7 +5,7 @@ export interface BeatportDataProviderOptions {
   /**
    * Base Beatport URL used to build track, release, label, and search URLs.
    */
-  domainURL: string;
+  domainUrl: string;
 
   /**
    * Beatport path used for track searches.
