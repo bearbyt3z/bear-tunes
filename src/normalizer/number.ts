@@ -11,7 +11,7 @@ import {
  * positive finite number.
  *
  * @param value - Value to normalize.
- * @param value - Raw or already normalized value to normalize.
+ * @returns Parsed positive number, or `undefined` when the input is invalid.
  */
 export function normalizePositiveNumber(value: unknown): number | undefined {
   if (typeof value !== 'string' && typeof value !== 'number') {
