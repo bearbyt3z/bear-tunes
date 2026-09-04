@@ -344,6 +344,7 @@ function renderIndentedBlock(title: string, lines: string[]): string[] {
  * - headline
  * - top-level metadata fields
  * - optional `issues` section
+ * - optional `cause` section
  * - optional `error` or `stack` section
  *
  * @param info - Winston log payload after normalization.
