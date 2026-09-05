@@ -1,9 +1,9 @@
 /**
  * BearTunes CLI application entry point.
  *
- * Reads the input directory and optional output directory from command-line
- * arguments, runs the audio processing pipeline, and maps directory processing
- * outcomes to application logs and process exit codes.
+ * Validates positional directory arguments, runs the audio processing pipeline,
+ * and maps processing outcomes and unexpected application failures to logs and
+ * process exit codes.
  */
 
 // https://github.com/aadsm/JavaScript-ID3-Reader
@@ -78,16 +78,48 @@ enum BearTunesExitCode {
   UncaughtException = 42,
 }
 
-const inputDirectory = process.argv[2] ?? '.';
-const outputDirectory = process.argv[3] ?? undefined;
+/**
+ * Directory arguments accepted by the BearTunes CLI.
+ */
+interface DirectoryArguments {
+  inputDirectory: string;
+  outputDirectory?: string;
+}
 
-const processor = new BearTunesProcessor({ verbose: true });
+/**
+ * Parses positional directory arguments accepted by the BearTunes CLI.
+ *
+ * The CLI accepts an optional input directory and an optional output directory.
+ * When no input directory is provided, the current working directory is used.
+ *
+ * @param values - Positional command-line arguments without the Node.js executable and script path.
+ * @returns Parsed directory arguments, or `undefined` when the argument count
+ * or argument values are invalid.
+ */
+function parseDirectoryArguments(
+  values: readonly string[],
+): DirectoryArguments | undefined {
+  if (
+    values.length > 2
+    || values.some((value) => value.trim().length === 0)
+  ) {
+    return undefined;
+  }
 
-// Last-resort handlers for errors that escape normal try/catch.
-// - `unhandledRejection`: a rejected Promise with no handler.
-// - `uncaughtException`: a synchronous throw not caught anywhere.
-// We log the error and set a non-zero exit code, letting Node exit naturally
-// (instead of forcing an immediate shutdown).
+  const [inputDirectory = '.', outputDirectory] = values;
+
+  return {
+    inputDirectory,
+    outputDirectory,
+  };
+}
+
+// Last-resort handlers for failures that reach the process level.
+// - `unhandledRejection`: a Promise rejection with no attached error handler.
+// - `uncaughtException`: an exception that escaped application-level handling.
+//
+// Each handler logs the failure and sets a non-zero exit code, allowing Node to
+// finish pending I/O and exit naturally instead of forcing immediate shutdown.
 
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled promise rejection', {
@@ -105,44 +137,64 @@ process.on('uncaughtException', (error) => {
   process.exitCode = BearTunesExitCode.UncaughtException;
 });
 
-// Start the main async workflow and handle the aggregated processing status for
-// the entire input directory tree.
-//
-// The `then()` branch handles the normal completion path by mapping the returned
-// `DirectoryProcessingStatus` to logging and process exit codes. The `catch()`
-// branch remains the top-level fallback for unexpected errors that escape the
-// explicit status-based flow.
-//
-// We set `process.exitCode` instead of calling `process.exit(1)` to let Node finish
-// any pending I/O (e.g., flushing stderr) and exit naturally.
-processor.processAllFilesInDirectory(inputDirectory, outputDirectory)
-  .then((result) => {
-    switch (result) {
-      case DirectoryProcessingStatus.FilesProcessed:
-        return;
+const cliArguments = process.argv.slice(2);
 
-      case DirectoryProcessingStatus.NoSupportedFilesFound:
-        logger.warn(`There are no suitable files in directory tree: ${inputDirectory}`);
-        process.exitCode = BearTunesExitCode.NoSupportedFilesFound;
-        return;
+const directoryArguments = parseDirectoryArguments(cliArguments);
 
-      case DirectoryProcessingStatus.PathDoesNotExist:
-        process.exitCode = BearTunesExitCode.InputDirectoryDoesNotExist;
-        return;
-
-      case DirectoryProcessingStatus.PathIsNotDirectory:
-        process.exitCode = BearTunesExitCode.InputPathIsNotDirectory;
-        return;
-
-      case DirectoryProcessingStatus.CannotReadDirectory:
-        process.exitCode = BearTunesExitCode.InputDirectoryCannotBeRead;
-        return;
-    }
-  })
-  .catch((error: unknown) => {
-    logger.error('Unexpected processor failure', {
-      error: normalizeUnknownError(error),
-    });
-
-    process.exitCode = BearTunesExitCode.UnexpectedProcessorFailure;
+if (directoryArguments === undefined) {
+  logger.error('Invalid command-line arguments', {
+    arguments: cliArguments,
+    usage: 'npm run start -- [input-directory] [output-directory]',
   });
+
+  process.exitCode = BearTunesExitCode.InvalidCommandLineArguments;
+} else {
+  // Start the main async workflow and handle the aggregated processing status for
+  // the entire input directory tree.
+  //
+  // The `then()` branch handles the normal completion path by mapping the returned
+  // `DirectoryProcessingStatus` to logging and process exit codes. The `catch()`
+  // branch remains the top-level fallback for unexpected errors that escape the
+  // explicit status-based flow.
+  //
+  // We set `process.exitCode` instead of calling `process.exit(1)` to let Node finish
+  // any pending I/O (e.g., flushing stderr) and exit naturally.
+  const processor = new BearTunesProcessor({ verbose: true });
+
+  processor.processAllFilesInDirectory(
+    directoryArguments.inputDirectory,
+    directoryArguments.outputDirectory,
+  )
+    .then((result) => {
+      switch (result) {
+        case DirectoryProcessingStatus.FilesProcessed:
+          return;
+
+        case DirectoryProcessingStatus.NoSupportedFilesFound:
+          logger.warn(
+            `There are no suitable files in directory tree: ${directoryArguments.inputDirectory}`,
+          );
+          process.exitCode = BearTunesExitCode.NoSupportedFilesFound;
+          return;
+
+        case DirectoryProcessingStatus.PathDoesNotExist:
+          process.exitCode = BearTunesExitCode.InputDirectoryDoesNotExist;
+          return;
+
+        case DirectoryProcessingStatus.PathIsNotDirectory:
+          process.exitCode = BearTunesExitCode.InputPathIsNotDirectory;
+          return;
+
+        case DirectoryProcessingStatus.CannotReadDirectory:
+          process.exitCode = BearTunesExitCode.InputDirectoryCannotBeRead;
+          return;
+      }
+    })
+    .catch((error: unknown) => {
+      logger.error('Unexpected processor failure', {
+        error: normalizeUnknownError(error),
+      });
+
+      process.exitCode = BearTunesExitCode.UnexpectedProcessorFailure;
+    });
+}
