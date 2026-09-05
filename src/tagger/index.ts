@@ -106,7 +106,7 @@ const defaultTaggerOptions = Object.freeze({
   dataProvider: new BeatportDataProvider(),
   eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
   lengthDifferenceAccepted: 3,
-  verbose: true,
+  verbose: false,
   eyed3Verbose: false,
   metaflacVerbose: false,
 } as const satisfies BearTunesTaggerOptions);
