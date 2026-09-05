@@ -6,21 +6,6 @@
  * process exit codes.
  */
 
-// https://github.com/aadsm/JavaScript-ID3-Reader
-// ID3 tags reader in JavaScript (ID3v1, ID3v2 and AAC) http://www.aadsm.net/libraries/id3/
-
-// https://antimatter15.com/wp/2010/07/a-bright-coloured-fish-parsing-id3v2-tags-in-javascript-and-extensionfm/
-// https://github.com/antimatter15/js-id3v2
-
-// https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
-// http://id3.org/id3v2.4.0-frames
-// https://eyed3.readthedocs.io/en/latest/plugins/classic_plugin.html
-// https://eyed3.readthedocs.io/en/latest/_modules/eyed3/id3/frames.html
-// https://readthedocs.org/projects/eyed3/downloads/pdf/latest/
-
-// display plugin of eyeD3 requires grako:
-// $pip install grako
-
 import process from 'node:process';
 
 import logger from '#logger';
