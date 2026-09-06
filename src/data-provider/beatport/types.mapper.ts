@@ -31,6 +31,50 @@ import type {
 } from '#shared-types';
 
 /**
+ * Roles that identify primary track artists in Beatport payloads.
+ */
+const primaryArtistRoles = [
+  BeatportArtistType.Artist,
+] as const;
+
+/**
+ * Roles that identify track remixers in Beatport payloads.
+ *
+ * Beatport may classify remixers either as regular remixers or as
+ * Beatsource remixers. Both roles are mapped to canonical `remixers`.
+ */
+const remixerArtistRoles = [
+  BeatportArtistType.Remixer,
+  BeatportArtistType.Beatsource_Remixer,
+] as const;
+
+/**
+ * Extracts artist names whose Beatport roles match one of the requested roles.
+ *
+ * The helper is intentionally generic because Beatport search-result and
+ * detailed-track payloads represent artist names and roles with different
+ * property names. Callers provide accessors for those fields while this
+ * function owns the common role-filtering and name-extraction behavior.
+ *
+ * @typeParam T - Artist entry type returned by a specific Beatport payload.
+ * @param artists - Artist entries from a Beatport payload.
+ * @param artistRoles - Roles whose artists should be included in the result.
+ * @param getArtistRole - Returns the Beatport role assigned to an artist entry.
+ * @param getArtistName - Returns the display name of an artist entry.
+ * @returns Names of artists assigned to one of `artistRoles`, in payload order.
+ */
+function getBeatportArtistNamesByRole<T>(
+  artists: readonly T[],
+  artistRoles: readonly BeatportArtistType[],
+  getArtistRole: (artist: T) => BeatportArtistType,
+  getArtistName: (artist: T) => string,
+): string[] {
+  return artists
+    .filter((artist) => artistRoles.includes(getArtistRole(artist)))
+    .map((artist) => getArtistName(artist));
+}
+
+/**
  * Maps a Beatport search-result track entry to canonical `TrackInfo`.
  *
  * This function performs source-specific field mapping and delegates final
@@ -45,18 +89,19 @@ export function mapBeatportSearchResultTrackToTrackInfo(
   trackEntry: BeatportSearchResultTrackInfo,
   domainUrl: string,
 ): TrackInfo | undefined {
-  const artists = trackEntry.artists
-    .filter((artist) => artist.artist_type_name === BeatportArtistType.Artist)
-    .map((artist) => artist.artist_name);
+  const artists = getBeatportArtistNamesByRole(
+    trackEntry.artists,
+    primaryArtistRoles,
+    (artist) => artist.artist_type_name,
+    (artist) => artist.artist_name,
+  );
 
-  const remixers = trackEntry.artists
-    .filter((artist) =>
-      [
-        BeatportArtistType.Remixer,
-        BeatportArtistType.Beatsource_Remixer,
-      ].includes(artist.artist_type_name),
-    )
-    .map((artist) => artist.artist_name);
+  const remixers = getBeatportArtistNamesByRole(
+    trackEntry.artists,
+    remixerArtistRoles,
+    (artist) => artist.artist_type_name,
+    (artist) => artist.artist_name,
+  );
 
   const [genre, subgenre] = trackEntry.genre.map((genreEntry) => genreEntry.genre_name);
 
@@ -148,18 +193,19 @@ export function mapBeatportTrackToTrackInfo(
   album: AlbumInfo | undefined,
   publisher: PublisherInfo | undefined,
 ): TrackInfo | undefined {
-  const artists = trackData.artists
-    .filter((artist) => artist.type === BeatportArtistType.Artist)
-    .map((artist) => artist.name);
+  const artists = getBeatportArtistNamesByRole(
+    trackData.artists,
+    primaryArtistRoles,
+    (artist) => artist.type,
+    (artist) => artist.name,
+  );
 
-  const remixers = trackData.artists
-    .filter((artist) =>
-      [
-        BeatportArtistType.Remixer,
-        BeatportArtistType.Beatsource_Remixer,
-      ].includes(artist.type),
-    )
-    .map((artist) => artist.name);
+  const remixers = getBeatportArtistNamesByRole(
+    trackData.artists,
+    remixerArtistRoles,
+    (artist) => artist.type,
+    (artist) => artist.name,
+  );
 
   return normalizeTrackInfo({
     url: trackUrl,
