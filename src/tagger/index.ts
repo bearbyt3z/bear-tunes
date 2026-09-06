@@ -60,11 +60,8 @@ import {
 
 import {
   normalizeTrackInfo,
-} from '#shared-types-normalizer';
-
-import {
   trackInfoSchema,
-} from '#shared-types-schema';
+} from '#shared-types';
 
 import type {
   BearTunesTaggerFailureResult,

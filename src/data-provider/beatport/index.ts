@@ -34,7 +34,7 @@ import {
   albumInfoSchema,
   publisherInfoSchema,
   trackInfoSchema,
-} from '#shared-types-schema';
+} from '#shared-types';
 
 import type {
   BeatportDataProviderOptions,

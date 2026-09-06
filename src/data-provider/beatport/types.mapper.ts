@@ -10,7 +10,7 @@ import {
   normalizeAlbumInfo,
   normalizePublisherInfo,
   normalizeTrackInfo,
-} from '#shared-types-normalizer';
+} from '#shared-types';
 
 import {
   slugify,
