@@ -75,6 +75,34 @@ function getBeatportArtistNamesByRole<T>(
 }
 
 /**
+ * Returns the original Beatport media URL without an image-size transform.
+ *
+ * Beatport image URLs may include either concrete dimensions, such as
+ * `/image_size/1400x1400/`, or dynamic placeholders, such as
+ * `/image_size/{w}x{h}/`. Both variants are converted to the original
+ * `/image/` resource path.
+ *
+ * When `imageUrl` is undefined, the function returns undefined without
+ * attempting URL normalization.
+ *
+ * @param imageUrl - Beatport image or waveform URL to normalize, when available.
+ * @returns URL pointing to the original, unscaled media resource, or
+ * `undefined` when no URL was provided.
+ */
+function getBeatportOriginalImageUrl(imageUrl: string): string;
+function getBeatportOriginalImageUrl(
+  imageUrl: string | undefined,
+): string | undefined;
+function getBeatportOriginalImageUrl(
+  imageUrl: string | undefined,
+): string | undefined {
+  return imageUrl?.replace(
+    /\/image_size\/(?:\d+|\{w\})x(?:\d+|\{h\})\//u,
+    '/image/',
+  );
+}
+
+/**
  * Maps a Beatport search-result track entry to canonical `TrackInfo`.
  *
  * This function performs source-specific field mapping and delegates final
@@ -148,7 +176,7 @@ export function mapBeatportAlbumToAlbumInfo(
     trackNumber: tryParsePositiveInteger(trackNumber),
     trackTotal: albumData.track_count,
     url: albumUrl,
-    artwork: albumData.image?.uri,
+    artwork: getBeatportOriginalImageUrl(albumData.image?.uri),
   });
 }
 
@@ -170,7 +198,7 @@ export function mapBeatportPublisherToPublisherInfo(
   return normalizePublisherInfo({
     name: publisherData.name,
     url: publisherUrl,
-    logotype: publisherData.image?.uri,
+    logotype: getBeatportOriginalImageUrl(publisherData.image?.uri),
   });
 }
 
@@ -219,7 +247,7 @@ export function mapBeatportTrackToTrackInfo(
     key: trackData.key,
     isrc: trackData.isrc,
     ufid: `track-${trackData.track_id}`,
-    waveform: trackData.track_waveform_url.replace('/image_size/{w}x{h}/', '/image/'), // replace dynamic image size URL with the original image URL
+    waveform: getBeatportOriginalImageUrl(trackData.track_waveform_url),
     publisher,
     album,
     details: {
