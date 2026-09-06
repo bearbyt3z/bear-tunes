@@ -186,10 +186,10 @@ export class BeatportDataProvider extends DataProvider {
       return undefined;
     }
 
-    const publisher = await this.getPublisherInfo(trackData.release.label);
+    const publisher = await this.getPublisherInfo(trackData.label);
     const album = await this.getAlbumInfo(
       trackData.release,
-      trackData.number,
+      trackData.track_number,
     );
 
     const mappedTrackInfo = mapBeatportTrackToTrackInfo(
@@ -229,7 +229,7 @@ export class BeatportDataProvider extends DataProvider {
    */
   private async getAlbumInfo(
     releaseInfo: BeatportReleaseInfo | undefined,
-    trackNumber: number,
+    trackNumber: string,
   ): Promise<AlbumInfo | undefined> {
     const beatportAlbumPayload = await fetchBeatportAlbumPayload(
       this.options.domainUrl,

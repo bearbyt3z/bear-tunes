@@ -1,5 +1,5 @@
 import {
-  BeatportSearchResultArtistType,
+  BeatportArtistType,
 } from './types.js';
 
 import {
@@ -14,11 +14,11 @@ import {
 
 import {
   slugify,
+  tryParsePositiveInteger,
 } from '#tools';
 
 import type {
   BeatportAlbumInfo,
-  BeatportArtistInfo,
   BeatportPublisherInfo,
   BeatportSearchResultTrackInfo,
   BeatportTrackInfo,
@@ -46,14 +46,14 @@ export function mapBeatportSearchResultTrackToTrackInfo(
   domainUrl: string,
 ): TrackInfo | undefined {
   const artists = trackEntry.artists
-    .filter((artist) => artist.artist_type_name === BeatportSearchResultArtistType.Artist)
+    .filter((artist) => artist.artist_type_name === BeatportArtistType.Artist)
     .map((artist) => artist.artist_name);
 
   const remixers = trackEntry.artists
     .filter((artist) =>
       [
-        BeatportSearchResultArtistType.Remixer,
-        BeatportSearchResultArtistType.Beatsource_Remixer,
+        BeatportArtistType.Remixer,
+        BeatportArtistType.Beatsource_Remixer,
       ].includes(artist.artist_type_name),
     )
     .map((artist) => artist.artist_name);
@@ -94,13 +94,13 @@ export function mapBeatportSearchResultTrackToTrackInfo(
 export function mapBeatportAlbumToAlbumInfo(
   albumData: BeatportAlbumInfo,
   albumUrl: URL,
-  trackNumber: number,
+  trackNumber: string,
 ): AlbumInfo | undefined {
   return normalizeAlbumInfo({
-    artists: albumData.artists.map((artist: BeatportArtistInfo) => artist.name),
+    artists: albumData.artists.map((artist) => artist.name),
     title: albumData.name,
     catalogNumber: albumData.catalog_number,
-    trackNumber,
+    trackNumber: tryParsePositiveInteger(trackNumber),
     trackTotal: albumData.track_count,
     url: albumUrl,
     artwork: albumData.image?.uri,
@@ -148,23 +148,36 @@ export function mapBeatportTrackToTrackInfo(
   album: AlbumInfo | undefined,
   publisher: PublisherInfo | undefined,
 ): TrackInfo | undefined {
+  const artists = trackData.artists
+    .filter((artist) => artist.type === BeatportArtistType.Artist)
+    .map((artist) => artist.name);
+
+  const remixers = trackData.artists
+    .filter((artist) =>
+      [
+        BeatportArtistType.Remixer,
+        BeatportArtistType.Beatsource_Remixer,
+      ].includes(artist.type),
+    )
+    .map((artist) => artist.name);
+
   return normalizeTrackInfo({
     url: trackUrl,
-    artists: trackData.artists.map((artist: BeatportArtistInfo) => artist.name),
-    title: normalizeTrackTitle(trackData.name, trackData.mix_name),
-    remixers: trackData.remixers.map((artist: BeatportArtistInfo) => artist.name),
-    released: trackData.new_release_date,
+    artists,
+    title: normalizeTrackTitle(trackData.track_name, trackData.mix_name),
+    remixers,
+    released: trackData.release.release_date,
     genre: trackData.genre?.name,
-    subgenre: trackData.sub_genre?.name,
+    subgenre: trackData.genre?.sub_genre?.name,
     bpm: trackData.bpm,
-    key: trackData.key?.name,
+    key: trackData.key,
     isrc: trackData.isrc,
-    ufid: `track-${trackData.id}`,
-    waveform: trackData.image?.uri,
+    ufid: `track-${trackData.track_id}`,
+    waveform: trackData.track_waveform_url.replace('/image_size/{w}x{h}/', '/image/'), // replace dynamic image size URL with the original image URL
     publisher,
     album,
     details: {
-      duration: trackData.length_ms / 1000.0,
+      duration: trackData.track_length_ms / 1000.0,
     },
   });
 }

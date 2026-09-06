@@ -41,7 +41,7 @@ export interface BeatportPublisherPayloadResult {
 
 // Beatport search result object
 
-export enum BeatportSearchResultArtistType {
+export enum BeatportArtistType {
   Artist = 'Artist',
   Remixer = 'Remixer',
   Beatsource_Remixer = 'Beatsource Remixer',
@@ -52,7 +52,7 @@ export enum BeatportSearchResultArtistType {
 export interface BeatportSearchResultArtistInfo {
   artist_id: number;
   artist_name: string;
-  artist_type_name: BeatportSearchResultArtistType;
+  artist_type_name: BeatportArtistType;
 }
 
 export interface BeatportSearchResultLabelInfo {
@@ -93,19 +93,34 @@ export interface BeatportSearchResultTrackInfo {
 
 // Beatport detailed track info object
 
+/**
+ * Minimal artist information returned by Beatport album payloads.
+ *
+ * Artist role is implied by the containing `artists` or `remixers` array.
+ */
 export interface BeatportArtistInfo {
   id: number;
   name: string;
 }
 
+/**
+ * Artist information returned in a detailed Beatport track payload.
+ *
+ * The role is explicitly provided by the `type` field.
+ */
+export interface BeatportArtistWithRoleInfo extends BeatportArtistInfo {
+  type: BeatportArtistType;
+}
+
 export interface BeatportGenreInfo {
   id: number;
   name: string;
+  sub_genre: BeatportSubGenreInfo | null;
 }
 
 export interface BeatportSubGenreInfo {
-  id: number;
-  name: string;
+  id: number | null;
+  name: string | null;
 }
 
 export interface BeatportImageInfo {
@@ -116,45 +131,32 @@ export interface BeatportImageInfo {
 export interface BeatportLabelInfo {
   id: number;
   name: string;
-  image: BeatportImageInfo;
   slug: string;
-}
-
-export interface BeatportKeyInfo {
-  // camelot_number: number;
-  // camelot_letter: string;
-  id: number;
-  name: string;
 }
 
 export interface BeatportReleaseInfo {
   id: number;
   name: string;
-  image: BeatportImageInfo;
-  label: BeatportLabelInfo;
+  image_url: string;
+  release_date: string;
   slug: string;
 }
 
 export interface BeatportTrackInfo {
-  artists: BeatportArtistInfo[];
+  artists: BeatportArtistWithRoleInfo[];
   bpm?: number;
   catalog_number?: string;
   genre: BeatportGenreInfo;
-  id: number;
-  image: BeatportImageInfo;
+  track_id: number;
+  track_waveform_url: string;
   isrc?: string | null;
-  key: BeatportKeyInfo;
-  length: string; // minutes:seconds
-  length_ms: number; // in milliseconds
+  key: string;
+  track_length_ms: number; // in milliseconds
   mix_name: string; // e.g.: Extended Mix / Original Mix / ... Remix
-  name: string;
-  new_release_date: string;
-  number: number; // album track number
-  // publish_date: string;
+  track_name: string;
+  track_number: string; // album track number
   release: BeatportReleaseInfo;
-  remixers: BeatportArtistInfo[];
-  slug: string;
-  sub_genre: BeatportSubGenreInfo | null;
+  label: BeatportLabelInfo;
 }
 
 // Beatport album (release) info object
