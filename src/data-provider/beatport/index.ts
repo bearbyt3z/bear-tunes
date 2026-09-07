@@ -32,6 +32,8 @@ import {
 
 import {
   albumInfoSchema,
+  getBasicTrackIdentificationStatus,
+  hasBasicTrackIdentificationData,
   publisherInfoSchema,
   trackInfoSchema,
 } from '#shared-types';
@@ -158,11 +160,15 @@ export class BeatportDataProvider extends DataProvider {
       const trackInfo = parsedTrackInfo.data;
 
       if (
-        trackInfo.title === undefined
-        || trackInfo.artists === undefined
-        || trackInfo.artists.length === 0
+        !hasBasicTrackIdentificationData(trackInfo)
         || trackInfo.details === undefined
       ) {
+        logger.warn('Skipping Beatport search candidate due to missing identification fields', {
+          trackId: trackEntry.track_id,
+          trackName: trackEntry.track_name,
+          identificationStatus: getBasicTrackIdentificationStatus(trackInfo),
+        });
+
         continue;
       }
 

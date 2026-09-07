@@ -105,3 +105,22 @@ export interface PublisherInfo {
 export interface TrackDetails {
   duration: number;
 }
+
+/**
+ * Status of basic identification fields in a TrackInfo object.
+ *
+ * Basic identification data consists of:
+ * - a non-empty title
+ * - a non-empty artists array
+ */
+export interface BasicTrackIdentificationStatus {
+  /**
+   * Whether the track has a non-empty title.
+   */
+  hasTitle: boolean;
+
+  /**
+   * Whether the track has a non-empty artists array.
+   */
+  hasArtists: boolean;
+}

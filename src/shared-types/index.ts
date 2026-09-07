@@ -1,18 +1,25 @@
 /**
- * Public API for shared BearTunes types, schemas, and normalization helpers.
+ * Public API for shared BearTunes types, schemas, guards, and normalization helpers.
  *
  * This module provides the canonical metadata types used across the application
  * (such as {@link TrackInfo}, {@link AlbumInfo}, and {@link PublisherInfo}),
- * together with Zod schemas for runtime validation and normalization functions
- * that transform raw or source-specific payloads into the canonical shapes.
+ * together with Zod schemas for runtime validation, guards for checking basic
+ * track identification data, and normalization functions that transform raw
+ * or source-specific payloads into the canonical shapes.
  *
  * Re-exported members:
- * - Normalization helpers from {@link ./normalizer}
- * - Zod schemas from {@link ./schema}
- * - Canonical type definitions from {@link ./types}
+ * - Identification guards from `./guards.ts`
+ * - Normalization helpers from `./normalizer.ts`
+ * - Zod schemas from `./schema.ts`
+ * - Canonical type definitions from `./types.ts`
  *
  * @module shared-types
  */
+
+export {
+  hasBasicTrackIdentificationData,
+  getBasicTrackIdentificationStatus,
+} from './guards.js';
 
 export {
   normalizeAlbumInfo,
@@ -30,6 +37,7 @@ export {
 
 export type {
   AlbumInfo,
+  BasicTrackIdentificationStatus,
   PublisherInfo,
   TrackDetails,
   TrackInfo,
