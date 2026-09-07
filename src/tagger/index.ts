@@ -59,6 +59,8 @@ import {
 } from './types.js';
 
 import {
+  getBasicTrackIdentificationStatus,
+  hasBasicTrackIdentificationData,
   normalizeTrackInfo,
   trackInfoSchema,
 } from '#shared-types';
@@ -233,6 +235,11 @@ export class BearTunesTagger {
    * FLAC files through the FLAC tag writer. AIFF files and unrecognized audio
    * formats are rejected as unsupported for tag writing.
    *
+   * Before writing, the method checks whether `trackInfo` contains the basic
+   * identification data (i.e. non-empty title and artists). If this data is missing,
+   * a warning is logged but the write operation proceeds, allowing partial
+   * metadata to be saved.
+   *
    * The public contract is result-based: internal guard failures are caught and
    * mapped to a classified {@link BearTunesTaggerFailureResult}, so callers do
    * not need to know about {@link TaggerGuardError}. Unexpected write-time failures
@@ -248,6 +255,13 @@ export class BearTunesTagger {
   ): Promise<BearTunesTaggerResult> {
     try {
       this.assertAccessibleInputFile(trackPath);
+
+      if (!hasBasicTrackIdentificationData(trackInfo)) {
+        logger.warn('Saving tag with missing basic identification data', {
+          trackPath,
+          identificationStatus: getBasicTrackIdentificationStatus(trackInfo),
+        });
+      }
 
       const audioFileType = await tryGetAudioFileTypeFromFile(trackPath);
 
