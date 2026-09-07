@@ -52,6 +52,22 @@ function getProblematicArrayItem<T extends object>(
   return undefined;
 }
 
+/**
+ * Fetches and validates Beatport search results for the given keywords.
+ *
+ * The function builds a search URL from the provided base URL, query parameter
+ * and additional search parameters, requests the Next.js data payload, and
+ * validates the response against the shared search-result track info schema.
+ * If the payload is missing or fails validation, a warning is logged and
+ * `undefined` is returned.
+ *
+ * @param searchUrl - Base URL of the Beatport track search endpoint.
+ * @param searchQueryParameter - Name of the query parameter used for the search keywords.
+ * @param searchParameters - Additional query parameters to include in the search request.
+ * @param inputKeywords - Keywords used to search for tracks on Beatport.
+ * @returns An array of validated search result track info objects, or `undefined`
+ * when the payload is unavailable or invalid.
+ */
 export async function fetchBeatportSearchTrackPayload(
   searchUrl: URL,
   searchQueryParameter: string,
@@ -101,6 +117,18 @@ export async function fetchBeatportSearchTrackPayload(
   return parsedTrackArray.data;
 }
 
+/**
+ * Fetches and validates Beatport metadata for a single track.
+ *
+ * The function requests the Next.js data payload for the provided track URL
+ * and validates the response against the shared Beatport track info schema.
+ * If the payload is missing or fails validation, a warning is logged and
+ * `undefined` is returned.
+ *
+ * @param trackUrl - URL of the Beatport track page.
+ * @returns Validated Beatport track info, or `undefined` when the payload
+ * is unavailable or invalid.
+ */
 export async function fetchBeatportTrackPayload(
   trackUrl: URL,
 ): Promise<BeatportTrackInfo | undefined> {
@@ -130,6 +158,21 @@ export async function fetchBeatportTrackPayload(
   return parsedTrackData.data;
 }
 
+/**
+ * Fetches and validates Beatport metadata for a release (album).
+ *
+ * The function constructs the release URL from the domain URL and release
+ * information, requests the Next.js data payload, and validates the response
+ * against the shared Beatport album info schema. If the release info is
+ * missing, the URL cannot be built, or the payload is unavailable or invalid,
+ * a warning is logged (when applicable) and `undefined` is returned.
+ *
+ * @param domainUrl - Base domain URL for Beatport (e.g. `https://www.beatport.com`).
+ * @param releaseInfo - Release metadata used to build the album URL.
+ * @returns An object containing the album URL and validated album info, or
+ * `undefined` when the release info is missing or the payload is unavailable
+ * or invalid.
+ */
 export async function fetchBeatportAlbumPayload(
   domainUrl: string,
   releaseInfo: BeatportReleaseInfo | undefined,
@@ -169,6 +212,21 @@ export async function fetchBeatportAlbumPayload(
   };
 }
 
+/**
+ * Fetches and validates Beatport metadata for a label (publisher).
+ *
+ * The function constructs the label URL from the domain URL and label
+ * information, requests the Next.js data payload, and validates the response
+ * against the shared Beatport publisher info schema. If the label info is
+ * missing, the URL cannot be built, or the payload is unavailable or invalid,
+ * a warning is logged (when applicable) and `undefined` is returned.
+ *
+ * @param domainUrl - Base domain URL for Beatport (e.g. `https://www.beatport.com`).
+ * @param labelInfo - Label metadata used to build the publisher URL.
+ * @returns An object containing the publisher URL and validated publisher info, or
+ * `undefined` when the label info is missing or the payload is unavailable
+ * or invalid.
+ */
 export async function fetchBeatportPublisherPayload(
   domainUrl: string,
   labelInfo: BeatportLabelInfo | undefined,
