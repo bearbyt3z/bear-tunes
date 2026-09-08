@@ -2,7 +2,7 @@ import { defineConfig } from 'eslint/config';
 import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
-import importPlugin from 'eslint-plugin-import';
+import importX from 'eslint-plugin-import-x';
 import stylistic from '@stylistic/eslint-plugin';
 
 export default defineConfig(
@@ -34,8 +34,8 @@ export default defineConfig(
     extends: [
       ...tseslint.configs.recommendedTypeChecked,
       ...tseslint.configs.stylisticTypeChecked,
-      importPlugin.flatConfigs.recommended,
-      importPlugin.flatConfigs.typescript,
+      importX.flatConfigs.recommended,
+      importX.flatConfigs.typescript,
     ],
     plugins: {
       '@stylistic': stylistic,
