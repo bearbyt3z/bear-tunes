@@ -4,9 +4,9 @@
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](./LICENSE)
 
-A TypeScript CLI tool for organizing and enriching digital music libraries.
+A TypeScript toolkit and CLI for converting, tagging, renaming, and organizing music files using Beatport or custom metadata providers.
 
-**bear-tunes** automates audio conversion, metadata lookup, tagging, file renaming, and artwork handling, with Beatport used as the primary metadata source.
+**bear-tunes** provides reusable components for working with digital music libraries as well as a ready-to-use CLI. Its core functionality is exposed through configurable `BearTunes*` classes, allowing applications to use individual parts of the processing pipeline or combine them into a complete workflow.
 
 ## Features
 
@@ -21,6 +21,22 @@ A TypeScript CLI tool for organizing and enriching digital music libraries.
 * Handle ambiguous matches and significant duration differences interactively.
 * Provide structured error handling and verbose logging.
 * Run automated linting, type checking, and builds through GitHub Actions.
+
+## Public API
+
+The core functionality is exposed through reusable TypeScript classes. Each component can be instantiated and configured independently, while `BearTunesProcessor` can combine them into a complete processing pipeline.
+
+| Component | Responsibility | Main entry points |
+| --------- | -------------- | ----------------- |
+| `BearTunesProcessor` | Orchestrates directory-level audio processing. Uses dependency injection to accept custom converter, tagger, and renamer instances while providing sensible defaults. | `processAllFilesInDirectory()` |
+| `BearTunesConverter` | Converts supported audio formats and controls encoding options. | `aiffToFlac()`, `flacToMp3()` |
+| `BearTunesTagger` | Reads local metadata, resolves canonical track information, and writes tags. Uses dependency injection to accept a custom `DataProvider`, with `BeatportDataProvider` used by default. | `readTag()`, `resolveTrackInfo()`, `saveTag()`, `processTrack()` |
+| `BearTunesRenamer` | Builds metadata-driven paths and renames or moves audio files. | `rename()` |
+| `DataProvider` | Defines the contract for metadata sources used during track resolution, allowing custom providers to be integrated into the tagging workflow. | `findTrackCandidates()`, `getTrackInfo()` |
+| `BeatportDataProvider` | Default `DataProvider` implementation that retrieves track metadata from Beatport. | `findTrackCandidates()`, `getTrackInfo()` |
+
+The default tagger uses Beatport as its metadata provider, but a custom `DataProvider` implementation can be supplied when integrating bear-tunes into another application or workflow.
+
 
 ## How It Works
 
