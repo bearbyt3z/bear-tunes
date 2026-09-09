@@ -1,21 +1,54 @@
 {
   "name": "bear-tunes",
-  "version": "0.38.3",
+  "version": "0.38.4",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./dist/main.js",
   "type": "module",
   "imports": {
-    "#config": "./dist/config.js",
-    "#tools": "./dist/tools/index.js",
-    "#processor": "./dist/processor/index.js",
-    "#converter": "./dist/converter/index.js",
-    "#renamer": "./dist/renamer/index.js",
-    "#tagger": "./dist/tagger/index.js",
-    "#data-provider": "./dist/data-provider/index.js",
-    "#data-provider/*": "./dist/data-provider/*/index.js",
-    "#logger": "./dist/logger/index.js",
-    "#normalizer": "./dist/normalizer/index.js",
-    "#shared-types": "./dist/shared-types/index.js"
+    "#config": {
+      "types": "./src/config.ts",
+      "default": "./dist/config.js"
+    },
+    "#tools": {
+      "types": "./src/tools/index.ts",
+      "default": "./dist/tools/index.js"
+    },
+    "#processor": {
+      "types": "./src/processor/index.ts",
+      "default": "./dist/processor/index.js"
+    },
+    "#converter": {
+      "types": "./src/converter/index.ts",
+      "default": "./dist/converter/index.js"
+    },
+    "#renamer": {
+      "types": "./src/renamer/index.ts",
+      "default": "./dist/renamer/index.js"
+    },
+    "#tagger": {
+      "types": "./src/tagger/index.ts",
+      "default": "./dist/tagger/index.js"
+    },
+    "#data-provider": {
+      "types": "./src/data-provider/index.ts",
+      "default": "./dist/data-provider/index.js"
+    },
+    "#data-provider/*": {
+      "types": "./src/data-provider/*/index.ts",
+      "default": "./dist/data-provider/*/index.js"
+    },
+    "#logger": {
+      "types": "./src/logger/index.ts",
+      "default": "./dist/logger/index.js"
+    },
+    "#normalizer": {
+      "types": "./src/normalizer/index.ts",
+      "default": "./dist/normalizer/index.js"
+    },
+    "#shared-types": {
+      "types": "./src/shared-types/index.ts",
+      "default": "./dist/shared-types/index.js"
+    }
   },
   "scripts": {
     "setup": "npx playwright install chromium",

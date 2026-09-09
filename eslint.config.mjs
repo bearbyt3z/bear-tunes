@@ -51,12 +51,6 @@ export default defineConfig(
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    settings: {
-      'import/resolver': {
-        typescript: true,
-        node: true,
-      },
-    },
     rules: {
       '@typescript-eslint/prefer-regexp-exec': 'off',
 
