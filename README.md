@@ -37,40 +37,85 @@ The core functionality is exposed through reusable TypeScript classes. Each comp
 
 The default tagger uses Beatport as its metadata provider, but a custom `DataProvider` implementation can be supplied when integrating bear-tunes into another application or workflow.
 
-
 ## How It Works
 
-At a high level, bear-tunes processes each supported audio file through a metadata-driven pipeline:
+bear-tunes is built around a modular processing pipeline that can be used through the CLI or assembled programmatically using its public API.
 
-```text
-Input directory
-      │
-      ▼
-Audio file detection
-      │
-      ├── MP3 ───────────────┐
-      ├── FLAC ──────────────┤
-      └── AIFF → FLAC ───────┤
-                             ▼
-                     Metadata resolution
-                             │
-                             ▼
-                     Beatport data provider
-                             │
-                             ▼
-                    Tagging & metadata update
-                             │
-                             ▼
-                       File renaming
-                             │
-                             ▼
-                     Artwork processing
-                             │
-                             ▼
-                       Organized output
+### Architecture
+
+The public API is composed of independent components that can be configured and combined through dependency injection.
+
+```mermaid
+classDiagram
+    class BearTunesProcessor {
+        +processAllFilesInDirectory()
+    }
+
+    class BearTunesConverter {
+        +aiffToFlac()
+        +flacToMp3()
+    }
+
+    class BearTunesTagger {
+        +readTag()
+        +resolveTrackInfo()
+        +saveTag()
+        +processTrack()
+    }
+
+    class BearTunesRenamer {
+        +rename()
+    }
+
+    class DataProvider {
+        <<interface>>
+        +findTrackCandidates()
+        +getTrackInfo()
+    }
+
+    class BeatportDataProvider {
+        +findTrackCandidates()
+        +getTrackInfo()
+    }
+
+    class CustomDataProvider {
+        +findTrackCandidates()
+        +getTrackInfo()
+    }
+
+    BearTunesProcessor ..> BearTunesConverter : injects
+    BearTunesProcessor ..> BearTunesTagger : injects
+    BearTunesProcessor ..> BearTunesRenamer : injects
+
+    BearTunesTagger ..> DataProvider : injects
+
+    BeatportDataProvider ..|> DataProvider : implements
+    CustomDataProvider ..|> DataProvider : implements
 ```
 
-The application separates the main processing responsibilities into dedicated modules such as the **processor**, **converter**, **tagger**, **renamer**, and **data provider** layers.
+### Processing Flow
+
+When a directory is provided for processing, bear-tunes scans it recursively and processes supported audio files through a metadata-driven workflow.
+
+```mermaid
+flowchart TD
+    Input["Input directory"]
+        --> Scan["Recursive directory scanning"]
+
+    Scan --> Detect["Audio file detection"]
+
+    Detect --> Metadata["Metadata resolution & tagging"]
+
+    Detect -. "optional" .-> Conversion["Audio conversion"]
+    Conversion -.-> Metadata
+
+    Metadata --> Artwork["Save cover artwork"]
+    
+    Metadata -. "optional" .-> Rename["File renaming & relocation"]
+    Rename -.-> Artwork
+
+    Artwork --> Output["Organized output"]
+```
 
 ## Tech Stack
 
