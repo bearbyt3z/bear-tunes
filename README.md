@@ -229,24 +229,37 @@ The same checks are executed automatically in GitHub Actions for pushes to `mast
 
 ## Project Structure
 
-```text
-src/
-├── converter/        Audio format conversion
-├── data-provider/    External metadata providers (e.g. Beatport)
-├── logger/           Application logging
-├── normalizer/       Metadata normalization
-├── processor/        Main processing pipeline
-├── renamer/          File and directory organization
-├── shared-types/     Shared domain models and validation
-├── tagger/           Audio metadata reading and writing
-└── tools/            Shared utilities and integrations
+The project is organized into focused modules, with the core music-processing functionality separated from the CLI and project tooling.
 
-.github/
-└── workflows/        Continuous integration
+### Core modules
 
-eyed3-display-plugin.py
-                      MP3 metadata extraction helper
-```
+| Path                 | Purpose                                             |
+| -------------------- | --------------------------------------------------- |
+| `src/converter/`     | Audio format conversion.                            |
+| `src/data-provider/` | Metadata provider abstractions and implementations. |
+| `src/logger/`        | Application logging.                                |
+| `src/normalizer/`    | Metadata normalization.                             |
+| `src/processor/`     | Main processing orchestration.                      |
+| `src/renamer/`       | File renaming and relocation.                       |
+| `src/shared-types/`  | Shared domain types and validation.                 |
+| `src/tagger/`        | Audio metadata reading and tagging.                 |
+| `src/tools/`         | Shared utilities and integrations.                  |
+
+### Application, configuration, and build output
+
+| Path                | Purpose |
+| ------------------- | ------- |
+| `src/main.ts`       | CLI entry point. |
+| `src/main.types.ts` | CLI-specific types. |
+| `src/config.ts`     | Application configuration. |
+| `dist/`             | Generated JavaScript output produced by the TypeScript build. |
+
+### Project tooling
+
+| Path                      | Purpose                                   |
+| ------------------------- | ----------------------------------------- |
+| `.github/workflows/`      | Continuous integration configuration.     |
+| `eyed3-display-plugin.py` | eyeD3 helper for MP3 metadata extraction. |
 
 ## Notes
 
