@@ -93,6 +93,34 @@ When no input directory is provided, the current working directory is used.
 
 The application recursively scans the input directory and processes supported audio files.
 
+The same workflow can also use partial information from the original filename to identify the track and enrich it with metadata from the configured provider.
+
+```text
+Before:
+
+music/
+├── First Artist - Track One.flac
+└── 01 - Second Artist - Track Two Third Artist Remix.mp3
+```
+
+```text
+After:
+
+organized/
+├── House/
+│   └── First Artist, Another Artist/
+│       └── First Artist, Another Artist - Track One (Original Mix).flac
+└── Techno/
+    └── Second Artist/
+        └── Second Artist - Track Two (Third Artist & Another Remixer Extended Remix).mp3
+```
+
+In the first example, the original filename contains only one of the track's artists and does not specify the mix. bear-tunes enriches the filename with the missing artist and the `Original Mix` version.
+
+In the second example, the input filename provides enough keywords to identify the remix, while the metadata provider supplies the complete remix information, including the additional remixer and the `Extended Remix` version.
+
+The resulting files are organized according to the metadata-driven filename and directory patterns described below.
+
 
 ## File Organization
 
