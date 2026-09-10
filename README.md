@@ -37,6 +37,111 @@ The core functionality is exposed through reusable TypeScript classes. Each comp
 
 The default tagger uses Beatport as its metadata provider, but a custom `DataProvider` implementation can be supplied when integrating bear-tunes into another application or workflow.
 
+### Programmatic Usage
+
+The processing pipeline can be used directly from TypeScript without going through the CLI.
+
+```typescript
+import { BearTunesProcessor } from '#processor';
+
+const processor = new BearTunesProcessor();
+
+await processor.processAllFilesInDirectory(
+  './music',
+  './organized',
+);
+```
+
+The processor provides sensible defaults for its dependencies, including the converter, tagger, and renamer. Custom dependencies and options can be supplied through the constructor when more control over the processing pipeline is required.
+
+### Customizing the Processing Pipeline
+
+The processor can accept custom instances of its converter, tagger, and renamer dependencies. Each component can be configured independently before being injected into the processing pipeline.
+
+```typescript
+import { BearTunesProcessor } from '#processor';
+import {
+  BearTunesConverter,
+  LameQuality,
+  Mp3BitrateMode,
+} from '#converter';
+import { BearTunesTagger } from '#tagger';
+import { BearTunesRenamer } from '#renamer';
+import { BeatportDataProvider } from '#data-provider/beatport';
+
+const converter = new BearTunesConverter({
+  mp3BitrateMode: Mp3BitrateMode.CBR,
+  mp3BitrateKbps: 256,
+  lameQuality: LameQuality.Q2,
+});
+
+const tagger = new BearTunesTagger({
+  dataProvider: new BeatportDataProvider(),
+  lengthDifferenceAccepted: 5,
+});
+
+const renamer = new BearTunesRenamer({
+  filenamePattern: '%artists% - %title%',
+  directoryPattern: '%genre%/%artists%',
+});
+
+const processor = new BearTunesProcessor(
+  {
+    convertFlacToMp3: true,
+    verbose: true,
+  },
+  {
+    converter,
+    tagger,
+    renamer,
+  },
+);
+
+await processor.processAllFilesInDirectory(
+  './music',
+  './organized',
+);
+```
+
+This approach allows the processor to reuse fully configured components while keeping each dependency independently replaceable and reusable.
+
+### Using Individual Components
+
+The individual components can also be used independently when a complete processing pipeline is not required.
+
+For example, `BearTunesConverter` can be used directly for audio conversion:
+
+```typescript
+import { BearTunesConverter } from '#converter';
+
+const converter = new BearTunesConverter({
+  mp3BitrateKbps: 256,
+});
+
+const result = await converter.flacToMp3('./track.flac');
+
+if (result.ok) {
+  console.log(`Created: ${result.outputPath}`);
+}
+```
+
+Similarly, `BearTunesTagger` can be used directly to read metadata from a supported audio file:
+
+```typescript
+import { BearTunesTagger } from '#tagger';
+
+const tagger = new BearTunesTagger();
+
+const result = await tagger.readTag('./track.mp3');
+
+if (result.ok) {
+  console.log(result.trackInfo);
+}
+```
+
+The same approach can be used with `BearTunesRenamer` and the metadata provider components when only a specific part of the workflow is needed.
+
+
 ## How It Works
 
 bear-tunes is built around a modular processing pipeline that can be used through the CLI or assembled programmatically using its public API.
