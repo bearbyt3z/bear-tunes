@@ -8,6 +8,7 @@ A TypeScript toolkit and CLI for converting, tagging, renaming, and organizing m
 
 **bear-tunes** provides reusable components for working with digital music libraries as well as a ready-to-use CLI. Its core functionality is exposed through configurable `BearTunes*` classes, allowing applications to use individual parts of the processing pipeline or combine them into a complete workflow.
 
+
 ## Features
 
 * Process **MP3, FLAC, and AIFF** audio files.
@@ -21,6 +22,96 @@ A TypeScript toolkit and CLI for converting, tagging, renaming, and organizing m
 * Handle ambiguous matches and significant duration differences interactively.
 * Provide structured error handling and verbose logging.
 * Run automated linting, type checking, and builds through GitHub Actions.
+
+
+## Tech Stack
+
+* **TypeScript**
+* **Node.js 20+**
+* **Zod** for runtime data validation
+* **Playwright** for browser-based data retrieval
+* **Winston** for logging
+* **eyeD3** for MP3 metadata handling
+* **FLAC / metaflac** for FLAC metadata and audio processing
+* **LAME** for MP3 encoding
+* **GitHub Actions** for continuous integration
+
+
+## Requirements
+
+
+### Runtime
+
+* Node.js **20 or newer**
+* npm
+* Python 3 with the `eyeD3` package
+* `flac`
+* `metaflac`
+* `lame`
+
+The project invokes some audio and metadata tools as external processes, so they must be available in the system `PATH`.
+
+
+## Installation
+
+Clone the repository and install the Node.js dependencies:
+
+```bash
+git clone https://github.com/bearbyt3z/bear-tunes.git
+cd bear-tunes
+npm ci
+```
+
+Install the Playwright browser required by the project:
+
+```bash
+npm run setup
+```
+
+Build the application:
+
+```bash
+npm run build
+```
+
+
+## CLI Usage
+
+The CLI accepts an optional input directory and an optional output directory:
+
+```bash
+npm run start -- [input-directory] [output-directory]
+```
+
+For example:
+
+```bash
+npm run start -- ./music ./organized
+```
+
+When no input directory is provided, the current working directory is used.
+
+The application recursively scans the input directory and processes supported audio files.
+
+
+## File Organization
+
+By default, bear-tunes uses metadata-driven patterns for filenames and directories.
+
+The default filename pattern is:
+
+```text
+%artists% - %title%
+```
+
+The default directory pattern is:
+
+```text
+%genre%/%artists%
+```
+
+This allows processed files to be organized using metadata rather than their original filenames.
+
 
 ## Public API
 
@@ -36,6 +127,7 @@ The core functionality is exposed through reusable TypeScript classes. Each comp
 | `BeatportDataProvider` | Default `DataProvider` implementation that retrieves track metadata from Beatport. | `findTrackCandidates()`, `getTrackInfo()` |
 
 The default tagger uses Beatport as its metadata provider, but a custom `DataProvider` implementation can be supplied when integrating bear-tunes into another application or workflow.
+
 
 ### Programmatic Usage
 
@@ -53,6 +145,7 @@ await processor.processAllFilesInDirectory(
 ```
 
 The processor provides sensible defaults for its dependencies, including the converter, tagger, and renamer. Custom dependencies and options can be supplied through the constructor when more control over the processing pipeline is required.
+
 
 ### Customizing the Processing Pipeline
 
@@ -105,6 +198,7 @@ await processor.processAllFilesInDirectory(
 
 This approach allows the processor to reuse fully configured components while keeping each dependency independently replaceable and reusable.
 
+
 ### Using Individual Components
 
 The individual components can also be used independently when a complete processing pipeline is not required.
@@ -145,6 +239,7 @@ The same approach can be used with `BearTunesRenamer` and the metadata provider 
 ## How It Works
 
 bear-tunes is built around a modular processing pipeline that can be used through the CLI or assembled programmatically using its public API.
+
 
 ### Architecture
 
@@ -198,6 +293,7 @@ classDiagram
     CustomDataProvider ..|> DataProvider : implements
 ```
 
+
 ### Processing Flow
 
 When a directory is provided for processing, bear-tunes scans it recursively and processes supported audio files through a metadata-driven workflow.
@@ -222,96 +318,44 @@ flowchart TD
     Artwork --> Output["Organized output"]
 ```
 
-## Tech Stack
 
-* **TypeScript**
-* **Node.js 20+**
-* **Zod** for runtime data validation
-* **Playwright** for browser-based data retrieval
-* **Winston** for logging
-* **eyeD3** for MP3 metadata handling
-* **FLAC / metaflac** for FLAC metadata and audio processing
-* **LAME** for MP3 encoding
-* **GitHub Actions** for continuous integration
+## Project Structure
 
-## Requirements
+The project is organized into focused modules, with the core music-processing functionality separated from the CLI and project tooling.
 
-### Runtime
 
-* Node.js **20 or newer**
-* npm
-* Python 3 with the `eyeD3` package
-* `flac`
-* `metaflac`
-* `lame`
+### Core modules
 
-The project invokes some audio and metadata tools as external processes, so they must be available in the system `PATH`.
+| Path                 | Purpose                                             |
+| -------------------- | --------------------------------------------------- |
+| `src/converter/`     | Audio format conversion.                            |
+| `src/data-provider/` | Metadata provider abstractions and implementations. |
+| `src/logger/`        | Application logging.                                |
+| `src/normalizer/`    | Metadata normalization.                             |
+| `src/processor/`     | Main processing orchestration.                      |
+| `src/renamer/`       | File renaming and relocation.                       |
+| `src/shared-types/`  | Shared domain types and validation.                 |
+| `src/tagger/`        | Audio metadata reading and tagging.                 |
+| `src/tools/`         | Shared utilities and integrations.                  |
 
-## Installation
 
-Clone the repository and install the Node.js dependencies:
+### Application, configuration, and build output
 
-```bash
-git clone https://github.com/bearbyt3z/bear-tunes.git
-cd bear-tunes
-npm ci
-```
+| Path                | Purpose |
+| ------------------- | ------- |
+| `src/main.ts`       | CLI entry point. |
+| `src/main.types.ts` | CLI-specific types. |
+| `src/config.ts`     | Application configuration. |
+| `dist/`             | Generated JavaScript output produced by the TypeScript build. |
 
-Install the Playwright browser required by the project:
 
-```bash
-npm run setup
-```
+### Project tooling
 
-Build the application:
+| Path                      | Purpose                                   |
+| ------------------------- | ----------------------------------------- |
+| `.github/workflows/`      | Continuous integration configuration.     |
+| `eyed3-display-plugin.py` | eyeD3 helper for MP3 metadata extraction. |
 
-```bash
-npm run build
-```
-
-## Usage
-
-The CLI accepts an optional input directory and an optional output directory:
-
-```bash
-npm run start -- [input-directory] [output-directory]
-```
-
-For example:
-
-```bash
-npm run start -- ./music ./organized
-```
-
-When no input directory is provided, the current working directory is used.
-
-The application recursively scans the input directory and processes supported audio files.
-
-### Development shortcut
-
-Build the project and start the CLI in one command:
-
-```bash
-npm run build-start -- ./music ./organized
-```
-
-## File Organization
-
-By default, bear-tunes uses metadata-driven patterns for filenames and directories.
-
-The default filename pattern is:
-
-```text
-%artists% - %title%
-```
-
-The default directory pattern is:
-
-```text
-%genre%/%artists%
-```
-
-This allows processed files to be organized using metadata rather than their original filenames.
 
 ## Development
 
@@ -332,45 +376,22 @@ lint → typecheck → build
 
 The same checks are executed automatically in GitHub Actions for pushes to `master` and for pull requests.
 
-## Project Structure
 
-The project is organized into focused modules, with the core music-processing functionality separated from the CLI and project tooling.
+### Development shortcut
 
-### Core modules
+Build the project and start the CLI in one command:
 
-| Path                 | Purpose                                             |
-| -------------------- | --------------------------------------------------- |
-| `src/converter/`     | Audio format conversion.                            |
-| `src/data-provider/` | Metadata provider abstractions and implementations. |
-| `src/logger/`        | Application logging.                                |
-| `src/normalizer/`    | Metadata normalization.                             |
-| `src/processor/`     | Main processing orchestration.                      |
-| `src/renamer/`       | File renaming and relocation.                       |
-| `src/shared-types/`  | Shared domain types and validation.                 |
-| `src/tagger/`        | Audio metadata reading and tagging.                 |
-| `src/tools/`         | Shared utilities and integrations.                  |
+```bash
+npm run build-start -- ./music ./organized
+```
 
-### Application, configuration, and build output
-
-| Path                | Purpose |
-| ------------------- | ------- |
-| `src/main.ts`       | CLI entry point. |
-| `src/main.types.ts` | CLI-specific types. |
-| `src/config.ts`     | Application configuration. |
-| `dist/`             | Generated JavaScript output produced by the TypeScript build. |
-
-### Project tooling
-
-| Path                      | Purpose                                   |
-| ------------------------- | ----------------------------------------- |
-| `.github/workflows/`      | Continuous integration configuration.     |
-| `eyed3-display-plugin.py` | eyeD3 helper for MP3 metadata extraction. |
 
 ## Notes
 
 bear-tunes currently relies on Beatport as its metadata provider. When metadata cannot be matched confidently, the application may ask for user confirmation rather than silently applying an uncertain match.
 
 The AIFF processing pipeline converts the source file to FLAC and removes the original AIFF file after a successful conversion. Make sure you have a backup when processing files that should be preserved unchanged.
+
 
 ## License
 
