@@ -26,15 +26,17 @@ A TypeScript toolkit and CLI for converting, tagging, renaming, and organizing m
 
 ## Tech Stack
 
-* **TypeScript**
-* **Node.js 20+**
-* **Zod** for runtime data validation
-* **Playwright** for browser-based data retrieval
-* **Winston** for logging
-* **eyeD3** for MP3 metadata handling
-* **FLAC / metaflac** for FLAC metadata and audio processing
-* **LAME** for MP3 encoding
-* **GitHub Actions** for continuous integration
+| Technology          | Purpose                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| **TypeScript**      | Main programming language.                                                              |
+| **Node.js 20+**     | Runtime environment.                                                                    |
+| **Python 3**        | Used for the custom eyeD3 display plugin integration.                                   |
+| **Zod**             | Runtime validation of application data and domain models.                               |
+| **Playwright**      | Browser automation for metadata retrieval.                                              |
+| **Winston**         | Structured application logging.                                                         |
+| **eyeD3**           | MP3 metadata reading and writing, including integration with the custom display plugin. |
+| **FLAC / metaflac** | FLAC metadata handling and audio processing.                                            |
+| **LAME**            | MP3 encoding.                                                                           |
 
 
 ## Requirements
@@ -45,11 +47,17 @@ A TypeScript toolkit and CLI for converting, tagging, renaming, and organizing m
 * Node.js **20 or newer**
 * npm
 * Python 3 with the `eyeD3` package
+
+
+### System Dependencies
+
+The following tools are required for audio conversion and metadata processing:
+
 * `flac`
 * `metaflac`
 * `lame`
 
-The project invokes some audio and metadata tools as external processes, so they must be available in the system `PATH`.
+These tools are invoked as external processes and must be available in the system `PATH`.
 
 
 ## Installation
@@ -382,7 +390,7 @@ The project is organized into focused modules, with the core music-processing fu
 | Path                      | Purpose                                   |
 | ------------------------- | ----------------------------------------- |
 | `.github/workflows/`      | Continuous integration configuration.     |
-| `eyed3-display-plugin.py` | eyeD3 helper for MP3 metadata extraction. |
+| `eyed3-display-plugin.py` | Custom eyeD3 display plugin for MP3 metadata extraction. |
 
 
 ## Development
