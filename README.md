@@ -409,31 +409,39 @@ The project is organized into focused modules, with the core music-processing fu
 
 ## Development
 
-Available npm scripts include:
+### Development Workflow
 
-```bash
-npm run lint
-npm run typecheck
-npm run build
-npm run check
-```
-
-`npm run check` runs the project's main quality gates:
+The project uses a small set of automated checks to keep the codebase consistent and buildable during development.
 
 ```text
 lint → typecheck → build
 ```
 
-The same checks are executed automatically in GitHub Actions for pushes to `master` and for pull requests.
-
-
-### Development shortcut
-
-Build the project and start the CLI in one command:
+Run the complete local validation with:
 
 ```bash
-npm run build-start -- ./music ./organized
+npm run check
 ```
+
+
+### Available Scripts
+
+| Command               | Purpose                                                      |
+| --------------------- | ------------------------------------------------------------ |
+| `npm run lint`        | Runs ESLint across the project.                              |
+| `npm run lint:fix`    | Automatically fixes available ESLint issues.                 |
+| `npm run typecheck`   | Runs TypeScript type checking without generating output.     |
+| `npm run build`       | Cleans the build output and compiles the TypeScript project. |
+| `npm run clean`       | Removes the generated `dist/` directory.                     |
+| `npm run build-start` | Builds the project and starts the CLI.                       |
+| `npm run check`       | Runs linting, type checking, and the production build.       |
+
+
+### Continuous Integration
+
+The same quality checks are executed automatically by GitHub Actions for pushes to `master` and for pull requests.
+
+The CI workflow runs on Ubuntu with Node.js 20, installs dependencies using `npm ci`, and executes `npm run check`.
 
 
 ## Notes
