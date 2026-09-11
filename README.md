@@ -376,17 +376,17 @@ The project is organized into focused modules, with the core music-processing fu
 
 ### Core modules
 
-| Path                 | Purpose                                             |
-| -------------------- | --------------------------------------------------- |
-| `src/converter/`     | Audio format conversion.                            |
-| `src/data-provider/` | Metadata provider abstractions and implementations. |
-| `src/logger/`        | Application logging.                                |
-| `src/normalizer/`    | Metadata normalization.                             |
-| `src/processor/`     | Main processing orchestration.                      |
-| `src/renamer/`       | File renaming and relocation.                       |
-| `src/shared-types/`  | Shared domain types and validation.                 |
-| `src/tagger/`        | Audio metadata reading and tagging.                 |
-| `src/tools/`         | Shared utilities and integrations.                  |
+| Path                 | Purpose                                                                         |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `src/converter/`     | Audio format conversion.                                                        |
+| `src/data-provider/` | Metadata provider abstractions and implementations.                             |
+| `src/logger/`        | Application logging.                                                            |
+| `src/normalizer/`    | Metadata normalization.                                                         |
+| `src/processor/`     | Main processing orchestration.                                                  |
+| `src/renamer/`       | File renaming and relocation.                                                   |
+| `src/shared-types/`  | Shared domain types and validation.                                             |
+| `src/tagger/`        | Audio metadata reading and tagging.                                             |
+| `src/tools/`         | Shared utilities and infrastructure integrations, independent of domain models. |
 
 
 ### Application, configuration, and build output
