@@ -451,11 +451,15 @@ The same quality checks are executed automatically by GitHub Actions for pushes 
 The CI workflow runs on Ubuntu with Node.js 20, installs dependencies using `npm ci`, and executes `npm run check`.
 
 
-## Notes
+## Important Notes
 
-bear-tunes currently relies on Beatport as its metadata provider. When metadata cannot be matched confidently, the application may ask for user confirmation rather than silently applying an uncertain match.
+When metadata cannot be matched confidently, bear-tunes may ask for user confirmation rather than silently applying an uncertain match.
 
-The AIFF processing pipeline converts the source file to FLAC and removes the original AIFF file after a successful conversion. Make sure you have a backup when processing files that should be preserved unchanged.
+> [!NOTE]
+> **CAPTCHA and anti-bot challenges may require user interaction.** Metadata retrieval normally starts with a regular HTTP request. When a challenge is detected, bear-tunes falls back to a persistent Playwright browser session. If the challenge cannot be resolved automatically, a visible browser session is opened so the user can complete it manually.
+
+> [!WARNING]
+> **AIFF source files can be removed after a successful conversion to FLAC.** The `BearTunesConverter.aiffToFlac()` method provides the `deleteAiffAfterConversion` option to control whether the original AIFF file is deleted. The default processing pipeline enables this option when performing AIFF conversion.
 
 
 ## License
