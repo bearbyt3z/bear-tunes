@@ -32,7 +32,8 @@ A TypeScript toolkit and CLI for converting, tagging, renaming, and organizing m
 | **Node.js 20+**     | Runtime environment.                                                                    |
 | **Python 3**        | Used for the custom eyeD3 display plugin integration.                                   |
 | **Zod**             | Runtime validation of application data and domain models.                               |
-| **Playwright**      | Browser automation for metadata retrieval.                                              |
+| **JSDOM**           | HTML document parsing for metadata extraction.                                          |
+| **Playwright**      | Fallback browser automation for handling CAPTCHA and anti-bot challenges.               |
 | **Winston**         | Structured application logging.                                                         |
 | **eyeD3**           | MP3 metadata reading and writing, including integration with the custom display plugin. |
 | **FLAC / metaflac** | FLAC metadata handling and audio processing.                                            |
