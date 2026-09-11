@@ -9,6 +9,13 @@ A TypeScript toolkit and CLI for converting, tagging, renaming, and organizing m
 **bear-tunes** provides reusable components for working with digital music libraries as well as a ready-to-use CLI. Its core functionality is exposed through configurable `BearTunes*` classes, allowing applications to use individual parts of the processing pipeline or combine them into a complete workflow.
 
 
+## Why bear-tunes?
+
+bear-tunes was created to provide a consistent way of organizing and tagging music files regardless of where the metadata comes from. Music may be sourced from platforms such as Beatport, Bandcamp, Juno Download, Traxsource, or SoundCloud, but the resulting local library should follow the same metadata and naming conventions.
+
+Beatport is used as the default provider because its catalog offers particularly rich metadata for music-library organization and DJ-oriented workflows, including genre, BPM, key, catalog information, artwork, and detailed track and release data. The provider can be replaced through the public `DataProvider` API when another source is preferred or required.
+
+
 ## Features
 
 * Process **MP3, FLAC, and AIFF** audio files.
