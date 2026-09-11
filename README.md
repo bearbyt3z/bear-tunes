@@ -144,9 +144,9 @@ In the second example, the input filename provides enough keywords to identify t
 The resulting files are organized according to the metadata-driven filename and directory patterns described below.
 
 
-## File Organization
+## Output Organization
 
-By default, bear-tunes uses metadata-driven patterns for filenames and directories.
+bear-tunes can organize processed files using metadata-driven filename and directory patterns.
 
 The default filename pattern is:
 
@@ -160,7 +160,7 @@ The default directory pattern is:
 %genre%/%artists%
 ```
 
-This allows processed files to be organized using metadata rather than their original filenames.
+These patterns are applied to the metadata resolved for each track, allowing the output directory structure and filenames to be generated automatically.
 
 
 ## Public API
