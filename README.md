@@ -62,25 +62,38 @@ These tools are invoked as external processes and must be available in the syste
 
 ## Installation
 
-Clone the repository and install the Node.js dependencies:
+Before installing bear-tunes, make sure all [requirements](#requirements) are installed and available in your system `PATH`.
+
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/bearbyt3z/bear-tunes.git
 cd bear-tunes
+```
+
+
+### 2. Install Node.js dependencies
+
+```bash
 npm ci
 ```
 
-Install the Playwright browser required by the project:
+
+### 3. Install the required Playwright browser
 
 ```bash
 npm run setup
 ```
 
-Build the application:
+
+### 4. Build the project
 
 ```bash
 npm run build
 ```
+
+After a successful build, bear-tunes is ready to use through the CLI or directly from its TypeScript API.
 
 
 ## CLI Usage
