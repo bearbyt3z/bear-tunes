@@ -165,7 +165,7 @@ These patterns are applied to the metadata resolved for each track, allowing the
 
 ## Public API
 
-The core functionality is exposed through reusable TypeScript classes. Each component can be instantiated and configured independently, while `BearTunesProcessor` can combine them into a complete processing pipeline.
+The same processing capabilities are exposed through a reusable TypeScript API. Each component can be instantiated and configured independently, while `BearTunesProcessor` can combine them into a complete processing pipeline.
 
 | Component | Responsibility | Main entry points |
 | --------- | -------------- | ----------------- |
