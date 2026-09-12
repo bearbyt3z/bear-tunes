@@ -453,7 +453,8 @@ The CI workflow runs on Ubuntu with Node.js 20, installs dependencies using `npm
 
 ## Important Notes
 
-When metadata cannot be matched confidently, bear-tunes may ask for user confirmation rather than silently applying an uncertain match.
+> [!NOTE]
+> **Metadata matching may require user confirmation.** When metadata cannot be matched confidently, bear-tunes may ask for user confirmation rather than silently applying an uncertain match.
 
 > [!NOTE]
 > **CAPTCHA and anti-bot challenges may require user interaction.** Metadata retrieval normally starts with a regular HTTP request. When a challenge is detected, bear-tunes falls back to a persistent Playwright browser session. If the challenge cannot be resolved automatically, a visible browser session is opened so the user can complete it manually.
