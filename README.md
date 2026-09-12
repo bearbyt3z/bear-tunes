@@ -174,6 +174,8 @@ These patterns are applied to the metadata resolved for each track, allowing the
 
 The same processing capabilities are exposed through a reusable TypeScript API. Each component can be instantiated and configured independently, while `BearTunesProcessor` can combine them into a complete processing pipeline.
 
+The public API is documented with TSDoc to provide detailed type and usage information directly in the source code.
+
 | Component | Responsibility | Main entry points |
 | --------- | -------------- | ----------------- |
 | `BearTunesProcessor` | Orchestrates directory-level audio processing. Uses dependency injection to accept custom converter, tagger, and renamer instances while providing sensible defaults. | `processAllFilesInDirectory()` |
