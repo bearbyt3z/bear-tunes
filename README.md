@@ -32,18 +32,18 @@ Beatport is used as the default provider because its catalog offers particularly
 
 ## Tech Stack
 
-| Technology          | Purpose                                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------- |
-| **TypeScript**      | Main programming language.                                                              |
-| **Node.js 20+**     | Runtime environment.                                                                    |
-| **Python 3**        | Used for the custom eyeD3 display plugin integration.                                   |
-| **Zod**             | Runtime validation of application data and domain models.                               |
-| **JSDOM**           | HTML document parsing for metadata extraction.                                          |
-| **Playwright**      | Fallback browser automation for handling CAPTCHA and anti-bot challenges.               |
-| **Winston**         | Structured application logging.                                                         |
-| **eyeD3**           | MP3 metadata reading and writing, including integration with the custom display plugin. |
-| **FLAC / metaflac** | FLAC metadata handling and audio processing.                                            |
-| **LAME**            | MP3 encoding.                                                                           |
+| Technology | Purpose |
+| ---------- | ------- |
+| **TypeScript** | Main programming language. |
+| **Node.js 20+** | Runtime environment. |
+| **Python 3** | Used for the custom eyeD3 display plugin integration. |
+| **Zod** | Runtime validation of application data and domain models. |
+| **JSDOM** | HTML document parsing for metadata extraction. |
+| **Playwright** | Fallback browser automation for handling CAPTCHA and anti-bot challenges. |
+| **Winston** | Structured application logging. |
+| **eyeD3** | MP3 metadata reading and writing through the Python package and CLI tool, including integration with the custom display plugin. |
+| **FLAC / metaflac** | FLAC metadata handling and audio processing. |
+| **LAME** | MP3 encoding. |
 
 
 ## Requirements
@@ -60,6 +60,7 @@ Beatport is used as the default provider because its catalog offers particularly
 
 The following tools are required for audio conversion and metadata processing:
 
+* `eyeD3`
 * `flac`
 * `metaflac`
 * `lame`
