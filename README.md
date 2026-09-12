@@ -325,7 +325,7 @@ classDiagram
     }
 
     class DataProvider {
-        <<interface>>
+        <<abstract>>
         +findTrackCandidates()
         +getTrackInfo()
     }
@@ -335,7 +335,7 @@ classDiagram
         +getTrackInfo()
     }
 
-    class CustomDataProvider {
+    class YourDataProvider {
         +findTrackCandidates()
         +getTrackInfo()
     }
@@ -346,8 +346,8 @@ classDiagram
 
     BearTunesTagger ..> DataProvider : injects
 
-    BeatportDataProvider ..|> DataProvider : implements
-    CustomDataProvider ..|> DataProvider : implements
+    BeatportDataProvider --|> DataProvider : extends
+    YourDataProvider --|> DataProvider : extends
 ```
 
 
