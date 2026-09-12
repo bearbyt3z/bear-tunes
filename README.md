@@ -295,7 +295,7 @@ The same approach can be used with `BearTunesRenamer` and the metadata provider 
 
 ## How It Works
 
-bear-tunes is built around a modular processing pipeline that can be used through the CLI or assembled programmatically using its public API.
+The diagrams below illustrate the relationships between the public API components and the high-level processing workflow.
 
 
 ### Architecture
