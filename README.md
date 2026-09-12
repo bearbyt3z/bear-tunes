@@ -28,7 +28,6 @@ Beatport is used as the default provider because its catalog offers particularly
 * Download and embed album artwork and additional image metadata.
 * Handle ambiguous matches and significant duration differences interactively.
 * Provide structured error handling and verbose logging.
-* Run automated linting, type checking, and builds through GitHub Actions.
 
 
 ## Tech Stack
