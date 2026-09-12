@@ -70,7 +70,7 @@ These tools are invoked as external processes and must be available in the syste
 
 ## Installation
 
-Before installing bear-tunes, make sure all [requirements](#requirements) are installed and available in your system `PATH`.
+Before installing bear-tunes, make sure all [requirements](#requirements) are installed.
 
 
 ### 1. Clone the repository
