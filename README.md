@@ -8,13 +8,11 @@ A TypeScript toolkit and CLI for converting, tagging, renaming, and organizing m
 
 **bear-tunes** provides reusable components for working with digital music libraries as well as a ready-to-use CLI. Its core functionality is exposed through configurable `BearTunes*` classes, allowing applications to use individual parts of the processing pipeline or combine them into a complete workflow.
 
-
 ## Why bear-tunes?
 
 bear-tunes was created to provide a consistent way of organizing and tagging music files regardless of where the metadata comes from. Music may be sourced from platforms such as Beatport, Bandcamp, Juno Download, Traxsource, or SoundCloud, but the resulting local library should follow the same metadata and naming conventions.
 
 Beatport is used as the default provider because its catalog offers particularly rich metadata for music-library organization and DJ-oriented workflows, including genre, BPM, key, catalog information, artwork, and detailed track and release data. The provider can be replaced through the public `DataProvider` API when another source is preferred or required.
-
 
 ## Features
 
@@ -28,7 +26,6 @@ Beatport is used as the default provider because its catalog offers particularly
 * Download and embed album artwork and additional image metadata.
 * Handle ambiguous matches and significant duration differences interactively.
 * Provide structured error handling and verbose logging.
-
 
 ## Tech Stack
 
@@ -45,16 +42,13 @@ Beatport is used as the default provider because its catalog offers particularly
 | **FLAC / metaflac** | FLAC metadata handling and audio processing. |
 | **LAME** | MP3 encoding. |
 
-
 ## Requirements
-
 
 ### Runtime
 
 * Node.js **20 or newer**
 * npm
 * Python 3 with the `eyeD3` package
-
 
 ### System Dependencies
 
@@ -67,11 +61,9 @@ The following tools are required for audio conversion and metadata processing:
 
 These tools are invoked as external processes and must be available in the system `PATH`.
 
-
 ## Installation
 
 Before installing bear-tunes, make sure all [requirements](#requirements) are installed.
-
 
 ### 1. Clone the repository
 
@@ -80,20 +72,17 @@ git clone https://github.com/bearbyt3z/bear-tunes.git
 cd bear-tunes
 ```
 
-
 ### 2. Install Node.js dependencies
 
 ```bash
 npm ci
 ```
 
-
 ### 3. Install the required Playwright browser
 
 ```bash
 npm run setup
 ```
-
 
 ### 4. Build the project
 
@@ -102,7 +91,6 @@ npm run build
 ```
 
 After a successful build, bear-tunes is ready to use through the CLI or directly from its TypeScript API.
-
 
 ## CLI Usage
 
@@ -150,7 +138,6 @@ In the second example, the input filename provides enough keywords to identify t
 
 The resulting files are organized according to the metadata-driven filename and directory patterns described below.
 
-
 ## Output Organization
 
 bear-tunes can organize processed files using metadata-driven filename and directory patterns.
@@ -169,7 +156,6 @@ The default directory pattern is:
 
 These patterns are applied to the metadata resolved for each track, allowing the output directory structure and filenames to be generated automatically.
 
-
 ## Public API
 
 The same processing capabilities are exposed through a reusable TypeScript API. Each component can be instantiated and configured independently, while `BearTunesProcessor` can combine them into a complete processing pipeline.
@@ -187,7 +173,6 @@ The public API is documented with TSDoc to provide detailed type and usage infor
 
 The default tagger uses Beatport as its metadata provider, but a custom `DataProvider` implementation can be supplied when integrating bear-tunes into another application or workflow.
 
-
 ### Programmatic Usage
 
 The processing pipeline can be used directly from TypeScript without going through the CLI.
@@ -204,7 +189,6 @@ await processor.processAllFilesInDirectory(
 ```
 
 The processor provides sensible defaults for its dependencies, including the converter, tagger, and renamer. Custom dependencies and options can be supplied through the constructor when more control over the processing pipeline is required.
-
 
 ### Customizing the Processing Pipeline
 
@@ -257,7 +241,6 @@ await processor.processAllFilesInDirectory(
 
 This approach allows the processor to reuse fully configured components while keeping each dependency independently replaceable and reusable.
 
-
 ### Using Individual Components
 
 The individual components can also be used independently when a complete processing pipeline is not required.
@@ -294,11 +277,9 @@ if (result.ok) {
 
 The same approach can be used with `BearTunesRenamer` and the metadata provider components when only a specific part of the workflow is needed.
 
-
 ## How It Works
 
 The diagrams below illustrate the relationships between the public API components and the high-level processing workflow.
-
 
 ### Architecture
 
@@ -306,52 +287,51 @@ The public API is composed of independent components that can be configured and 
 
 ```mermaid
 classDiagram
-    class BearTunesProcessor {
-        +processAllFilesInDirectory()
-    }
+  class BearTunesProcessor {
+    +processAllFilesInDirectory()
+  }
 
-    class BearTunesConverter {
-        +aiffToFlac()
-        +flacToMp3()
-    }
+  class BearTunesConverter {
+    +aiffToFlac()
+    +flacToMp3()
+  }
 
-    class BearTunesTagger {
-        +readTag()
-        +resolveTrackInfo()
-        +saveTag()
-        +processTrack()
-    }
+  class BearTunesTagger {
+    +readTag()
+    +resolveTrackInfo()
+    +saveTag()
+    +processTrack()
+  }
 
-    class BearTunesRenamer {
-        +rename()
-    }
+  class BearTunesRenamer {
+    +rename()
+  }
 
-    class DataProvider {
-        <<abstract>>
-        +findTrackCandidates()
-        +getTrackInfo()
-    }
+  class DataProvider {
+    <<abstract>>
+    +findTrackCandidates()
+    +getTrackInfo()
+  }
 
-    class BeatportDataProvider {
-        +findTrackCandidates()
-        +getTrackInfo()
-    }
+  class BeatportDataProvider {
+    +findTrackCandidates()
+    +getTrackInfo()
+  }
 
-    class YourDataProvider {
-        +findTrackCandidates()
-        +getTrackInfo()
-    }
+  class YourDataProvider {
+    +findTrackCandidates()
+    +getTrackInfo()
+  }
 
-    BearTunesProcessor ..> BearTunesConverter : injects
-    BearTunesProcessor ..> BearTunesTagger : injects
-    BearTunesProcessor ..> BearTunesRenamer : injects
+  BearTunesProcessor ..> BearTunesConverter : injects
+  BearTunesProcessor ..> BearTunesTagger : injects
+  BearTunesProcessor ..> BearTunesRenamer : injects
 
-    BearTunesTagger ..> DataProvider : injects
+  BearTunesTagger ..> DataProvider : injects
 
-    BeatportDataProvider --|> DataProvider : extends
-    YourDataProvider --|> DataProvider : extends
+  BeatportDataProvider --|> DataProvider : extends
+  YourDataProvider --|> DataProvider : extends
 ```
-
 
 ### Processing Flow
 
@@ -359,29 +339,27 @@ When a directory is provided for processing, bear-tunes scans it recursively and
 
 ```mermaid
 flowchart TD
-    Input["Input directory"]
-        --> Scan["Recursive directory scanning"]
+  Input["Input directory"]
+    --> Scan["Recursive directory scanning"]
 
-    Scan --> Detect["Audio file detection"]
+  Scan --> Detect["Audio file detection"]
 
-    Detect --> Metadata["Metadata resolution & tagging"]
+  Detect --> Metadata["Metadata resolution & tagging"]
 
-    Detect -. "optional" .-> Conversion["Audio conversion"]
-    Conversion -.-> Metadata
+  Detect -. "optional" .-> Conversion["Audio conversion"]
+  Conversion -.-> Metadata
 
-    Metadata --> Artwork["Save cover artwork"]
-    
-    Metadata -. "optional" .-> Rename["File renaming & relocation"]
-    Rename -.-> Artwork
+  Metadata --> Artwork["Save cover artwork"]
+  
+  Metadata -. "optional" .-> Rename["File renaming & relocation"]
+  Rename -.-> Artwork
 
-    Artwork --> Output["Organized output"]
+  Artwork --> Output["Organized output"]
 ```
-
 
 ## Project Structure
 
 The project is organized into focused modules, with the core music-processing functionality separated from the CLI and project tooling.
-
 
 ### Core modules
 
@@ -397,7 +375,6 @@ The project is organized into focused modules, with the core music-processing fu
 | `src/tagger/`        | Audio metadata reading and tagging.                                             |
 | `src/tools/`         | Shared utilities and infrastructure integrations, independent of domain models. |
 
-
 ### Application, configuration, and build output
 
 | Path                | Purpose |
@@ -407,14 +384,12 @@ The project is organized into focused modules, with the core music-processing fu
 | `src/config.ts`     | Application configuration. |
 | `dist/`             | Generated JavaScript output produced by the TypeScript build. |
 
-
 ### Project tooling
 
 | Path                      | Purpose                                   |
 | ------------------------- | ----------------------------------------- |
 | `.github/workflows/`      | Continuous integration configuration.     |
 | `eyed3-display-plugin.py` | Custom eyeD3 display plugin for MP3 metadata extraction. |
-
 
 ## Development
 
@@ -432,7 +407,6 @@ Run the complete local validation with:
 npm run check
 ```
 
-
 ### Available Scripts
 
 | Command               | Purpose                                                      |
@@ -445,13 +419,11 @@ npm run check
 | `npm run build-start` | Builds the project and starts the CLI.                       |
 | `npm run check`       | Runs linting, type checking, and the production build.       |
 
-
 ### Continuous Integration
 
 The same quality checks are executed automatically by GitHub Actions for pushes to `master` and for pull requests.
 
 The CI workflow runs on Ubuntu with Node.js 20, installs dependencies using `npm ci`, and executes `npm run check`.
-
 
 ## Important Notes
 
@@ -463,7 +435,6 @@ The CI workflow runs on Ubuntu with Node.js 20, installs dependencies using `npm
 
 > [!WARNING]
 > **AIFF source files can be removed after a successful conversion to FLAC.** The `BearTunesConverter.aiffToFlac()` method provides the `deleteAiffAfterConversion` option to control whether the original AIFF file is deleted. The default processing pipeline enables this option when performing AIFF conversion.
-
 
 ## License
 
