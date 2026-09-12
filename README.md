@@ -122,7 +122,7 @@ When no input directory is provided, the current working directory is used.
 
 The application recursively scans the input directory and processes supported audio files.
 
-The same workflow can also use partial information from the original filename to identify the track and enrich it with metadata from the configured provider.
+The workflow can identify tracks using partial information from the original filename and enrich the resulting files with metadata from the configured provider.
 
 ```text
 Before:
