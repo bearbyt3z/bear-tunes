@@ -384,6 +384,12 @@ The project is organized into focused modules, with the core music-processing fu
 | `src/config.ts`     | Application configuration. |
 | `dist/`             | Generated JavaScript output produced by the TypeScript build. |
 
+### Runtime data
+
+| Path | Purpose |
+| ---- | ------- |
+| `logs/` | Runtime application logs. Log files are generated locally and excluded from version control. |
+
 ### Project tooling
 
 | Path                      | Purpose                                   |
