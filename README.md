@@ -33,12 +33,12 @@ Beatport is used as the default provider because its catalog offers particularly
 | ---------- | ------- |
 | **TypeScript** | Main programming language. |
 | **Node.js 20+** | Runtime environment. |
-| **Python 3** | Used for the custom eyeD3 display plugin integration. |
+| **Python 3** | Runtime for the custom eyeD3 display plugin replacement used for MP3 metadata extraction. |
 | **Zod** | Runtime validation of application data and domain models. |
 | **JSDOM** | HTML document parsing for metadata extraction. |
 | **Playwright** | Fallback browser automation for handling CAPTCHA and anti-bot challenges. |
 | **Winston** | Structured application logging. |
-| **eyeD3** | MP3 metadata reading and writing through the Python package and CLI tool, including integration with the custom display plugin. |
+| **eyeD3** | MP3 metadata reading and writing through the Python package and CLI tool. |
 | **FLAC / metaflac** | FLAC metadata handling and audio processing. |
 | **LAME** | MP3 encoding. |
 
@@ -392,10 +392,11 @@ The project is organized into focused modules, with the core music-processing fu
 
 ### Project tooling
 
-| Path                      | Purpose                                   |
-| ------------------------- | ----------------------------------------- |
-| `.github/workflows/`      | Continuous integration configuration.     |
-| `eyed3-display-plugin.py` | Custom eyeD3 display plugin for MP3 metadata extraction. |
+| Path                      | Purpose |
+| ------------------------- | ------- |
+| `.github/workflows/`      | Continuous integration configuration. |
+| `eyed3-display-plugin.py` | Custom replacement for the eyeD3 `display` plugin, used to extract MP3 metadata according to `eyed3-pattern.txt`. |
+| `eyed3-pattern.txt`       | Pattern file defining the MP3 metadata fields extracted by `eyed3-display-plugin.py`, based on the pattern syntax of the original eyeD3 `display` plugin. |
 
 ## Development
 
