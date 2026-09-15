@@ -103,7 +103,7 @@ export type {
 // - `Object.freeze()` guards against accidental mutation at runtime.
 const defaultTaggerOptions = Object.freeze({
   dataProvider: new BeatportDataProvider(),
-  eyeD3DisplayPluginPatternFile: './eyed3-pattern.txt',
+  eyeD3DisplayPluginPatternFile: './eyed3-display-plugin-pattern.txt',
   lengthDifferenceAccepted: 3,
   verbose: false,
   eyed3Verbose: false,
@@ -714,7 +714,7 @@ export class BearTunesTagger {
   private extractId3Tag(trackPath: string): TrackInfo {
     // Replacing eyeD3 display-plugin with a simple python script:
     const displayPluginOutput = childProcess.spawnSync(
-      './eyed3-display-plugin.py',
+      './eyed3-display-plugin-replacement.py',
       [
         this.options.eyeD3DisplayPluginPatternFile,
         trackPath,
