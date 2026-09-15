@@ -392,12 +392,12 @@ The project is organized into focused modules, with the core music-processing fu
 
 ### Project tooling
 
-| Path                      | Purpose |
-| ------------------------- | ------- |
-| `.github/workflows/`      | Continuous integration configuration. |
-| `eslint.config.mjs` | ESLint configuration. |
+| Path                                  | Purpose |
+| ------------------------------------- | ------- |
+| `.github/workflows/`                  | Continuous integration configuration. |
+| `eslint.config.mjs`                   | ESLint configuration. |
 | `eyed3-display-plugin-replacement.py` | Custom replacement for the eyeD3 `display` plugin, used to extract MP3 metadata according to `eyed3-display-plugin-pattern.txt`. |
-| `eyed3-display-plugin-pattern.txt` | Pattern file defining the MP3 metadata fields extracted by `eyed3-display-plugin-replacement.py`, based on the pattern syntax of the original eyeD3 `display` plugin. |
+| `eyed3-display-plugin-pattern.txt`    | Pattern file defining the MP3 metadata fields extracted by `eyed3-display-plugin-replacement.py`, based on the pattern syntax of the original eyeD3 `display` plugin. |
 
 ## Development
 
