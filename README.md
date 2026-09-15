@@ -400,7 +400,7 @@ The project is organized into focused modules, with the core music-processing fu
 | `eyed3-display-plugin-pattern.txt`    | Pattern file defining the MP3 metadata fields extracted by `eyed3-display-plugin-replacement.py`, based on the pattern syntax of the original eyeD3 `display` plugin. |
 
 > [!NOTE]
-> The custom eyeD3 display plugin replacement is used because the original `display` plugin was removed from eyeD3 v0.9.7. The replacement preserves the pattern-based extraction approach of the original plugin, while `eyed3-display-plugin-pattern.txt` defines which metadata fields are extracted from MP3 files.
+> The custom eyeD3 display plugin replacement is used because [the original `display` plugin was removed from eyeD3 v0.9.7](https://github.com/nicfit/eyeD3/pull/585). The replacement preserves the pattern-based extraction approach of the original plugin, while `eyed3-display-plugin-pattern.txt` defines which metadata fields are extracted from MP3 files.
 
 ## Development
 
