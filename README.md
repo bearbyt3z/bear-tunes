@@ -1,6 +1,7 @@
 # bear-tunes
 
 [![CI](https://github.com/bearbyt3z/bear-tunes/actions/workflows/ci.yml/badge.svg)](https://github.com/bearbyt3z/bear-tunes/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/github/package-json/v/bearbyt3z/bear-tunes)](https://github.com/bearbyt3z/bear-tunes)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](./LICENSE)
 
