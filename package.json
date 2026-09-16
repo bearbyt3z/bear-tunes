@@ -1,6 +1,6 @@
 {
   "name": "bear-tunes",
-  "version": "0.38.6",
+  "version": "0.39.0",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./dist/main.js",
   "type": "module",
@@ -59,12 +59,13 @@
     "start": "node ./dist/main.js",
     "build": "npm run clean && npx tsc",
     "build-start": "npm run build && npm run start",
-    "check": "npm run lint && npm run typecheck && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run build",
+    "test": "vitest run"
   },
   "author": "bearbyt3z",
   "license": "GPL-3.0-or-later",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "dependencies": {
     "canvas": "^3.2.3",
@@ -91,10 +92,12 @@
     "eslint-plugin-import-x": "^4.17.1",
     "globals": "^17.11.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.69.0"
+    "typescript-eslint": "^8.69.0",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   },
   "allowScripts": {
     "canvas@3.2.3": true,
-    "unrs-resolver@1.11.1": true
+    "unrs-resolver@1.12.2": true
   }
 }
