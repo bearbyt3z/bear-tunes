@@ -4,5 +4,6 @@
 /test/
 /.cache/
 /dist/
+/coverage/
 
 # Log directory rules are managed in /logs/.gitignore
