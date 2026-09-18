@@ -1,7 +1,7 @@
 import logger from '#logger';
 import {
   formatZodErrorIssues,
-  isRecordArray,
+  isObjectArray,
 } from '#tools';
 
 import { extractNextJSData } from './nextjs-data.js';
@@ -101,7 +101,7 @@ export async function fetchBeatportSearchTrackPayload(
   });
 
   if (!parsedTrackArray.success) {
-    const problematicItem = isRecordArray(rawTrackArray)
+    const problematicItem = isObjectArray(rawTrackArray)
       ? getProblematicArrayItem(rawTrackArray, parsedTrackArray.error.issues)
       : undefined;
 

@@ -17,7 +17,7 @@ import logger from '#logger';
 import {
   AudioFileType,
   downloadAndSaveArtwork,
-  isErrnoException,
+  isErrorWithStringCode,
   tryGetAudioFileTypeFromFile,
 } from '#tools';
 
@@ -457,7 +457,7 @@ export class BearTunesProcessor {
     try {
       stats = await fs.promises.stat(directoryPath);
     } catch (error: unknown) {
-      if (isErrnoException(error) && error.code === 'ENOENT') {
+      if (isErrorWithStringCode(error) && error.code === 'ENOENT') {
         logger.error(`Path specified doesn't exist: ${directoryPath}`);
         return DirectoryProcessingStatus.PathDoesNotExist;
       }

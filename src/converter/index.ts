@@ -22,7 +22,7 @@ import {
   executeCommandPipeline,
   executeCommandSync,
   FirstPipelineCommandFailedError,
-  isErrnoException,
+  isErrorWithStringCode,
   normalizeTrailingPathSeparators,
   normalizeUnknownError,
   SecondPipelineCommandFailedError,
@@ -155,7 +155,7 @@ export class BearTunesConverter {
     try {
       fs.lstatSync(outputFilePath);
     } catch (error: unknown) {
-      if (isErrnoException(error) && error.code === 'ENOENT') {
+      if (isErrorWithStringCode(error) && error.code === 'ENOENT') {
         return;
       }
 
@@ -223,7 +223,7 @@ export class BearTunesConverter {
     try {
       outputPathStats = fs.lstatSync(outputPath);
     } catch (error: unknown) {
-      if (isErrnoException(error) && error.code === 'ENOENT') {
+      if (isErrorWithStringCode(error) && error.code === 'ENOENT') {
         if (!outputPath.match(expectedOutputExtensionPattern)) {
           throw new ConverterGuardError(
             BearTunesConverterFailureCode.InvalidOutputFileExtension,
