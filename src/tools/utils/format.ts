@@ -13,7 +13,7 @@ function zeroPad(value: number): string {
 }
 
 /**
- * Formats a local date as an ISO 8601 calendar date string.
+ * Formats a valid local date as an ISO 8601 calendar date string.
  *
  * The returned string uses the `YYYY-MM-DD` format based on the date's local
  * year, month, and day values.
@@ -21,8 +21,9 @@ function zeroPad(value: number): string {
  * This helper uses local date getters (`getFullYear()`, `getMonth()`, and
  * `getDate()`), so the result is based on the local time zone rather than UTC.
  *
- * @param date - Date to format.
+ * @param date - Valid Date to format.
  * @returns A local date string in `YYYY-MM-DD` format.
+ * @throws {TypeError} If the date is invalid.
  *
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getFullYear | MDN: Date.prototype.getFullYear()}
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getMonth | MDN: Date.prototype.getMonth()}
@@ -30,7 +31,13 @@ function zeroPad(value: number): string {
  * @see {@link https://www.iso.org/iso-8601-date-and-time-format.html | ISO 8601 date format}
  */
 export function formatLocalDateToIsoDateString(date: Date): string {
-  return `${date.getFullYear()}-${zeroPad(date.getMonth() + 1)}-${zeroPad(date.getDate())}`;
+  if (Number.isNaN(date.getTime())) {
+    throw new TypeError('date must be a valid Date.');
+  }
+
+  const year = date.getFullYear().toString().padStart(4, '0');
+
+  return `${year}-${zeroPad(date.getMonth() + 1)}-${zeroPad(date.getDate())}`;
 }
 
 /**
@@ -117,36 +124,65 @@ export function secondsToTimeFormat(inputSeconds : number): string {
 }
 
 /**
- * Rounds a number to the specified number of decimal places.
+ * Rounds a finite number to the specified number of decimal places.
  *
- * This helper scales the input by `10^decimalPlaces`, rounds the scaled value
- * with `Math.round()`, and then scales it back to the original magnitude.
+ * The input is rounded using decimal-place scaling and `Math.round()`.
+ * Values are rounded symmetrically for positive and negative numbers, and
+ * floating-point precision issues are reduced for common decimal edge cases.
  *
- * A small `Number.EPSILON` adjustment is applied before rounding to reduce
- * floating-point precision issues in edge cases such as `1.005`.
+ * `decimalPlaces` must be a non-negative integer. A `RangeError` is thrown when
+ * `decimalPlaces` is negative, non-integer, or too large to be represented by
+ * the decimal scaling factor.
  *
- * This approach is based on a commonly used JavaScript rounding pattern
- * discussed in the following Stack Overflow thread and explanatory comment.
+ * If decimal scaling would overflow the finite number range, the original input
+ * value is returned unchanged.
  *
- * @param num - Number to round.
+ * @param num - Finite number to round.
  * @param decimalPlaces - Number of decimal places to keep. Defaults to `0`.
- * @returns The rounded number.
+ * @returns The rounded number, or the original input value when decimal scaling would overflow.
+ * @throws {TypeError} If `num` is not a finite number.
+ * @throws {RangeError} If `decimalPlaces` is not a non-negative integer or is too large.
  *
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round | MDN: Math.round()}
- * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/EPSILON | MDN: Number.EPSILON}
- * @see {@link https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary/48764436#48764436 | Stack Overflow: explanation of the EPSILON-based rounding method}
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isFinite | MDN: Number.isFinite()}
  */
 export function roundToDecimalPlaces(num: number, decimalPlaces = 0): number {
-  const p = Math.pow(10, decimalPlaces);
-  const n = (num * p) * (1 + Number.EPSILON);
-  return Math.round(n) / p;
+  if (!Number.isFinite(num)) {
+    throw new TypeError('num must be a finite number.');
+  }
+
+  if (!Number.isInteger(decimalPlaces) || decimalPlaces < 0) {
+    throw new RangeError('decimalPlaces must be a non-negative integer.');
+  }
+
+  const decimalScale = 10 ** decimalPlaces;
+
+  if (!Number.isFinite(decimalScale)) {
+    throw new RangeError('decimalPlaces is too large.');
+  }
+
+  const magnitude = Math.abs(num) * decimalScale;
+
+  if (!Number.isFinite(magnitude)) {
+    return num;
+  }
+
+  const adjustedMagnitude = magnitude * (1 + Number.EPSILON);
+
+  if (!Number.isFinite(adjustedMagnitude)) {
+    return num;
+  }
+
+  const rounded = Math.round(adjustedMagnitude) / decimalScale;
+
+  return Math.sign(num) * rounded;
 }
 
 /**
  * Returns the first line of a string.
  *
- * This helper splits the input on the first Unix (`\n`) or Windows (`\r\n`)
- * line break and returns only the text before it.
+ * This helper splits the input on the first common line break (`\n`, `\r\n`,
+ * or `\r`) and returns only the text before it.
  *
  * It is useful for shortening multi-line messages, for example when logging
  * only the first line of an error and omitting the remaining stack trace.
@@ -155,28 +191,34 @@ export function roundToDecimalPlaces(num: number, decimalPlaces = 0): number {
  * @returns The first line of the input string, or the whole string if it does not contain a line break.
  */
 export function getFirstLine(text: string): string {
-  return text.split(/\r?\n/, 1)[0];
+  return text.split(/\r\n|\r|\n/, 1)[0];
 }
 
 /**
  * Converts a string into a URL-friendly slug.
  *
- * The resulting slug is normalized to lowercase ASCII, with diacritics removed,
- * non-alphanumeric characters stripped, whitespace converted to hyphens, and
- * duplicate or edge hyphens removed.
+ * The resulting slug contains only lowercase ASCII letters, digits, and
+ * hyphens, making it safe to use as a single URL path segment.
  *
- * This helper is intended for generating readable identifiers such as file
- * names, path segments, or other slug-like strings.
+ * The input is normalized using Unicode NFD normalization, combining
+ * diacritical marks are removed, and unsupported characters are discarded.
+ * Whitespace is converted to hyphens, consecutive hyphens are collapsed,
+ * and leading or trailing hyphens are removed.
+ *
+ * This helper is intended for generating readable identifiers for resources,
+ * such as URL path segments or file names.
  *
  * @example
  * ```ts
  * slugify('Hello World'); // "hello-world"
- * slugify('Zażółć gęślą jaźń'); // "zazolc-gesla-jazn"
+ * slugify('Zażółć gęślą jaźń'); // "zazoc-gesla-jazn"
+ * slugify('Førehand'); // "frehand"
  * slugify('  Foo --- Bar!  '); // "foo-bar"
+ * slugify('foo/bar'); // "foobar"
  * ```
  *
  * @param text - Text to convert into a slug.
- * @returns A lowercase, hyphen-separated ASCII slug.
+ * @returns A lowercase ASCII slug containing only letters, digits, and hyphens.
  *
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/normalize | MDN: String.prototype.normalize()}
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replaceAll | MDN: String.prototype.replaceAll()}
