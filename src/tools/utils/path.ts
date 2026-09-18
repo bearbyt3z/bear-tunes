@@ -17,10 +17,10 @@ export function normalizeTrailingPathSeparators(filePath: string): string {
 /**
  * Replaces the filename extension in a filesystem path.
  *
- * @param filePath The filesystem path whose filename extension should be replaced.
- * @param replacement The new filename extension, with or without a leading dot.
+ * @param filePath - Filesystem path whose filename extension should be replaced.
+ * @param replacement - New filename extension, with or without a leading dot.
  * @returns The input path with its filename extension replaced.
- * @throws {TypeError} If replacement is not a non-empty string.
+ * @throws {TypeError} If `replacement` is not a non-empty string.
  */
 export function replaceFilenameExtension(filePath: string, replacement: string): string {
   if (typeof replacement !== 'string' || replacement === '') {
@@ -41,7 +41,7 @@ export function replaceFilenameExtension(filePath: string, replacement: string):
 /**
  * Removes the filename extension from a filesystem path.
  *
- * @param filePath The filesystem path whose filename extension should be removed.
+ * @param filePath - Filesystem path whose filename extension should be removed.
  * @returns The input path without its filename extension.
  */
 export function removeFilenameExtension(filePath: string): string {
