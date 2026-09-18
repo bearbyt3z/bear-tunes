@@ -63,21 +63,6 @@ export function isObjectRecord(value: unknown): value is Record<string, unknown>
 }
 
 /**
- * Returns whether the given value is a readonly array of strings.
- *
- * This helper exists primarily as a TypeScript narrowing workaround. In some
- * `string | readonly string[]` unions, `Array.isArray()` alone may not narrow
- * the non-array branch correctly, which can still produce property access errors
- * on the remaining `string` path.
- *
- * @param value - Value to check.
- * @returns `true` when the value is a readonly string array; otherwise `false`.
- */
-export function isReadonlyStringArray(value: unknown): value is readonly string[] {
-  return Array.isArray(value);
-}
-
-/**
  * Checks if a value is an array.
  *
  * Type guard returns `value is unknown[]`, meaning:

@@ -101,7 +101,6 @@ export {
   isEmptyPlainObject,
   isErrnoException,
   isObjectRecord,
-  isReadonlyStringArray,
   isRecordArray,
   isUnknownArray,
 } from './utils/type-guards.js';
