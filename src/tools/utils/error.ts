@@ -1,5 +1,19 @@
 import type { ZodError } from 'zod';
 
+/**
+ * Formats an arbitrary value for inclusion in a formatted Zod issue.
+ *
+ * `undefined` values are omitted by returning `undefined`. Other values are
+ * serialized with `JSON.stringify()`. If serialization throws, a placeholder
+ * string is returned instead.
+ *
+ * Some values may also produce `undefined` because `JSON.stringify()` does not
+ * return a serialized representation for them.
+ *
+ * @param input - Value from a Zod issue to format.
+ * @returns A JSON string, `undefined` when the value has no JSON representation,
+ * or a placeholder when serialization fails.
+ */
 function formatZodIssueInput(input: unknown): string | undefined {
   if (input === undefined) {
     return undefined;
@@ -15,12 +29,13 @@ function formatZodIssueInput(input: unknown): string | undefined {
 /**
  * Converts a Zod validation error into a compact, log-friendly list of issues.
  *
- * Each returned entry contains only the issue path, code, and message,
- * which makes validation logs shorter and easier to scan than logging
- * the full `ZodError` object.
+ * Each returned entry contains the issue path, code, message, and an optional
+ * JSON-formatted representation of the issue input, which makes validation
+ * logs shorter and easier to scan than logging the full `ZodError` object.
  *
  * The issue path is flattened into a dot-delimited string. When an issue
- * has no path, the returned `path` value is an empty string.
+ * has no path, the returned `path` value is an empty string. When the issue
+ * has no input value, the `input` property is omitted.
  *
  * @param error - Zod validation error to format.
  * @returns Simplified validation issues for structured logging.
