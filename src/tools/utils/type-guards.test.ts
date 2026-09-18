@@ -1,4 +1,5 @@
 import { describe, expect, it, expectTypeOf } from 'vitest';
+
 import {
   isEmptyPlainObject,
   isErrorWithStringCode,

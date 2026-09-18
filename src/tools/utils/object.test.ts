@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { removeUndefinedObjectFields } from '#tools';
+
+import {
+  removeUndefinedObjectFields,
+} from '#tools';
 
 import type { TrackInfo } from '#shared-types';
 

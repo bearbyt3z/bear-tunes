@@ -8,7 +8,7 @@ import {
   roundToDecimalPlaces,
   secondsToTimeFormat,
   slugify,
-} from './format.js';
+} from '#tools';
 
 describe('formatLocalDateToIsoDateString', () => {
   it('formats a date as YYYY-MM-DD', () => {
