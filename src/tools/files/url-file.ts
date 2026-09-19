@@ -9,13 +9,16 @@ import { tryParseUrl } from '../utils/parse.js';
  * the remainder as a valid URL. It returns `undefined` when the file does not
  * contain such a line or when the extracted value is not a valid URL.
  *
+ * Errors encountered while reading the file are propagated to the caller.
+ *
  * @param filePath - Path to the local `.url` file to inspect.
  * @returns Parsed URL, or `undefined` when no valid URL could be extracted from the file.
+ * @throws If the file cannot be read.
  */
 export async function tryGetUrlFromFile(filePath: string): Promise<URL | undefined> {
   const fileContent = await fs.promises.readFile(filePath, 'utf8');
   const urlLine = fileContent
-    .split(/\r?\n/)
+    .split(/\r\n|\r|\n/)
     .find((line) => line.startsWith('URL='));
 
   if (!urlLine) {
