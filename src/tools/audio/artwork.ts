@@ -16,13 +16,19 @@ const supportedArtworkMimeTypes = new Set([
 /**
  * Returns whether the given file is a supported artwork image.
  *
- * A file is considered supported when its detected MIME type matches one of the
- * artwork formats accepted by the tagging pipeline.
+ * The file is considered supported when its detected MIME type matches one of
+ * the artwork formats accepted by the tagging pipeline. The file extension is
+ * not used to determine whether the artwork is supported.
+ *
+ * Errors encountered while reading or inspecting the file are propagated to
+ * the caller.
  *
  * @param filePath - Path to the local file to validate.
- * @returns `true` when the file is a supported artwork image, otherwise `false`.
+ * @returns `true` when the detected MIME type is a supported artwork format,
+ * otherwise `false`.
+ * @throws If reading or inspecting the file fails.
  */
 export async function isSupportedArtworkFile(filePath: string): Promise<boolean> {
   const mimeType = await tryGetMimeTypeFromFile(filePath);
-  return !!mimeType && supportedArtworkMimeTypes.has(mimeType);
+  return mimeType !== undefined && supportedArtworkMimeTypes.has(mimeType);
 }
