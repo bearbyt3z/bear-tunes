@@ -92,8 +92,8 @@ function collectBuffer(
 }
 
 /**
- * Creates a transform stream that forwards all chunks unchanged and optionally
- * captures them for later retrieval.
+ * Creates a transform stream that forwards incoming chunks as buffers and
+ * optionally captures them for later retrieval.
  *
  * @param enabled - Whether forwarded chunks should also be captured.
  * @returns Transform stream together with a getter for the captured output.
@@ -123,11 +123,11 @@ function createCaptureTap(enabled: boolean): {
 }
 
 /**
- * Waits until a child process either emits `error` or fully closes.
+ * Waits until a child process either emits `error` or closes.
  *
- * This helper resolves exactly once. If the child process cannot be spawned
- * correctly, the returned result contains the emitted error. Otherwise, it
- * contains the close status and signal.
+ * The returned promise resolves only once, even if both events are emitted.
+ * If the child process emits an error, the returned result contains that error.
+ * Otherwise, it contains the close status and signal.
  *
  * @param child - Child process to observe.
  * @returns Promise resolved with the final child process result.
