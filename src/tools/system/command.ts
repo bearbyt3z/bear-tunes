@@ -92,7 +92,7 @@ function collectBuffer(
 }
 
 /**
- * Creates a transform stream that forwards incoming chunks as buffers and
+ * Creates a transform stream that forwards incoming chunks unchanged and
  * optionally captures them for later retrieval.
  *
  * @param enabled - Whether forwarded chunks should also be captured.
@@ -112,7 +112,7 @@ function createCaptureTap(enabled: boolean): {
         chunks.push(buffer);
       }
 
-      callback(null, buffer);
+      callback(null, chunk);
     },
   });
 
