@@ -53,20 +53,22 @@ function buildProcessExitError(
 }
 
 /**
- * Collects all binary output from a readable stream.
+ * Consumes all data from a readable stream and optionally captures it.
  *
- * The stream is read until it ends. If the stream is `null` or capturing is
- * disabled, the function resolves to `undefined`.
+ * The stream is read until it ends. When capturing is disabled, the stream is
+ * still consumed but its output is discarded. If the stream is `null`, the
+ * function resolves to `undefined`.
  *
  * @param stream - Readable stream to consume, or `null` when no stream is available.
  * @param enabled - Whether stream output should be captured.
- * @returns Promise resolved with the full captured stream output, or `undefined`.
+ * @returns Promise resolved with the full captured stream output, or `undefined`
+ * when the stream is `null` or capturing is disabled.
  */
 function collectBuffer(
   stream: NodeJS.ReadableStream | null,
   enabled: boolean,
 ): Promise<Buffer | undefined> {
-  if (stream === null || !enabled) {
+  if (stream === null) {
     return Promise.resolve(undefined);
   }
 
@@ -74,11 +76,13 @@ function collectBuffer(
     const chunks: Buffer[] = [];
 
     stream.on('data', (chunk: Buffer | string): void => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      if (enabled) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
     });
 
     stream.once('end', (): void => {
-      resolve(Buffer.concat(chunks));
+      resolve(enabled ? Buffer.concat(chunks) : undefined);
     });
 
     stream.once('error', (error: unknown): void => {
