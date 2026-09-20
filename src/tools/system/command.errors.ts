@@ -1,7 +1,8 @@
 /**
  * Error thrown when a system command cannot be started.
  *
- * Stores the command name together with the original startup failure cause.
+ * Stores the command name together with the original error reported while
+ * starting the child process.
  */
 export class CommandExecutionStartError extends Error {
   /** Name or path of the command that could not be started. */
@@ -23,8 +24,8 @@ export class CommandExecutionStartError extends Error {
 /**
  * Error thrown when a synchronously executed system command fails.
  *
- * Stores the command name together with its termination details, captured
- * standard output and standard error streams.
+ * Stores the command name together with the process exit status, termination
+ * signal, and captured standard output and standard error streams.
  */
 export class CommandExecutionFailedError extends Error {
   /** Name or path of the command that failed. */
@@ -71,12 +72,10 @@ export class CommandExecutionFailedError extends Error {
 }
 
 /**
- * Error thrown when a command pipeline cannot be initialized or executed correctly
- * for infrastructure-related reasons.
+ * Error thrown when a command pipeline fails for infrastructure-related reasons.
  *
  * This covers failures such as child process startup errors, pipe initialization
- * problems, and stream pipeline errors that prevent the command pipeline from
- * running to completion.
+ * problems, and stream pipeline errors that prevent the pipeline from completing.
  */
 export class CommandPipelineInfrastructureError extends Error {
   /**
