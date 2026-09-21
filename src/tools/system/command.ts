@@ -32,14 +32,15 @@ import type {
  * process terminated due to a signal.
  * @param signal - Signal that terminated the child process, or `null` when the
  * process exited normally.
- * @param stderr - Standard error output captured from the child process.
+ * @param stderr - Captured standard error output, or `undefined` when it was not
+ * captured.
  * @returns Error describing why the child process did not complete successfully.
  */
 function buildProcessExitError(
   commandName: string,
   status: number | null,
   signal: NodeJS.Signals | null,
-  stderr: string,
+  stderr: string | undefined,
 ): Error {
   if (status === null) {
     return new Error(
@@ -47,8 +48,13 @@ function buildProcessExitError(
     );
   }
 
+  const stderrFirstLine = getFirstLine(stderr ?? '');
+
   return new Error(
-    `Child process "${commandName}" exited with code ${status}: ${getFirstLine(stderr)}`,
+    `Child process "${commandName}" exited with code ${status}: ${stderr === undefined
+      ? '[stderr output not captured]'
+      : stderrFirstLine || '[no stderr output]'
+    }`,
   );
 }
 
@@ -68,6 +74,9 @@ function collectBuffer(
   stream: NodeJS.ReadableStream | null,
   enabled: boolean,
 ): Promise<Buffer | undefined> {
+  // `executeCommandPipeline()` validates all required streams before calling
+  // this helper, so the null case is unreachable through the public API.
+  /* v8 ignore if -- @preserve */
   if (stream === null) {
     return Promise.resolve(undefined);
   }
@@ -105,6 +114,7 @@ function createCaptureTap(enabled: boolean): {
   const chunks: Buffer[] = [];
 
   const stream = new Transform({
+    decodeStrings: false,
     transform(chunk: Buffer | string, _encoding: BufferEncoding, callback): void {
       const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
 
@@ -195,7 +205,7 @@ export function executeCommandSync(
         commandName,
         child.status,
         child.signal,
-        child.stderr?.toString('utf8') ?? '',
+        child.stderr?.toString('utf8'),
       ).message,
       commandName,
       child.status,
@@ -336,7 +346,7 @@ export async function executeCommandPipeline(
   }
 
   if (secondProcessResult.status !== 0) {
-    const stderr = secondStderr?.toString('utf8') ?? '';
+    const stderr = secondStderr?.toString('utf8');
 
     throw new SecondPipelineCommandFailedError(
       buildProcessExitError(
@@ -348,12 +358,12 @@ export async function executeCommandPipeline(
       secondCommand.commandName,
       secondProcessResult.status,
       secondProcessResult.signal,
-      stderr,
+      stderr ?? '',
     );
   }
 
   if (firstProcessResult.status !== 0) {
-    const stderr = firstStderr?.toString('utf8') ?? '';
+    const stderr = firstStderr?.toString('utf8');
 
     throw new FirstPipelineCommandFailedError(
       buildProcessExitError(
@@ -365,7 +375,7 @@ export async function executeCommandPipeline(
       firstCommand.commandName,
       firstProcessResult.status,
       firstProcessResult.signal,
-      stderr,
+      stderr ?? '',
     );
   }
 
