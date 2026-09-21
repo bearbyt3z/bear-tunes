@@ -3,7 +3,7 @@
 [![CI](https://github.com/bearbyt3z/bear-tunes/actions/workflows/ci.yml/badge.svg)](https://github.com/bearbyt3z/bear-tunes/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/github/bearbyt3z/bear-tunes/graph/badge.svg?token=GX7WZKIWJV)](https://codecov.io/github/bearbyt3z/bear-tunes)
 [![Version](https://img.shields.io/github/package-json/v/bearbyt3z/bear-tunes)](https://github.com/bearbyt3z/bear-tunes)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.12-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.12-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](./LICENSE)
 
 A TypeScript toolkit and CLI for converting, tagging, renaming, and organizing music files using Beatport or custom metadata providers.
