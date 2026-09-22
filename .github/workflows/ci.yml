@@ -7,6 +7,17 @@ on:
   pull_request:
 
 jobs:
+  eyed3-compatibility:
+    name: eyeD3 0.9.7 / Python 3.7.17
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Run eyeD3 compatibility test
+        run: ./scripts/eyed3-compatibility/run.sh
+
   check:
     runs-on: ubuntu-latest
 
