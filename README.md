@@ -35,7 +35,7 @@ Beatport is used as the default provider because its catalog offers particularly
 | Technology | Purpose |
 | ---------- | ------- |
 | **TypeScript** | Main programming language. |
-| **Node.js 20+** | Runtime environment. |
+| **Node.js 22.12+** | Runtime environment. |
 | **Python 3.7+** | Runtime for the custom eyeD3 display plugin replacement used for MP3 metadata extraction. |
 | **Zod** | Runtime validation of application data and domain models. |
 | **JSDOM** | HTML document parsing for metadata extraction. |
@@ -49,7 +49,7 @@ Beatport is used as the default provider because its catalog offers particularly
 
 ### Runtime
 
-* Node.js **20 or newer**
+* Node.js **22.12 or newer**
 * npm
 * Python **3.7 or newer** with the `eyeD3` package
 
@@ -437,7 +437,7 @@ npm run check
 
 The same quality checks are executed automatically by GitHub Actions for pushes to `master` and for pull requests.
 
-The CI workflow runs on Ubuntu with Node.js 20, installs dependencies using `npm ci`, and executes `npm run check`.
+The CI workflow runs on Ubuntu with Node.js 22.12+, installs dependencies using `npm ci`, and executes `npm run check`.
 
 ## Important Notes
 
