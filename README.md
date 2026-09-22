@@ -41,7 +41,7 @@ Beatport is used as the default provider because its catalog offers particularly
 | **JSDOM** | HTML document parsing for metadata extraction. |
 | **Playwright** | Fallback browser automation for handling CAPTCHA and anti-bot challenges. |
 | **Winston** | Structured application logging. |
-| **eyeD3** | MP3 metadata reading and writing through the Python package and CLI tool. |
+| **eyeD3 0.9.7+** | MP3 metadata reading and writing through the Python package and CLI tool. |
 | **FLAC / metaflac** | FLAC metadata handling and audio processing. |
 | **LAME** | MP3 encoding. |
 
@@ -51,7 +51,13 @@ Beatport is used as the default provider because its catalog offers particularly
 
 * Node.js **22.12 or newer**
 * npm
-* Python **3.7 or newer** with the `eyeD3` package
+* Python **3.7 or newer** with `eyeD3` **0.9.7 or newer**
+
+The Python version must satisfy the requirements of the installed eyeD3 release, for example:
+
+* eyeD3 0.9.7 → Python >= 3.7
+* eyeD3 0.9.8 → Python >= 3.9
+* eyeD3 0.9.9 → Python >= 3.10
 
 ### System Dependencies
 
