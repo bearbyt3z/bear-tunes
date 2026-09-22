@@ -4,6 +4,7 @@
 [![codecov](https://codecov.io/github/bearbyt3z/bear-tunes/graph/badge.svg?token=GX7WZKIWJV)](https://codecov.io/github/bearbyt3z/bear-tunes)
 [![Version](https://img.shields.io/github/package-json/v/bearbyt3z/bear-tunes)](https://github.com/bearbyt3z/bear-tunes)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.12-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Python](https://img.shields.io/badge/Python-%3E%3D3.7-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](./LICENSE)
 
 A TypeScript toolkit and CLI for converting, tagging, renaming, and organizing music files using Beatport or custom metadata providers.
@@ -35,7 +36,7 @@ Beatport is used as the default provider because its catalog offers particularly
 | ---------- | ------- |
 | **TypeScript** | Main programming language. |
 | **Node.js 20+** | Runtime environment. |
-| **Python 3** | Runtime for the custom eyeD3 display plugin replacement used for MP3 metadata extraction. |
+| **Python 3.7+** | Runtime for the custom eyeD3 display plugin replacement used for MP3 metadata extraction. |
 | **Zod** | Runtime validation of application data and domain models. |
 | **JSDOM** | HTML document parsing for metadata extraction. |
 | **Playwright** | Fallback browser automation for handling CAPTCHA and anti-bot challenges. |
@@ -50,7 +51,7 @@ Beatport is used as the default provider because its catalog offers particularly
 
 * Node.js **20 or newer**
 * npm
-* Python 3 with the `eyeD3` package
+* Python **3.7 or newer** with the `eyeD3` package
 
 ### System Dependencies
 
