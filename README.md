@@ -41,7 +41,7 @@ Beatport is used as the default provider because its catalog offers particularly
 | **JSDOM** | HTML document parsing for metadata extraction. |
 | **Playwright** | Fallback browser automation for handling CAPTCHA and anti-bot challenges. |
 | **Winston** | Structured application logging. |
-| **eyeD3 0.9.7+** | MP3 metadata reading and writing through the Python package and CLI tool. |
+| **[eyeD3](https://github.com/nicfit/eyeD3) 0.9.7+** | MP3 metadata reading and writing through the Python package and CLI tool. |
 | **FLAC / metaflac** | FLAC metadata handling and audio processing. |
 | **LAME** | MP3 encoding. |
 
