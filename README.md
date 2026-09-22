@@ -37,13 +37,13 @@ Beatport is used as the default provider because its catalog offers particularly
 | **TypeScript** | Main programming language. |
 | **Node.js 22.12+** | Runtime environment. |
 | **Python 3.7+** | Runtime for the custom eyeD3 display plugin replacement used for MP3 metadata extraction. |
-| **Zod** | Runtime validation of application data and domain models. |
-| **JSDOM** | HTML document parsing for metadata extraction. |
-| **Playwright** | Fallback browser automation for handling CAPTCHA and anti-bot challenges. |
-| **Winston** | Structured application logging. |
-| **[eyeD3](https://github.com/nicfit/eyeD3) 0.9.7+** | MP3 metadata reading and writing through the Python package and CLI tool. |
-| **FLAC / metaflac** | FLAC metadata handling and audio processing. |
-| **LAME** | MP3 encoding. |
+| **[Zod](https://zod.dev/)** | Runtime validation of application data and domain models. |
+| **[JSDOM](https://github.com/jsdom/jsdom)** | HTML document parsing for metadata extraction. |
+| **[Playwright](https://playwright.dev/)** | Fallback browser automation for handling CAPTCHA and anti-bot challenges. |
+| **[Winston](https://github.com/winstonjs/winston)** | Structured application logging. |
+| **[eyeD3](https://github.com/nicfit/eyeD3)** 0.9.7+ | MP3 metadata reading and writing through the Python package and CLI tool. |
+| **[FLAC / metaflac](https://xiph.org/flac/)** | FLAC metadata handling and audio processing. |
+| **[LAME](https://lame.sourceforge.io/)** | MP3 encoding. |
 
 ## Requirements
 
