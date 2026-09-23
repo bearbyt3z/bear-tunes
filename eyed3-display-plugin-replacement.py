@@ -30,7 +30,23 @@ if len(pattern) < 6:
 eyed3.log.setLevel('ERROR')
 
 # Load audio file
-audio = eyed3.load(sys.argv[2])
+audio_file_path = sys.argv[2]
+
+try:
+    audio = eyed3.load(audio_file_path)
+except OSError as error:
+    print(
+        f'Error: Unable to load audio file: {error}',
+        file=sys.stderr,
+    )
+    sys.exit(3)
+
+if audio is None:
+    print(
+        f'Error: Unsupported audio file type: {audio_file_path}',
+        file=sys.stderr,
+    )
+    sys.exit(3)
 
 # Track metadata
 pattern = pattern.replace(
