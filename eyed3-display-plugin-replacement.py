@@ -5,6 +5,43 @@ import sys
 import eyed3
 
 
+def get_nested_attribute_value(obj, *attributes):
+    """Return a nested attribute value as text suitable for pattern replacement.
+
+    Attributes are resolved in the order provided. Missing attributes and
+    ``None`` values are replaced with an empty string.
+
+    Boolean values are converted to lowercase ``true`` or ``false`` so they
+    can be used as JSON boolean literals. Numeric values are preserved,
+    including zero. Other empty values are replaced with an empty string,
+    while strings and other non-empty values are converted with ``str()``.
+
+    A boolean placeholder must not be enclosed in quotes in the pattern file
+    when the resulting value is expected to remain a JSON boolean.
+    """
+    value = obj
+
+    for attribute in attributes:
+        if value is None:
+            return ''
+
+        value = getattr(value, attribute, None)
+
+    if value is None:
+        return ''
+
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+
+    if isinstance(value, (int, float)):
+        return str(value)
+
+    if not value:
+        return ''
+
+    return str(value)
+
+
 # Validate command-line arguments
 if len(sys.argv) != 3:
     print(
@@ -56,78 +93,36 @@ if audio is None:
     )
     sys.exit(3)
 
-# Track metadata
-pattern = pattern.replace(
-    '%artist%',
-    str(audio.tag and audio.tag.artist or ''),
-)
+# Metadata replacements
+metadata_replacements = {
+    # Track metadata
+    '%artist%': ('tag', 'artist'),
+    '%title%': ('tag', 'title'),
+    '%release-date%': ('tag', 'release_date'),
+    '%genre%': ('tag', 'genre'),
+    '%audio-file-url%': ('tag', 'audio_file_url'),
+    '%comments%': ('tag', 'comments'),
+    '%music-cd-id%': ('tag', 'cd_id'),
 
-pattern = pattern.replace(
-    '%title%',
-    str(audio.tag and audio.tag.title or ''),
-)
+    # Publisher/Label metadata
+    '%publisher%': ('tag', 'publisher'),
+    '%publisher-url%': ('tag', 'publisher_url'),
 
-pattern = pattern.replace(
-    '%release-date%',
-    str(audio.tag and audio.tag.release_date or ''),
-)
+    # Album metadata
+    '%album%': ('tag', 'album'),
+    '%album-artist%': ('tag', 'album_artist'),
+    '%track%': ('tag', 'track_num', 'count'),
+    '%track-total%': ('tag', 'track_num', 'total'),
 
-pattern = pattern.replace(
-    '%genre%',
-    str(audio.tag and audio.tag.genre or ''),
-)
+    # Track length in seconds
+    '$length()': ('info', 'time_secs'),
+}
 
-pattern = pattern.replace(
-    '%audio-file-url%',
-    str(audio.tag and audio.tag.audio_file_url or ''),
-)
-
-pattern = pattern.replace(
-    '%comments%',
-    str(audio.tag and audio.tag.comments or ''),
-)
-
-pattern = pattern.replace(
-    '%music-cd-id%',
-    str(audio.tag and audio.tag.cd_id or ''),
-)
-
-pattern = pattern.replace(
-    '%publisher%',
-    str(audio.tag and audio.tag.publisher or ''),
-)
-
-pattern = pattern.replace(
-    '%publisher-url%',
-    str(audio.tag and audio.tag.publisher_url or ''),
-)
-
-# Album metadata
-pattern = pattern.replace(
-    '%album%',
-    str(audio.tag and audio.tag.album or ''),
-)
-
-pattern = pattern.replace(
-    '%album-artist%',
-    str(audio.tag and audio.tag.album_artist or ''),
-)
-
-pattern = pattern.replace(
-    '%track%',
-    str(audio.tag and audio.tag.track_num.count or ''),
-)
-
-pattern = pattern.replace(
-    '%track-total%',
-    str(audio.tag and audio.tag.track_num.total or ''),
-)
-
-# Track length in seconds
-pattern = pattern.replace(
-    '$length()',
-    str(audio.info and audio.info.time_secs or ''),
-)
+for placeholder, attributes in metadata_replacements.items():
+    pattern = pattern.replace(
+        placeholder,
+        get_nested_attribute_value(audio, *attributes),
+    )
 
 # User-defined text frames
 user_text_frames = ''
