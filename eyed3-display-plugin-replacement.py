@@ -27,9 +27,9 @@ except OSError as error:
     )
     sys.exit(2)
 
-if len(pattern) < 6:
+if not pattern.strip():
     print(
-        'Error: Pattern file have to be specified as the first parameter',
+        'Error: Pattern file is empty',
         file=sys.stderr,
     )
     sys.exit(2)
