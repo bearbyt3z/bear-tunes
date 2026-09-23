@@ -9,7 +9,7 @@ import eyed3
 if len(sys.argv) < 3:
     print(
         'Error: Pattern file and/or audio file parameters are missing\n'
-        f'Usage: {argv[0]} pattern_file audio_file',
+        f'Usage: {sys.argv[0]} pattern_file audio_file',
         file=sys.stderr,
     )
     sys.exit(1)
