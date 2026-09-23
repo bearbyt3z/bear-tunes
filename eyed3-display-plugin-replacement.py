@@ -16,8 +16,16 @@ if len(sys.argv) < 3:
 
 # Load pattern file
 pattern_file_path = sys.argv[1]
-with open(pattern_file_path) as f:
-    pattern = f.read()
+
+try:
+    with open(pattern_file_path) as f:
+        pattern = f.read()
+except OSError as error:
+    print(
+        f'Error: Unable to read pattern file: {error}',
+        file=sys.stderr,
+    )
+    sys.exit(2)
 
 if len(pattern) < 6:
     print(
