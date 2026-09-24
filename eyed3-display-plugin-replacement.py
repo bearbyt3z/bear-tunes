@@ -418,4 +418,7 @@ pattern = replace_frame_tag(
 # Replace escaped commas in the pattern
 pattern = pattern.replace('\\,', ',')
 
+# Remove ETX characters that break JSON parsing
+pattern = pattern.replace('\u0003', '')
+
 print(pattern)

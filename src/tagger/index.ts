@@ -744,10 +744,7 @@ export class BearTunesTagger {
     }
 
     try {
-      const id3TagJson: unknown = JSON.parse(
-        displayPluginOutput.stdout
-          .replaceAll('\u0003', ''), // replace unicode characters that break parse() (e.g. Beatoprt's ETX 0x03 at the beginning of URL)
-      );
+      const id3TagJson: unknown = JSON.parse(displayPluginOutput.stdout);
 
       const normalizedTrackInfo = normalizeTrackInfo(id3TagJson);
       const parsedTrackInfo = trackInfoSchema.safeParse(normalizedTrackInfo, {

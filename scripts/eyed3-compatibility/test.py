@@ -83,7 +83,7 @@ def write_test_metadata(mp3_path):
     audio.tag.title = 'Compatibility Test Track'
     audio.tag.release_date = Date(2025, 9, 11)
     audio.tag.genre = 'Progressive House'
-    audio.tag.audio_file_url = 'https://example.com/audio.mp3'
+    audio.tag.audio_file_url = '\u0003https://example.com/audio.mp3'
     audio.tag.publisher = 'Compatibility Label'
     audio.tag.publisher_url = 'https://example.com/label'
     audio.tag.album = 'Compatibility Album'
@@ -251,6 +251,11 @@ def validate_output(output):
             },
         ],
         'Unexpected comments.',
+    )
+
+    require(
+        '\u0003' not in str(output),
+        'Unexpected ETX character in replacement output.',
     )
 
 
