@@ -104,6 +104,10 @@ def write_test_metadata(mp3_path):
         'CATNUM123',
         'CATALOG #',
     )
+    audio.tag.user_text_frames.set(
+        'Value, with comma',
+        'TEST,FRAME',
+    )
 
     audio.tag.comments.set(
         'For promotional use',
@@ -114,6 +118,11 @@ def write_test_metadata(mp3_path):
         'Por reklama uzo',
         'Test comment',
         b'epo',
+    )
+    audio.tag.comments.set(
+        'Comment, with comma',
+        'Test comment with comma',
+        b'eng',
     )
 
     audio.tag.save()
@@ -218,10 +227,10 @@ def validate_output(output):
             'INITIALKEY': 'Abm',
             'CATALOGNUMBER': 'CATNUM123',
             'CATALOG #': 'CATNUM123',
+            'TEST,FRAME': 'Value, with comma',
         },
         'Unexpected text frames.',
     )
-
 
     require(
         output['comments'] == [
@@ -234,6 +243,11 @@ def validate_output(output):
                 'description': 'Test comment',
                 'language': 'epo',
                 'text': 'Por reklama uzo',
+            },
+            {
+                'description': 'Test comment with comma',
+                'language': 'eng',
+                'text': 'Comment, with comma',
             },
         ],
         'Unexpected comments.',
