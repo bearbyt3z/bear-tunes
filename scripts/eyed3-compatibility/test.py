@@ -90,6 +90,30 @@ def write_test_metadata(mp3_path):
     audio.tag.album_artist = 'Compatibility Album Artist'
     audio.tag.track_num = (2, 4)
 
+    audio.tag.user_text_frames.set(
+        'Abm',
+        'INITIALKEY',
+    )
+    audio.tag.user_text_frames.set(
+        'CATNUM123',
+        'CATALOGNUMBER',
+    )
+    audio.tag.user_text_frames.set(
+        'CATNUM123',
+        'CATALOG #',
+    )
+
+    audio.tag.comments.set(
+        'For promotional use',
+        'Test comment',
+        b'eng',
+    )
+    audio.tag.comments.set(
+        'Por reklama uzo',
+        'Test comment',
+        b'epo',
+    )
+
     audio.tag.save()
 
 
@@ -182,8 +206,27 @@ def validate_output(output):
         'Expected a positive duration.',
     )
     require(
-        output['textFrames'] == {},
-        'Expected no user text frames.',
+        output['textFrames'] == {
+            'INITIALKEY': 'Abm',
+            'CATALOGNUMBER': 'CATNUM123',
+            'CATALOG #': 'CATNUM123',
+        },
+        'Unexpected text frames.',
+    )
+    require(
+        output['comments'] == [
+            {
+                'description': 'Test comment',
+                'language': 'eng',
+                'text': 'For promotional use',
+            },
+            {
+                'description': 'Test comment',
+                'language': 'epo',
+                'text': 'Por reklama uzo',
+            },
+        ],
+        'Unexpected comments.',
     )
 
 
