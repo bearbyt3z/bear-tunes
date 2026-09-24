@@ -4,10 +4,12 @@
   "released": "%release-date%"\,
   "genre": "%genre%"\,
   "url": "%audio-file-url%"\,
-  "comments": "%comments%"\,
   "textFrames": {
-    %texts,output="#d": "#t"\,%
+    %texts,output="#d": "#t",separation=\,\n    %
   }\,
+  "comments": [
+    %comments,output={"description": "#d"\, "language": "#l"\, "text": "#t"},separation=\,\n    %
+  ]\,
   "musicCdId": "%music-cd-id%"\,
   "publisher": {
     "name": "%publisher%"\,
