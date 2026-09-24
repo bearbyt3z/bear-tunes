@@ -42,6 +42,19 @@ def get_nested_attribute_value(obj, *attributes):
     return str(value)
 
 
+def get_music_cd_id(audio):
+    """Return the music CD ID decoded as ASCII text.
+
+    Returns an empty string when the audio tag does not contain a music CD ID.
+    """
+    value = audio.tag and audio.tag.cd_id
+
+    if value is None:
+        return ''
+
+    return value.decode('ascii')
+
+
 def find_unescaped_character(text, character, start=0):
     """Find the first unescaped occurrence of a character in text.
 
@@ -350,7 +363,6 @@ metadata_replacements = {
     '%release-date%': ('tag', 'release_date'),
     '%genre%': ('tag', 'genre'),
     '%audio-file-url%': ('tag', 'audio_file_url'),
-    '%music-cd-id%': ('tag', 'cd_id'),
 
     # Publisher/Label metadata
     '%publisher%': ('tag', 'publisher'),
@@ -371,6 +383,12 @@ for placeholder, attributes in metadata_replacements.items():
         placeholder,
         get_nested_attribute_value(audio, *attributes),
     )
+
+# Music CD ID
+pattern = pattern.replace(
+    '%music-cd-id%',
+    get_music_cd_id(audio),
+)
 
 # User-defined text frames
 pattern = replace_frame_tag(

@@ -90,6 +90,8 @@ def write_test_metadata(mp3_path):
     audio.tag.album_artist = 'Compatibility Album Artist'
     audio.tag.track_num = (2, 4)
 
+    audio.tag.cd_id = b'TEST-MCDI-123'
+
     audio.tag.user_text_frames.set(
         'Abm',
         'INITIALKEY',
@@ -205,6 +207,12 @@ def validate_output(output):
         float(output['details']['duration']) > 0,
         'Expected a positive duration.',
     )
+
+    require(
+        output['musicCdId'] == 'TEST-MCDI-123',
+        'Unexpected music CD ID.',
+    )
+
     require(
         output['textFrames'] == {
             'INITIALKEY': 'Abm',
@@ -213,6 +221,8 @@ def validate_output(output):
         },
         'Unexpected text frames.',
     )
+
+
     require(
         output['comments'] == [
             {
