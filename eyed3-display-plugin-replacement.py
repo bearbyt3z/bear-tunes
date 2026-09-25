@@ -5,6 +5,11 @@ import sys
 import eyed3
 
 
+SUPPORTED_OPTIONS = {
+    '--escape-backslashes',
+}
+
+
 def get_nested_attribute_value(obj, *attributes):
     """Return a nested attribute value as text suitable for pattern replacement.
 
@@ -53,6 +58,19 @@ def get_music_cd_id(audio):
         return ''
 
     return value.decode('ascii')
+
+
+def escape_replacement_value(value, escape_backslashes):
+    """Escape backslashes in a replacement value when requested."""
+    if value is None:
+        return ''
+
+    replacement = str(value)
+
+    if escape_backslashes:
+        replacement = replacement.replace('\\', '\\\\')
+
+    return replacement
 
 
 def find_unescaped_character(text, character, start=0):
@@ -278,6 +296,7 @@ def replace_frame_tag(
     frames,
     get_replacements,
     default_output,
+    escape_backslashes=False,
 ):
     """Replace a frame collection tag using its display-plugin output pattern.
 
@@ -331,10 +350,18 @@ def replace_frame_tag(
         outputs = []
 
         for frame in frames:
+            replacements = tuple(
+                (
+                    placeholder,
+                    escape_replacement_value(value, escape_backslashes),
+                )
+                for placeholder, value in get_replacements(frame)
+            )
+
             outputs.append(
                 replace_frame_placeholders(
                     output_pattern,
-                    get_replacements(frame),
+                    replacements,
                 ),
             )
 
@@ -350,13 +377,31 @@ def replace_frame_tag(
 
 
 # Validate command-line arguments
-if len(sys.argv) != 3:
+if len(sys.argv) < 3:
     print(
-        'Error: Exactly two arguments are required: pattern file and audio file\n'
-        f'Usage: {sys.argv[0]} pattern_file audio_file',
+        'Error: Pattern file and audio file arguments are required\n'
+        f'Usage: {sys.argv[0]} pattern_file audio_file [options...]',
         file=sys.stderr,
     )
     sys.exit(1)
+
+options = sys.argv[3:]
+
+unknown_options = [
+    option
+    for option in options
+    if option not in SUPPORTED_OPTIONS
+]
+
+if unknown_options:
+    print(
+        'Error: Unknown option(s): '
+        + ', '.join(unknown_options),
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+escape_backslashes = '--escape-backslashes' in options
 
 # Load pattern file
 pattern_file_path = sys.argv[1]
@@ -426,15 +471,20 @@ metadata_replacements = {
 }
 
 for placeholder, attributes in metadata_replacements.items():
+    value = get_nested_attribute_value(audio, *attributes)
+
     pattern = pattern.replace(
         placeholder,
-        get_nested_attribute_value(audio, *attributes),
+        escape_replacement_value(value, escape_backslashes),
     )
 
 # Music CD ID
 pattern = pattern.replace(
     '%music-cd-id%',
-    get_music_cd_id(audio),
+    escape_replacement_value(
+        get_music_cd_id(audio),
+        escape_backslashes,
+    ),
 )
 
 # User-defined text frames
@@ -447,6 +497,7 @@ pattern = replace_frame_tag(
         ('#t', frame.text),
     ),
     'UserTextFrame: [Description: #d] #t',
+    escape_backslashes=escape_backslashes,
 )
 
 # Comments
@@ -460,6 +511,7 @@ pattern = replace_frame_tag(
         ('#t', comment.text),
     ),
     'Comment: [Description: #d] [Lang: #l]: #t',
+    escape_backslashes=escape_backslashes,
 )
 
 # Remove ETX characters that break JSON parsing

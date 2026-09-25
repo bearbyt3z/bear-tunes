@@ -109,7 +109,7 @@ def write_test_metadata(mp3_path):
         'TEST,FRAME',
     )
     audio.tag.user_text_frames.set(
-        'Value\\\\, with escaped comma',
+        'Value\\, with escaped comma',
         'ESCAPED,FRAME',
     )
 
@@ -139,6 +139,7 @@ def run_replacement(mp3_path):
             str(REPLACEMENT_SCRIPT),
             str(PATTERN_FILE),
             str(mp3_path),
+            '--escape-backslashes',
         ],
         capture_output=True,
         text=True,
@@ -232,7 +233,7 @@ def validate_output(output):
             'CATALOGNUMBER': 'CATNUM123',
             'CATALOG #': 'CATNUM123',
             'TEST,FRAME': 'Value, with comma',
-            'ESCAPED,FRAME': 'Value\\, with escaped comma',
+            'ESCAPED,FRAME': 'Value\, with escaped comma',
         },
         'Unexpected text frames.',
     )

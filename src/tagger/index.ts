@@ -718,6 +718,7 @@ export class BearTunesTagger {
       [
         this.options.eyeD3DisplayPluginPatternFile,
         trackPath,
+        '--escape-backslashes',
       ],
       {
         encoding: 'utf-8',
