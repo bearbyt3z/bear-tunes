@@ -376,145 +376,159 @@ def replace_frame_tag(
         search_from = tag_start + len(replacement)
 
 
-# Validate command-line arguments
-if len(sys.argv) < 3:
-    print(
-        'Error: Pattern file and audio file arguments are required\n'
-        f'Usage: {sys.argv[0]} pattern_file audio_file [options...]',
-        file=sys.stderr,
-    )
-    sys.exit(1)
+def main():
+    # Validate command-line arguments
+    if len(sys.argv) < 3:
+        print(
+            'Error: Pattern file and audio file arguments are required\n'
+            f'Usage: {sys.argv[0]} pattern_file audio_file [options...]',
+            file=sys.stderr,
+        )
+        return 1
 
-options = sys.argv[3:]
+    options = sys.argv[3:]
 
-unknown_options = [
-    option
-    for option in options
-    if option not in SUPPORTED_OPTIONS
-]
+    unknown_options = [
+        option
+        for option in options
+        if option not in SUPPORTED_OPTIONS
+    ]
 
-if unknown_options:
-    print(
-        'Error: Unknown option(s): '
-        + ', '.join(unknown_options),
-        file=sys.stderr,
-    )
-    sys.exit(1)
+    if unknown_options:
+        print(
+            'Error: Unknown option(s): '
+            + ', '.join(unknown_options),
+            file=sys.stderr,
+        )
+        return 2
 
-escape_backslashes = '--escape-backslashes' in options
+    escape_backslashes = '--escape-backslashes' in options
 
-# Load pattern file
-pattern_file_path = sys.argv[1]
+    # Load pattern file
+    pattern_file_path = sys.argv[1]
 
-try:
-    with open(pattern_file_path, encoding='utf-8') as f:
-        pattern = f.read()
-except OSError as error:
-    print(
-        f'Error: Unable to read pattern file: {error}',
-        file=sys.stderr,
-    )
-    sys.exit(2)
+    try:
+        with open(pattern_file_path, encoding='utf-8') as f:
+            pattern = f.read()
+    except OSError as error:
+        print(
+            f'Error: Unable to read pattern file: {error}',
+            file=sys.stderr,
+        )
+        return 3
 
-if not pattern.strip():
-    print(
-        'Error: Pattern file is empty',
-        file=sys.stderr,
-    )
-    sys.exit(2)
+    if not pattern.strip():
+        print(
+            'Error: Pattern file is empty',
+            file=sys.stderr,
+        )
+        return 4
 
-pattern = unescape_pattern_literals(pattern)
+    try:
+        pattern = unescape_pattern_literals(pattern)
+    except ValueError as error:
+        print(
+            f'Error: Invalid pattern: {error}',
+            file=sys.stderr,
+        )
+        return 5
 
-# Suppress eyeD3 warnings such as "Non standard genre name: ..."
-eyed3.log.setLevel('ERROR')
+    # Suppress eyeD3 warnings such as "Non standard genre name: ..."
+    eyed3.log.setLevel('ERROR')
 
-# Load audio file
-audio_file_path = sys.argv[2]
+    # Load audio file
+    audio_file_path = sys.argv[2]
 
-try:
-    audio = eyed3.load(audio_file_path)
-except OSError as error:
-    print(
-        f'Error: Unable to load audio file: {error}',
-        file=sys.stderr,
-    )
-    sys.exit(3)
+    try:
+        audio = eyed3.load(audio_file_path)
+    except OSError as error:
+        print(
+            f'Error: Unable to load audio file: {error}',
+            file=sys.stderr,
+        )
+        return 6
 
-if audio is None:
-    print(
-        f'Error: Unsupported audio file type: {audio_file_path}',
-        file=sys.stderr,
-    )
-    sys.exit(3)
+    if audio is None:
+        print(
+            f'Error: Unsupported audio file type: {audio_file_path}',
+            file=sys.stderr,
+        )
+        return 7
 
-# Metadata replacements
-metadata_replacements = {
-    # Track metadata
-    '%artist%': ('tag', 'artist'),
-    '%title%': ('tag', 'title'),
-    '%release-date%': ('tag', 'release_date'),
-    '%genre%': ('tag', 'genre'),
-    '%audio-file-url%': ('tag', 'audio_file_url'),
+    # Metadata replacements
+    metadata_replacements = {
+        # Track metadata
+        '%artist%': ('tag', 'artist'),
+        '%title%': ('tag', 'title'),
+        '%release-date%': ('tag', 'release_date'),
+        '%genre%': ('tag', 'genre'),
+        '%audio-file-url%': ('tag', 'audio_file_url'),
 
-    # Publisher/Label metadata
-    '%publisher%': ('tag', 'publisher'),
-    '%publisher-url%': ('tag', 'publisher_url'),
+        # Publisher/Label metadata
+        '%publisher%': ('tag', 'publisher'),
+        '%publisher-url%': ('tag', 'publisher_url'),
 
-    # Album metadata
-    '%album%': ('tag', 'album'),
-    '%album-artist%': ('tag', 'album_artist'),
-    '%track%': ('tag', 'track_num', 'count'),
-    '%track-total%': ('tag', 'track_num', 'total'),
+        # Album metadata
+        '%album%': ('tag', 'album'),
+        '%album-artist%': ('tag', 'album_artist'),
+        '%track%': ('tag', 'track_num', 'count'),
+        '%track-total%': ('tag', 'track_num', 'total'),
 
-    # Track length in seconds
-    '$length()': ('info', 'time_secs'),
-}
+        # Track length in seconds
+        '$length()': ('info', 'time_secs'),
+    }
 
-for placeholder, attributes in metadata_replacements.items():
-    value = get_nested_attribute_value(audio, *attributes)
+    for placeholder, attributes in metadata_replacements.items():
+        value = get_nested_attribute_value(audio, *attributes)
 
+        pattern = pattern.replace(
+            placeholder,
+            escape_replacement_value(value, escape_backslashes),
+        )
+
+    # Music CD ID
     pattern = pattern.replace(
-        placeholder,
-        escape_replacement_value(value, escape_backslashes),
+        '%music-cd-id%',
+        escape_replacement_value(
+            get_music_cd_id(audio),
+            escape_backslashes,
+        ),
     )
 
-# Music CD ID
-pattern = pattern.replace(
-    '%music-cd-id%',
-    escape_replacement_value(
-        get_music_cd_id(audio),
-        escape_backslashes,
-    ),
-)
+    # User-defined text frames
+    pattern = replace_frame_tag(
+        pattern,
+        'texts',
+        audio.tag and audio.tag.user_text_frames or [],
+        lambda frame: (
+            ('#d', frame.description),
+            ('#t', frame.text),
+        ),
+        'UserTextFrame: [Description: #d] #t',
+        escape_backslashes=escape_backslashes,
+    )
 
-# User-defined text frames
-pattern = replace_frame_tag(
-    pattern,
-    'texts',
-    audio.tag and audio.tag.user_text_frames or [],
-    lambda frame: (
-        ('#d', frame.description),
-        ('#t', frame.text),
-    ),
-    'UserTextFrame: [Description: #d] #t',
-    escape_backslashes=escape_backslashes,
-)
+    # Comments
+    pattern = replace_frame_tag(
+        pattern,
+        'comments',
+        audio.tag and audio.tag.comments or [],
+        lambda comment: (
+            ('#d', comment.description),
+            ('#l', comment.lang.decode('ascii')),
+            ('#t', comment.text),
+        ),
+        'Comment: [Description: #d] [Lang: #l]: #t',
+        escape_backslashes=escape_backslashes,
+    )
 
-# Comments
-pattern = replace_frame_tag(
-    pattern,
-    'comments',
-    audio.tag and audio.tag.comments or [],
-    lambda comment: (
-        ('#d', comment.description),
-        ('#l', comment.lang.decode('ascii')),
-        ('#t', comment.text),
-    ),
-    'Comment: [Description: #d] [Lang: #l]: #t',
-    escape_backslashes=escape_backslashes,
-)
+    # Remove ETX characters that break JSON parsing
+    pattern = pattern.replace('\u0003', '')
 
-# Remove ETX characters that break JSON parsing
-pattern = pattern.replace('\u0003', '')
+    print(pattern)
 
-print(pattern)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
