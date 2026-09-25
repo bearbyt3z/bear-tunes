@@ -108,6 +108,10 @@ def write_test_metadata(mp3_path):
         'Value, with comma',
         'TEST,FRAME',
     )
+    audio.tag.user_text_frames.set(
+        'Value\\\\, with escaped comma',
+        'ESCAPED,FRAME',
+    )
 
     audio.tag.comments.set(
         'For promotional use',
@@ -228,6 +232,7 @@ def validate_output(output):
             'CATALOGNUMBER': 'CATNUM123',
             'CATALOG #': 'CATNUM123',
             'TEST,FRAME': 'Value, with comma',
+            'ESCAPED,FRAME': 'Value\\, with escaped comma',
         },
         'Unexpected text frames.',
     )

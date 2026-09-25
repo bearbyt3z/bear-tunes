@@ -202,6 +202,51 @@ def unescape_pattern_text(text):
     return result
 
 
+def unescape_pattern_literals(pattern):
+    """Unescape literal pattern text while preserving display-plugin tags.
+
+    Text outside unescaped ``%...%`` tags is processed using the display-plugin
+    escape rules. Tag expressions are preserved for their dedicated parsers.
+    """
+    result = []
+    position = 0
+
+    while position < len(pattern):
+        tag_start = find_unescaped_character(pattern, '%', position)
+
+        if tag_start == -1:
+            result.append(
+                unescape_pattern_text(pattern[position:]),
+            )
+            break
+
+        result.append(
+            unescape_pattern_text(
+                pattern[position:tag_start],
+            ),
+        )
+
+        tag_end = find_unescaped_character(
+            pattern,
+            '%',
+            tag_start + 1,
+        )
+
+        if tag_end == -1:
+            result.append(
+                pattern[tag_start:],
+            )
+            break
+
+        result.append(
+            pattern[tag_start:tag_end + 1],
+        )
+
+        position = tag_end + 1
+
+    return ''.join(result)
+
+
 def replace_frame_placeholders(text, replacements):
     """Replace display-plugin frame placeholders in output text.
 
@@ -333,6 +378,8 @@ if not pattern.strip():
     )
     sys.exit(2)
 
+pattern = unescape_pattern_literals(pattern)
+
 # Suppress eyeD3 warnings such as "Non standard genre name: ..."
 eyed3.log.setLevel('ERROR')
 
@@ -414,9 +461,6 @@ pattern = replace_frame_tag(
     ),
     'Comment: [Description: #d] [Lang: #l]: #t',
 )
-
-# Replace escaped commas in the pattern
-pattern = pattern.replace('\\,', ',')
 
 # Remove ETX characters that break JSON parsing
 pattern = pattern.replace('\u0003', '')
