@@ -407,7 +407,7 @@ escape_backslashes = '--escape-backslashes' in options
 pattern_file_path = sys.argv[1]
 
 try:
-    with open(pattern_file_path) as f:
+    with open(pattern_file_path, encoding='utf-8') as f:
         pattern = f.read()
 except OSError as error:
     print(
