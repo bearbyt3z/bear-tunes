@@ -1,16 +1,40 @@
-FROM python:3.10.18-slim-bookworm
+ARG PYTHON_VERSION=3.10.18
+
+FROM python:${PYTHON_VERSION}-slim-bookworm
+
+ARG EYED3_TARGET=project
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends lame \
   && rm -rf /var/lib/apt/lists/*
 
-RUN python -m pip install \
-  --disable-pip-version-check \
-  --no-cache-dir \
-  --root-user-action=ignore \
-  "eyeD3==0.9.9"
+COPY requirements.txt /opt/eyed3-compatibility/requirements.txt
 
-COPY test.py /opt/eyed3-compatibility/test.py
+RUN case "${EYED3_TARGET}" in \
+      project) \
+        python -m pip install \
+          --disable-pip-version-check \
+          --no-cache-dir \
+          --root-user-action=ignore \
+          -r /opt/eyed3-compatibility/requirements.txt \
+        ;; \
+      latest) \
+        python -m pip install \
+          --disable-pip-version-check \
+          --no-cache-dir \
+          --root-user-action=ignore \
+          eyeD3 \
+        ;; \
+      *) \
+        python -m pip install \
+          --disable-pip-version-check \
+          --no-cache-dir \
+          --root-user-action=ignore \
+          "eyeD3==${EYED3_TARGET}" \
+        ;; \
+    esac
+
+COPY scripts/eyed3-compatibility/test.py /opt/eyed3-compatibility/test.py
 
 WORKDIR /work
 

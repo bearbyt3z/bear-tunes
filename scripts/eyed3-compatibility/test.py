@@ -11,9 +11,6 @@ from eyed3.core import Date
 
 eyed3.log.setLevel('ERROR')
 
-EXPECTED_PYTHON_VERSION = '3.10.18'
-EXPECTED_EYED3_VERSION = '0.9.9'
-
 WORK_DIR = Path('/work')
 REPLACEMENT_SCRIPT = WORK_DIR / 'eyed3-display-plugin-replacement.py'
 PATTERN_FILE = WORK_DIR / 'eyed3-display-plugin-pattern.txt'
@@ -233,7 +230,7 @@ def validate_output(output):
             'CATALOGNUMBER': 'CATNUM123',
             'CATALOG #': 'CATNUM123',
             'TEST,FRAME': 'Value, with comma',
-            'ESCAPED,FRAME': 'Value\, with escaped comma',
+            'ESCAPED,FRAME': 'Value\\, with escaped comma',
         },
         'Unexpected text frames.',
     )
@@ -280,17 +277,6 @@ def main():
 
     print(f'Python: {python_version}')
     print(f'eyeD3: {eyed3_version}')
-
-    require(
-        python_version == EXPECTED_PYTHON_VERSION,
-        f'Expected Python {EXPECTED_PYTHON_VERSION}, '
-        f'got {python_version}.',
-    )
-    require(
-        eyed3_version == EXPECTED_EYED3_VERSION,
-        f'Expected eyeD3 {EXPECTED_EYED3_VERSION}, '
-        f'got {eyed3_version}.',
-    )
 
     with tempfile.TemporaryDirectory() as temporary_directory:
         test_directory = Path(temporary_directory)

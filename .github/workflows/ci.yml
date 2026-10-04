@@ -8,14 +8,33 @@ on:
 
 jobs:
   eyed3-compatibility:
-    name: eyeD3 0.9.7 / Python 3.7.17
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: eyeD3 minimum / Python 3.7.17
+            python: '3.7.17'
+            eyed3: '0.9.7'
+
+          - name: eyeD3 project / Python 3.10.18
+            python: '3.10.18'
+            eyed3: 'project'
+
+          - name: eyeD3 latest / Python 3.14
+            python: '3.14'
+            eyed3: 'latest'
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
 
       - name: Run eyeD3 compatibility test
+        env:
+          PYTHON_VERSION: ${{ matrix.python }}
+          EYED3_TARGET: ${{ matrix.eyed3 }}
         run: ./scripts/eyed3-compatibility/run.sh
 
   check:
