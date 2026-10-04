@@ -1,5 +1,3 @@
-#!/opt/pipx/venvs/eyed3/bin/python
-
 import sys
 
 import eyed3

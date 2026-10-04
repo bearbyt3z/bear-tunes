@@ -714,8 +714,9 @@ export class BearTunesTagger {
   private extractId3Tag(trackPath: string): TrackInfo {
     // Replacing eyeD3 display-plugin with a simple python script:
     const displayPluginOutput = childProcess.spawnSync(
-      './eyed3-display-plugin-replacement.py',
+      './.venv/bin/python',
       [
+        './eyed3-display-plugin-replacement.py',
         this.options.eyeD3DisplayPluginPatternFile,
         trackPath,
         '--escape-backslashes',
@@ -1740,7 +1741,7 @@ export class BearTunesTagger {
     verbose = false,
   ): void {
     const result = executeCommandSync(
-      'eyeD3',
+      './.venv/bin/eyeD3',
       [
         '--v2',
         `--to-v${version.toString()}`, // overwrite other versions of id3
