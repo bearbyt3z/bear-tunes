@@ -11,8 +11,8 @@ from eyed3.core import Date
 
 eyed3.log.setLevel('ERROR')
 
-EXPECTED_PYTHON_VERSION = '3.7.17'
-EXPECTED_EYED3_VERSION = '0.9.7'
+EXPECTED_PYTHON_VERSION = '3.10.18'
+EXPECTED_EYED3_VERSION = '0.9.9'
 
 WORK_DIR = Path('/work')
 REPLACEMENT_SCRIPT = WORK_DIR / 'eyed3-display-plugin-replacement.py'
