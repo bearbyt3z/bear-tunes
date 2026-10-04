@@ -539,7 +539,7 @@ export interface BeatportPublisherInfo {
   /**
    * Label artwork metadata.
    */
-  image: BeatportImageInfo;
+  image_url: string;
 
   /**
    * Label name returned by Beatport.

@@ -198,7 +198,7 @@ export function mapBeatportPublisherToPublisherInfo(
   return normalizePublisherInfo({
     name: publisherData.name,
     url: publisherUrl,
-    logotype: getBeatportOriginalImageUrl(publisherData.image?.uri),
+    logotype: getBeatportOriginalImageUrl(publisherData.image_url),
   });
 }
 
