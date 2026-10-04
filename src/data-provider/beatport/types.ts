@@ -446,7 +446,7 @@ export interface BeatportTrackInfo {
   /**
    * Track position within the release.
    */
-  track_number: string; // album track number
+  track_number: number; // album track number
 
   /**
    * Release containing the track.

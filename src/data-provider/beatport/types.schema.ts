@@ -148,7 +148,7 @@ export const beatportTrackInfoSchema = z.object({
   track_length_ms: z.number(),
   mix_name: z.string(),
   track_name: z.string(),
-  track_number: z.string(),
+  track_number: z.number(),
   release: beatportReleaseInfoSchema,
   label: beatportLabelInfoSchema,
 });

@@ -167,7 +167,7 @@ export function mapBeatportSearchResultTrackToTrackInfo(
 export function mapBeatportAlbumToAlbumInfo(
   albumData: BeatportAlbumInfo,
   albumUrl: URL,
-  trackNumber: string,
+  trackNumber: number,
 ): AlbumInfo | undefined {
   return normalizeAlbumInfo({
     artists: albumData.artists.map((artist) => artist.name),

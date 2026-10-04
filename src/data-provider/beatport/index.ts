@@ -234,7 +234,7 @@ export class BeatportDataProvider extends DataProvider {
    */
   private async getAlbumInfo(
     releaseInfo: BeatportReleaseInfo | undefined,
-    trackNumber: string,
+    trackNumber: number,
   ): Promise<AlbumInfo | undefined> {
     const beatportAlbumPayload = await fetchBeatportAlbumPayload(
       this.options.domainUrl,
