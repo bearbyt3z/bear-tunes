@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 import wave
@@ -8,6 +9,8 @@ from eyed3.core import Date
 
 
 eyed3.log.setLevel('ERROR')
+
+TEST_METADATA_FILE = Path(__file__).resolve().with_name('test_metadata.json')
 
 
 def require(condition, message):
@@ -42,7 +45,7 @@ def generate_test_mp3(output_directory):
     return mp3_path
 
 
-def write_test_metadata(mp3_path):
+def write_test_metadata(mp3_path, metadata):
     audio = eyed3.load(str(mp3_path))
 
     require(
@@ -52,63 +55,53 @@ def write_test_metadata(mp3_path):
 
     audio.initTag()
 
-    audio.tag.artist = 'Compatibility Test Artist'
-    audio.tag.title = 'Compatibility Test Track'
-    audio.tag.release_date = Date(2025, 9, 11)
-    audio.tag.genre = 'Progressive House'
-    audio.tag.audio_file_url = '\u0003https://example.com/audio.mp3'
-    audio.tag.publisher = 'Compatibility Label'
-    audio.tag.publisher_url = 'https://example.com/label'
-    audio.tag.album = 'Compatibility Album'
-    audio.tag.album_artist = 'Compatibility Album Artist'
-    audio.tag.track_num = (2, 4)
+    audio.tag.artist = metadata['artist']
+    audio.tag.title = metadata['title']
 
-    audio.tag.cd_id = b'TEST-MCDI-123'
+    year, month, day = (
+        int(part)
+        for part in metadata['releaseDate'].split('-')
+    )
+    audio.tag.release_date = Date(year, month, day)
 
-    audio.tag.user_text_frames.set(
-        'Abm',
-        'INITIALKEY',
-    )
-    audio.tag.user_text_frames.set(
-        'CATNUM123',
-        'CATALOGNUMBER',
-    )
-    audio.tag.user_text_frames.set(
-        'CATNUM123',
-        'CATALOG #',
-    )
-    audio.tag.user_text_frames.set(
-        'Value, with comma',
-        'TEST,FRAME',
-    )
-    audio.tag.user_text_frames.set(
-        'Value\\, with escaped comma',
-        'ESCAPED,FRAME',
+    audio.tag.genre = metadata['genre']
+    audio.tag.audio_file_url = metadata['audioFileUrl']
+    audio.tag.publisher = metadata['publisher']['name']
+    audio.tag.publisher_url = metadata['publisher']['url']
+    audio.tag.album = metadata['album']['title']
+    audio.tag.album_artist = metadata['album']['artist']
+    audio.tag.track_num = (
+        metadata['album']['trackNumber'],
+        metadata['album']['trackTotal'],
     )
 
-    audio.tag.comments.set(
-        'For promotional use',
-        'Test comment',
-        b'eng',
-    )
-    audio.tag.comments.set(
-        'Por reklama uzo',
-        'Test comment',
-        b'epo',
-    )
-    audio.tag.comments.set(
-        'Comment, with comma',
-        'Test comment with comma',
-        b'eng',
-    )
+    audio.tag.cd_id = metadata['musicCdId'].encode('ascii')
+
+    for description, text in metadata['textFrames'].items():
+        audio.tag.user_text_frames.set(
+            text,
+            description,
+        )
+
+    for comment in metadata['comments']:
+        audio.tag.comments.set(
+            comment['text'],
+            comment['description'],
+            comment['language'].encode('ascii'),
+        )
 
     audio.tag.save()
 
 
 def create_test_mp3(output_directory):
     output_directory = Path(output_directory)
+
+    with TEST_METADATA_FILE.open(encoding='utf-8') as metadata_file:
+        metadata = json.load(metadata_file)
+
     mp3_path = generate_test_mp3(output_directory)
-    write_test_metadata(mp3_path)
+    write_test_metadata(mp3_path, metadata)
+
     return mp3_path
 
 

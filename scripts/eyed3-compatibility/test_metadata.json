@@ -1,0 +1,42 @@
+{
+  "artist": "Compatibility Test Artist",
+  "title": "Compatibility Test Track",
+  "releaseDate": "2025-09-11",
+  "genre": "Progressive House",
+  "audioFileUrl": "\u0003https://example.com/audio.mp3",
+  "publisher": {
+    "name": "Compatibility Label",
+    "url": "https://example.com/label"
+  },
+  "album": {
+    "title": "Compatibility Album",
+    "artist": "Compatibility Album Artist",
+    "trackNumber": 2,
+    "trackTotal": 4
+  },
+  "musicCdId": "TEST-MCDI-123",
+  "textFrames": {
+    "INITIALKEY": "Abm",
+    "CATALOGNUMBER": "CATNUM123",
+    "CATALOG #": "CATNUM123",
+    "TEST,FRAME": "Value, with comma",
+    "ESCAPED,FRAME": "Value\\, with escaped comma"
+  },
+  "comments": [
+    {
+      "description": "Test comment",
+      "language": "eng",
+      "text": "For promotional use"
+    },
+    {
+      "description": "Test comment",
+      "language": "epo",
+      "text": "Por reklama uzo"
+    },
+    {
+      "description": "Test comment with comma",
+      "language": "eng",
+      "text": "Comment, with comma"
+    }
+  ]
+}

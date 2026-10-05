@@ -10,6 +10,7 @@ WORK_DIR = Path('/work')
 REPLACEMENT_SCRIPT = WORK_DIR / 'eyed3-display-plugin-replacement.py'
 PATTERN_FILE = WORK_DIR / 'eyed3-display-plugin-pattern.txt'
 TEST_MP3_GENERATOR = WORK_DIR / 'scripts/eyed3-compatibility/create_test_mp3.py'
+TEST_METADATA_FILE = WORK_DIR / 'scripts/eyed3-compatibility/test_metadata.json'
 
 
 def require(condition, message):
@@ -75,90 +76,69 @@ def run_replacement(mp3_path):
     return output
 
 
-def validate_output(output):
+def validate_output(output, metadata):
     require(
-        output['artists'] == 'Compatibility Test Artist',
+        output['artists'] == metadata['artist'],
         'Unexpected artists value.',
     )
     require(
-        output['title'] == 'Compatibility Test Track',
+        output['title'] == metadata['title'],
         'Unexpected title value.',
     )
     require(
-        output['released'] == '2025-09-11',
+        output['released'] == metadata['releaseDate'],
         'Unexpected release date.',
     )
     require(
-        output['genre'] == 'Progressive House',
+        output['genre'] == metadata['genre'],
         'Unexpected genre.',
     )
     require(
-        output['url'] == 'https://example.com/audio.mp3',
+        output['url'] == metadata['audioFileUrl'].replace('\u0003', ''),
         'Unexpected audio URL.',
     )
     require(
-        output['publisher']['name'] == 'Compatibility Label',
+        output['publisher']['name'] == metadata['publisher']['name'],
         'Unexpected publisher name.',
     )
     require(
-        output['publisher']['url'] == 'https://example.com/label',
+        output['publisher']['url'] == metadata['publisher']['url'],
         'Unexpected publisher URL.',
     )
     require(
-        output['album']['title'] == 'Compatibility Album',
+        output['album']['title'] == metadata['album']['title'],
         'Unexpected album title.',
     )
     require(
-        output['album']['artists'] == 'Compatibility Album Artist',
+        output['album']['artists'] == metadata['album']['artist'],
         'Unexpected album artist.',
     )
     require(
-        output['album']['trackNumber'] == '2',
+        output['album']['trackNumber'] == str(metadata['album']['trackNumber']),
         'Unexpected track number.',
     )
     require(
-        output['album']['trackTotal'] == '4',
+        output['album']['trackTotal'] == str(metadata['album']['trackTotal']),
         'Unexpected track total.',
     )
+
     require(
         float(output['details']['duration']) > 0,
         'Expected a positive duration.',
     )
 
     require(
-        output['musicCdId'] == 'TEST-MCDI-123',
+        output['musicCdId'] == metadata['musicCdId'],
         'Unexpected music CD ID.',
     )
 
     require(
-        output['textFrames'] == {
-            'INITIALKEY': 'Abm',
-            'CATALOGNUMBER': 'CATNUM123',
-            'CATALOG #': 'CATNUM123',
-            'TEST,FRAME': 'Value, with comma',
-            'ESCAPED,FRAME': 'Value\\, with escaped comma',
-        },
+        output['textFrames'] == metadata['textFrames'],
         'Unexpected text frames.',
     )
 
     require(
-        output['comments'] == [
-            {
-                'description': 'Test comment',
-                'language': 'eng',
-                'text': 'For promotional use',
-            },
-            {
-                'description': 'Test comment',
-                'language': 'epo',
-                'text': 'Por reklama uzo',
-            },
-            {
-                'description': 'Test comment with comma',
-                'language': 'eng',
-                'text': 'Comment, with comma',
-            },
-        ],
+        output['comments'] == metadata['comments'],
         'Unexpected comments.',
     )
 
@@ -178,11 +158,19 @@ def main():
         f'Missing pattern file: {PATTERN_FILE}',
     )
 
+    require(
+        TEST_METADATA_FILE.is_file(),
+        f'Missing test metadata file: {TEST_METADATA_FILE}',
+    )
+
     python_version = platform.python_version()
     eyed3_version = get_package_version('eyeD3')
 
     print(f'Python: {python_version}')
     print(f'eyeD3: {eyed3_version}')
+
+    with TEST_METADATA_FILE.open(encoding='utf-8') as metadata_file:
+        metadata = json.load(metadata_file)
 
     with tempfile.TemporaryDirectory() as temporary_directory:
         test_directory = Path(temporary_directory)
@@ -203,7 +191,7 @@ def main():
         output = run_replacement(mp3_path)
 
         print('Validating replacement output...')
-        validate_output(output)
+        validate_output(output, metadata)
 
     print('Replacement output validated successfully.')
     print('Test completed successfully.')
