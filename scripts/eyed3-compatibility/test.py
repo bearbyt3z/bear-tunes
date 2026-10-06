@@ -1,3 +1,5 @@
+"""Run the eyeD3 compatibility test against a generated MP3 fixture."""
+
 import json
 import platform
 import subprocess
@@ -7,8 +9,11 @@ from pathlib import Path
 
 
 WORK_DIR = Path('/work')
+
 REPLACEMENT_SCRIPT = WORK_DIR / 'eyed3-display-plugin-replacement.py'
 PATTERN_FILE = WORK_DIR / 'eyed3-display-plugin-pattern.txt'
+
+# The generator is read from the repository mounted at /work.
 TEST_MP3_GENERATOR = WORK_DIR / 'scripts/eyed3-compatibility/create_test_mp3.py'
 TEST_METADATA_FILE = WORK_DIR / 'scripts/eyed3-compatibility/test_metadata.json'
 
@@ -19,6 +24,7 @@ def require(condition, message):
 
 
 def get_package_version(package_name):
+    """Return the installed package version reported by pip."""
     result = subprocess.run(
         [sys.executable, '-m', 'pip', 'show', package_name],
         check=True,
@@ -37,6 +43,7 @@ def get_package_version(package_name):
 
 
 def run_replacement(mp3_path):
+    """Run the display plugin replacement script and parse its JSON output."""
     result = subprocess.run(
         [
             sys.executable,
@@ -77,6 +84,7 @@ def run_replacement(mp3_path):
 
 
 def validate_output(output, metadata):
+    """Validate replacement output against the compatibility test fixture."""
     require(
         output['artists'] == metadata['artist'],
         'Unexpected artists value.',
@@ -149,6 +157,7 @@ def validate_output(output, metadata):
 
 
 def main():
+    """Run the complete eyeD3 compatibility test."""
     require(
         REPLACEMENT_SCRIPT.is_file(),
         f'Missing replacement script: {REPLACEMENT_SCRIPT}',

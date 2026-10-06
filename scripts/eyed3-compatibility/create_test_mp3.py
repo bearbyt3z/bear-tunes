@@ -1,3 +1,5 @@
+"""Create the tagged MP3 fixture used by eyeD3 compatibility tests."""
+
 import json
 import subprocess
 import sys
@@ -19,6 +21,7 @@ def require(condition, message):
 
 
 def generate_test_mp3(output_directory):
+    """Generate a short silent MP3 file in the given directory."""
     wav_path = output_directory / 'test.wav'
     mp3_path = output_directory / 'test.mp3'
 
@@ -46,6 +49,7 @@ def generate_test_mp3(output_directory):
 
 
 def write_test_metadata(mp3_path, metadata):
+    """Write compatibility test metadata to the generated MP3."""
     audio = eyed3.load(str(mp3_path))
 
     require(
@@ -58,6 +62,7 @@ def write_test_metadata(mp3_path, metadata):
     audio.tag.artist = metadata['artist']
     audio.tag.title = metadata['title']
 
+    # eyeD3 expects a Date object rather than the ISO date string from the fixture.
     year, month, day = (
         int(part)
         for part in metadata['releaseDate'].split('-')
@@ -75,6 +80,7 @@ def write_test_metadata(mp3_path, metadata):
         metadata['album']['trackTotal'],
     )
 
+    # eyeD3 stores the music CD ID as bytes.
     audio.tag.cd_id = metadata['musicCdId'].encode('ascii')
 
     for description, text in metadata['textFrames'].items():
@@ -94,6 +100,7 @@ def write_test_metadata(mp3_path, metadata):
 
 
 def create_test_mp3(output_directory):
+    """Generate the complete tagged MP3 fixture."""
     output_directory = Path(output_directory)
 
     with TEST_METADATA_FILE.open(encoding='utf-8') as metadata_file:
