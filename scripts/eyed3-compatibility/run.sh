@@ -29,7 +29,7 @@ docker build \
   --tag "$image_name" \
   "$repo_dir"
 
-echo "Running eyeD3 compatibility test..."
+echo "Running eyeD3 compatibility test suite..."
 docker run --rm \
   --volume "$repo_dir:/work:ro" \
   --workdir /work \
