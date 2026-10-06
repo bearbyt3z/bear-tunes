@@ -34,8 +34,8 @@ RUN case "${EYED3_TARGET}" in \
         ;; \
     esac
 
-COPY scripts/eyed3-compatibility/test.py /opt/eyed3-compatibility/test.py
+COPY scripts/eyed3-compatibility/test_display_plugin_replacement.py /opt/eyed3-compatibility/test_display_plugin_replacement.py
 
 WORKDIR /work
 
-ENTRYPOINT ["python", "/opt/eyed3-compatibility/test.py"]
+ENTRYPOINT ["python", "/opt/eyed3-compatibility/test_display_plugin_replacement.py"]

@@ -1,4 +1,4 @@
-"""Run the eyeD3 compatibility test against a generated MP3 fixture."""
+"""Test the eyeD3 display plugin replacement against a generated MP3 fixture."""
 
 import json
 import platform
