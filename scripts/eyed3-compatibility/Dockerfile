@@ -8,7 +8,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends lame \
   && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /opt/eyed3-compatibility/requirements.txt
+COPY python-requirements.txt /opt/eyed3-compatibility/python-requirements.txt
 
 RUN case "${EYED3_TARGET}" in \
       project) \
@@ -16,7 +16,7 @@ RUN case "${EYED3_TARGET}" in \
           --disable-pip-version-check \
           --no-cache-dir \
           --root-user-action=ignore \
-          -r /opt/eyed3-compatibility/requirements.txt \
+          -r /opt/eyed3-compatibility/python-requirements.txt \
         ;; \
       latest) \
         python -m pip install \
