@@ -91,10 +91,10 @@ function getBeatportArtistNamesByRole<T>(
  */
 function getBeatportOriginalImageUrl(imageUrl: string): string;
 function getBeatportOriginalImageUrl(
-  imageUrl: string | undefined,
+  imageUrl: string | null | undefined,
 ): string | undefined;
 function getBeatportOriginalImageUrl(
-  imageUrl: string | undefined,
+  imageUrl: string | null | undefined,
 ): string | undefined {
   return imageUrl?.replace(
     /\/image_size\/(?:\d+|\{w\})x(?:\d+|\{h\})\//u,

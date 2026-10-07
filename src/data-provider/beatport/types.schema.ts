@@ -179,7 +179,7 @@ export const beatportAlbumInfoSchema = z.object({
  */
 export const beatportPublisherInfoSchema = z.object({
   id: z.number(),
-  image_url: z.string(),
+  image_url: z.string().nullable(),
   name: z.string(),
   slug: z.string(),
 });
