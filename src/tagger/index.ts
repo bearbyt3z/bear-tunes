@@ -13,6 +13,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import {
+  PYTHON_EXECUTABLE,
   USER_AGENT_CACHE_FILE,
 } from '#config';
 import {
@@ -714,7 +715,7 @@ export class BearTunesTagger {
   private extractId3Tag(trackPath: string): TrackInfo {
     // Replacing eyeD3 display-plugin with a simple python script:
     const displayPluginOutput = childProcess.spawnSync(
-      './.venv/bin/python',
+      PYTHON_EXECUTABLE,
       [
         './eyed3-display-plugin-replacement.py',
         this.options.eyeD3DisplayPluginPatternFile,
