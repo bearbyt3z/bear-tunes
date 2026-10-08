@@ -1,6 +1,6 @@
 ARG PYTHON_VERSION=3.10.18
 
-FROM node:22.12.0-bookworm-slim AS node
+FROM node:22.13.0-bookworm-slim AS node
 
 FROM python:${PYTHON_VERSION}-slim-bookworm
 
