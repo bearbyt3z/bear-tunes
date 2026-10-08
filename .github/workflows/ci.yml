@@ -16,7 +16,7 @@ jobs:
       matrix:
         include:
           # Minimum eyeD3 version supported by the display plugin replacement.
-          - name: eyeD3 minimum / Python 3.7.17
+          - name: eyeD3 minimal / Python 3.7.17
             python: '3.7.17'
             requirements: python-requirements-minimal.txt
 
