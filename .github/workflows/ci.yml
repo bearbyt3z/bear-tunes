@@ -18,15 +18,15 @@ jobs:
           # Minimum eyeD3 version supported by the display plugin replacement.
           - name: eyeD3 minimum / Python 3.7.17
             python: '3.7.17'
-            eyed3: '0.9.7'
+            requirements: python-requirements-minimal.txt
 
           - name: eyeD3 project / Python 3.10.18
             python: '3.10.18'
-            eyed3: 'project'
+            requirements: python-requirements.txt
 
           - name: eyeD3 latest / Python 3.14
             python: '3.14'
-            eyed3: 'latest'
+            requirements: python-requirements-latest.txt
 
     steps:
       - name: Check out repository
@@ -35,7 +35,7 @@ jobs:
       - name: Run eyeD3 compatibility test
         env:
           PYTHON_VERSION: ${{ matrix.python }}
-          EYED3_TARGET: ${{ matrix.eyed3 }}
+          REQUIREMENTS_FILE: ${{ matrix.requirements }}
         run: ./scripts/eyed3-compatibility/run.sh
 
   check:
