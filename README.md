@@ -3,7 +3,7 @@
 [![CI](https://github.com/bearbyt3z/bear-tunes/actions/workflows/ci.yml/badge.svg)](https://github.com/bearbyt3z/bear-tunes/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/github/bearbyt3z/bear-tunes/graph/badge.svg?token=GX7WZKIWJV)](https://codecov.io/github/bearbyt3z/bear-tunes)
 [![Version](https://img.shields.io/github/package-json/v/bearbyt3z/bear-tunes)](https://github.com/bearbyt3z/bear-tunes)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.12-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.13-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Python](https://img.shields.io/badge/Python-%3E%3D3.10-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](./LICENSE)
 
@@ -35,7 +35,7 @@ Beatport is used as the default provider because its catalog offers particularly
 | Technology | Purpose |
 | ---------- | ------- |
 | **TypeScript** | Main programming language. |
-| **Node.js 22.12+** | Runtime environment. |
+| **Node.js 22.13+** | Runtime environment. |
 | **Python 3.10+** | Runtime used by the project-local `eyeD3` environment and custom `eyeD3` display plugin replacement. |
 | **[Zod](https://zod.dev/)** | Runtime validation of application data and domain models. |
 | **[JSDOM](https://github.com/jsdom/jsdom)** | HTML document parsing for metadata extraction. |
@@ -49,9 +49,11 @@ Beatport is used as the default provider because its catalog offers particularly
 
 ### Runtime
 
-* Node.js **22.12 or newer**
+* Node.js **22.13 or newer**
 * npm
 * Python **3.10 or newer**
+
+Node.js **22.13 or newer is required by the project's development tooling**. Vitest supports Node.js 22.12 or newer, but the project's ESLint dependencies require Node.js 22.13 or newer. Therefore, bear-tunes uses Node.js 22.13 as the minimum supported version to satisfy the requirements of the complete development and test toolchain.
 
 The project uses a project-local Python virtual environment for `eyeD3`. The pinned `eyeD3` version is defined in [`requirements.txt`](./requirements.txt) and installed into `.venv` during project setup.
 
