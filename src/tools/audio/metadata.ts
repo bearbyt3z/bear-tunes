@@ -102,9 +102,9 @@ export function extractTrackNameKeywords(trackName: string): string[] {
     // may belong to the artist or title.
     .replace(/(^|\s+[-–—]\s+)\d+\s*[-–—.]\s+/, ' ')
 
-    // Replace brackets and commas with spaces so their contents become
-    // separate searchable keywords.
-    .replaceAll(/[()[\],]/g, ' ')
+    // Replace brackets, commas, and semicolons with spaces to split
+    // punctuation-separated text into searchable keywords.
+    .replaceAll(/[()[\],;]/g, ' ')
 
     // Replace spaced dash-like separators and ampersands with spaces.
     // Only separators surrounded by whitespace are treated this way,
