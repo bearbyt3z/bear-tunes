@@ -7,6 +7,10 @@ export const PYTHON_EXECUTABLE = process.platform === 'win32'
   ? path.join(PYTHON_VENV_DIRECTORY, 'Scripts', 'python.exe')
   : path.join(PYTHON_VENV_DIRECTORY, 'bin', 'python');
 
+export const EYED3_EXECUTABLE = process.platform === 'win32'
+  ? path.join(PYTHON_VENV_DIRECTORY, 'Scripts', 'eyeD3.exe')
+  : path.join(PYTHON_VENV_DIRECTORY, 'bin', 'eyeD3');
+
 export const CACHE_DIR = path.join(process.cwd(), '.cache');
 
 export const BROWSER_PROFILE_DIR = path.join(

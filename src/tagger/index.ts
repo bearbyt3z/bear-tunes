@@ -13,6 +13,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import {
+  EYED3_EXECUTABLE,
   PYTHON_EXECUTABLE,
   USER_AGENT_CACHE_FILE,
 } from '#config';
@@ -1742,7 +1743,7 @@ export class BearTunesTagger {
     verbose = false,
   ): void {
     const result = executeCommandSync(
-      './.venv/bin/eyeD3',
+      EYED3_EXECUTABLE,
       [
         '--v2',
         `--to-v${version.toString()}`, // overwrite other versions of id3
