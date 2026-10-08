@@ -55,7 +55,7 @@ Beatport is used as the default provider because its catalog offers particularly
 
 Node.js **22.13 or newer is required by the project's development tooling**. Vitest supports Node.js 22.12 or newer, but the project's ESLint dependencies require Node.js 22.13 or newer. Therefore, bear-tunes uses Node.js 22.13 as the minimum supported version to satisfy the requirements of the complete development and test toolchain.
 
-The project uses a project-local Python virtual environment for `eyeD3`. The pinned `eyeD3` version is defined in [`requirements.txt`](./requirements.txt) and installed into `.venv` during project setup.
+The project uses a project-local Python virtual environment for `eyeD3`. The pinned `eyeD3` version is defined in [`python-requirements.txt`](./python-requirements.txt) and installed into `.venv` during project setup.
 
 The custom `eyeD3` display plugin replacement targets **`eyeD3` 0.9.7 and newer**. Compatibility is verified automatically in CI against the minimum supported release, the project-pinned release, and the latest available `eyeD3` release.
 
@@ -69,7 +69,7 @@ The following tools are required for audio conversion and metadata processing:
 
 These tools are invoked as external processes and must be available in the system `PATH`.
 
-`eyeD3` is **not** a system dependency. It is installed locally in the project's `.venv` environment from [`requirements.txt`](./requirements.txt).
+`eyeD3` is **not** a system dependency. It is installed locally in the project's `.venv` environment from [`python-requirements.txt`](./python-requirements.txt).
 
 ## Installation
 
@@ -94,7 +94,7 @@ npm ci
 npm run setup
 ```
 
-This creates the project-local Python virtual environment in `.venv`, installs the pinned Python dependencies from [`requirements.txt`](./requirements.txt), and installs the required Playwright browser.
+This creates the project-local Python virtual environment in `.venv`, installs the pinned Python dependencies from [`python-requirements.txt`](./python-requirements.txt), and installs the required Playwright browser.
 
 ### 4. Build the project
 
@@ -393,7 +393,7 @@ The project is organized into focused modules, with the core music-processing fu
 | ------------------- | ------- |
 | `src/main.ts`       | CLI entry point. |
 | `src/main.types.ts` | CLI-specific types. |
-| `src/config.ts`     | Application configuration. |
+| `src/config.mjs`    | Application configuration. |
 | `dist/`             | Generated JavaScript output produced by the TypeScript build. |
 
 ### Runtime data
@@ -408,7 +408,9 @@ The project is organized into focused modules, with the core music-processing fu
 | ------------------------------------- | ------- |
 | `.github/workflows/`                  | Continuous integration configuration. |
 | `eslint.config.mjs`                   | ESLint configuration. |
-| `requirements.txt`                    | Pins the Python dependency used by the project-local virtual environment. |
+| `python-requirements.txt`             | Pins the Python dependencies used by the project-local virtual environment. |
+| `python-requirements-minimal.txt`     | Defines the dependencies for the minimum supported `eyeD3` compatibility environment. |
+| `python-requirements-latest.txt`      | Defines the dependencies for the latest `eyeD3` compatibility environment. |
 | `scripts/eyed3-compatibility/`        | Docker-based compatibility tests for the custom `eyeD3` display plugin replacement. |
 | `eyed3-display-plugin-replacement.py` | Custom replacement for the eyeD3 `display` plugin, used to extract MP3 metadata according to `eyed3-display-plugin-pattern.txt`. |
 | `eyed3-display-plugin-pattern.txt`    | Pattern file defining the MP3 metadata fields extracted by `eyed3-display-plugin-replacement.py`, based on the pattern syntax of the original eyeD3 `display` plugin. |
@@ -452,13 +454,13 @@ The `check` job runs the standard Node.js quality checks, including linting, typ
 
 The `eyed3-compatibility` job runs the custom `eyeD3` display plugin replacement against three compatibility targets:
 
-* **Minimum** — the minimum supported `eyeD3` release with Python 3.7.17.
-* **Project** — the `eyeD3` release pinned by [`requirements.txt`](./requirements.txt).
+* **Minimal** — the minimum supported `eyeD3` release with Python 3.7.17.
+* **Project** — the `eyeD3` release pinned by [`python-requirements.txt`](./python-requirements.txt).
 * **Latest** — the latest available `eyeD3` release with Python 3.14.
 
 The compatibility test uses a Docker-based environment so each `eyeD3` release is tested together with an appropriate Python runtime. The test validates the replacement's metadata extraction and output handling rather than requiring a specific `eyeD3` version inside the test itself.
 
-The project-pinned `eyeD3` version remains defined only in [`requirements.txt`](./requirements.txt), while the CI matrix is responsible for selecting compatibility targets.
+The project-pinned `eyeD3` version remains defined only in [`python-requirements.txt`](./python-requirements.txt), while the CI matrix selects the appropriate requirements file for each compatibility target.
 
 ### `eyeD3` Compatibility Test
 
@@ -468,15 +470,17 @@ The compatibility test can also be run locally using the default project target:
 ./scripts/eyed3-compatibility/run.sh
 ```
 
-Additional compatibility targets can be selected by setting `PYTHON_VERSION` and `EYED3_TARGET`:
+Additional compatibility targets can be selected by setting `PYTHON_VERSION` and `REQUIREMENTS_FILE`:
 
 ```bash
-PYTHON_VERSION=3.7.17 EYED3_TARGET=0.9.7 \
+PYTHON_VERSION=3.7.17 \
+REQUIREMENTS_FILE=python-requirements-minimal.txt \
   ./scripts/eyed3-compatibility/run.sh
 ```
 
 ```bash
-PYTHON_VERSION=3.14 EYED3_TARGET=latest \
+PYTHON_VERSION=3.14 \
+REQUIREMENTS_FILE=python-requirements-latest.txt \
   ./scripts/eyed3-compatibility/run.sh
 ```
 
