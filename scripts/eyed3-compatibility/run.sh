@@ -12,6 +12,7 @@ repo_dir=$(cd -- "$script_dir/../.." && pwd)
 
 image_name='bear-tunes-eyed3-compatibility'
 
+node_version="${NODE_VERSION:-22.13.0}"
 python_version="${PYTHON_VERSION:-3.10.18}"
 requirements_file="${REQUIREMENTS_FILE:-python-requirements.txt}"
 
@@ -31,6 +32,8 @@ trap cleanup EXIT
 
 echo "Building eyeD3 compatibility test image..."
 docker build \
+  --pull \
+  --build-arg "NODE_VERSION=${node_version}" \
   --build-arg "PYTHON_VERSION=${python_version}" \
   --build-arg "REQUIREMENTS_FILE=${requirements_file}" \
   --build-arg "PYTHON_VENV_DIRECTORY=${python_venv_directory}" \

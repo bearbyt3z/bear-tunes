@@ -1,6 +1,7 @@
+ARG NODE_VERSION=22.13.0
 ARG PYTHON_VERSION=3.10.18
 
-FROM node:22.13.0-bookworm-slim AS node
+FROM node:${NODE_VERSION}-bookworm-slim AS node
 
 FROM python:${PYTHON_VERSION}-slim-bookworm
 
@@ -17,6 +18,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates \
     lame \
+    libatomic1 \
     libstdc++6 \
   && rm -rf /var/lib/apt/lists/*
 
