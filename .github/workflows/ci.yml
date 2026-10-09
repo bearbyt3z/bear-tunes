@@ -53,7 +53,16 @@ jobs:
         run: ./scripts/eyed3-compatibility/run.sh
 
   check:
+    name: Node.js ${{ matrix.node }} / project checks
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - '22.13.0'
+          - 'lts/*'
+          - 'current'
 
     steps:
       - name: Check out repository
@@ -62,7 +71,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 22.13
+          node-version: ${{ matrix.node }}
+          check-latest: true
           cache: npm
 
       - name: Install dependencies
@@ -72,6 +82,7 @@ jobs:
         run: npm run check
 
       - name: Upload coverage reports to Codecov
+        if: matrix.node == '22.13.0'
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
