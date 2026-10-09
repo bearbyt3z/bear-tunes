@@ -17,6 +17,7 @@ jobs:
   eyed3-compatibility:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
@@ -62,6 +63,7 @@ jobs:
   check:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
