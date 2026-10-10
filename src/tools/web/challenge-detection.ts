@@ -1,3 +1,17 @@
+// Substrings used to identify common browser-verification and anti-bot
+// challenge pages. HTML is normalized to lowercase before matching.
+const CHALLENGE_MARKERS = [
+  'checking your browser',
+  'verify you are human',
+  'enable javascript and cookies to continue',
+  'challenge-error-text',
+  'cf-challenge',
+  'cf-browser-verification',
+  'just a moment',
+  '/cdn-cgi/challenge-platform/',
+  'turnstile',
+] as const;
+
 /**
  * Returns a lowercase prefix of the provided HTML string.
  *
@@ -14,29 +28,21 @@ function getHtmlPrefix(html: string, maxLength = 16_000): string {
 }
 
 /**
- * Detects whether HTML looks like an active challenge or verification page.
+ * Detects whether HTML looks like a browser-verification or anti-bot challenge page.
  *
- * The check inspects a normalized lowercase prefix of the HTML and searches for
- * marker strings commonly found in anti-bot or browser verification interstitials.
+ * The check examines the first 16,000 characters of the HTML, normalizes
+ * them to lowercase, and searches for known challenge markers.
  *
- * @param html - HTML content to classify.
- * @returns `true` when the HTML prefix appears to match a challenge or verification page.
+ * @param html - HTML content to inspect.
+ * @returns `true` if the inspected HTML prefix contains a known challenge marker;
+ * otherwise, `false`.
  */
 export function looksLikeChallengeHtml(html: string): boolean {
   const normalized = getHtmlPrefix(html);
 
-  return [
-    'checking your browser',
-    'verify you are human',
-    'enable javascript and cookies to continue',
-    'challenge-error-text',
-    'cf-challenge',
-    'cf-browser-verification',
-    'just a moment',
-    '/cdn-cgi/challenge-platform/',
-    'cf-turnstile',
-    'turnstile',
-  ].some((needle) => normalized.includes(needle));
+  return CHALLENGE_MARKERS.some(
+    (needle) => normalized.includes(needle),
+  );
 }
 
 /**
