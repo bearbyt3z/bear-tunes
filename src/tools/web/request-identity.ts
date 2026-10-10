@@ -10,6 +10,7 @@ import {
 } from './request-identity.types.js';
 
 import { identityCacheSchema } from './request-identity.schema.js';
+import { isErrorWithStringCode } from '../utils/type-guards.js';
 
 import type { BrowserContextOptions } from 'playwright';
 
@@ -25,6 +26,9 @@ import type {
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
+const MIN_CACHE_TTL_DAYS = 7;
+const MAX_CACHE_TTL_DAYS = 14;
+
 const DEFAULT_LOCALE = 'en-US';
 const DEFAULT_TIMEZONE_ID = 'Europe/Warsaw';
 
@@ -34,7 +38,7 @@ const DEFAULT_TIMEZONE_ID = 'Europe/Warsaw';
 const UA_PROFILES: UAProfile[] = [
   {
     name: 'chrome-windows',
-    match: /Chrome/,
+    match: /Chrome\/(?!.*(?:EdgA?|Edge|OPR|SamsungBrowser)\/)/,
     filter: { deviceCategory: 'desktop', platform: 'Win32' },
   },
   {
@@ -44,17 +48,17 @@ const UA_PROFILES: UAProfile[] = [
   },
   {
     name: 'safari-macos',
-    match: /Safari/,
+    match: /Version\/[\d.]+ Safari\//,
     filter: { deviceCategory: 'desktop', platform: 'MacIntel' },
   },
   {
     name: 'chrome-mobile',
-    match: /(Chrome|CriOS)/,
+    match: /(?:Chrome|CriOS)\/(?!.*(?:EdgA?|Edge|OPR|SamsungBrowser)\/)/,
     filter: { deviceCategory: 'mobile' },
   },
   {
     name: 'safari-mobile',
-    match: /Version\/.*Mobile\/.*Safari\//,
+    match: /^(?!.*(?:EdgiOS|CriOS|FxiOS|OPT)\/).*Version\/.*Mobile\/.*Safari\//,
     filter: { deviceCategory: 'mobile' },
   },
 ];
@@ -82,7 +86,10 @@ function randomInt(min: number, max: number): number {
  * @param maxDays - Inclusive upper bound expressed in days.
  * @returns Random duration in milliseconds.
  */
-function randomTtlMs(minDays = 3, maxDays = 10): number {
+function randomTtlMs(
+  minDays = MIN_CACHE_TTL_DAYS,
+  maxDays = MAX_CACHE_TTL_DAYS,
+): number {
   const minMs = minDays * MILLISECONDS_PER_DAY;
   const maxMs = maxDays * MILLISECONDS_PER_DAY;
   return randomInt(minMs, maxMs);
@@ -126,19 +133,21 @@ async function ensureDir(dirPath: string): Promise<void> {
  * @param filePath - Path to the JSON file.
  * @returns Parsed JSON value or `null` when the file is missing.
  */
-async function readJsonFile<T>(filePath: string): Promise<T | null> {
-  try {
-    const raw = await fs.promises.readFile(filePath, 'utf8');
-    return JSON.parse(raw) as T;
-  } catch (error) {
-    const err = error as NodeJS.ErrnoException;
+async function readJsonFile(filePath: string): Promise<unknown> {
+  let raw: string;
 
-    if (err.code === 'ENOENT') {
+  try {
+    raw = await fs.promises.readFile(filePath, 'utf8');
+  } catch (error: unknown) {
+    if (isErrorWithStringCode(error) && error.code === 'ENOENT') {
       return null;
     }
 
     throw error;
   }
+
+  const parsed: unknown = JSON.parse(raw);
+  return parsed;
 }
 
 /**
@@ -155,8 +164,19 @@ async function writeFileAtomic(filePath: string, content: string): Promise<void>
   );
 
   await ensureDir(dirPath);
-  await fs.promises.writeFile(tempFilePath, content, 'utf8');
-  await fs.promises.rename(tempFilePath, filePath);
+
+  try {
+    await fs.promises.writeFile(tempFilePath, content, 'utf8');
+    await fs.promises.rename(tempFilePath, filePath);
+  } catch (error) {
+    try {
+      await fs.promises.rm(tempFilePath, { force: true });
+    } catch {
+      // Preserve the original write or rename error.
+    }
+
+    throw error;
+  }
 }
 
 /**
@@ -170,7 +190,18 @@ async function writeFileAtomic(filePath: string, content: string): Promise<void>
 async function readIdentityCache(
   userAgentCacheFile: string,
 ): Promise<IdentityCache> {
-  const cached = await readJsonFile(userAgentCacheFile);
+  let cached: unknown;
+
+  try {
+    cached = await readJsonFile(userAgentCacheFile);
+  } catch (error: unknown) {
+    if (error instanceof SyntaxError) {
+      return {};
+    }
+
+    throw error;
+  }
+
   const parsedCache = identityCacheSchema.safeParse(cached);
 
   return parsedCache.success ? parsedCache.data : {};
@@ -310,7 +341,7 @@ export async function saveBrowserNavigatorContext(
     vendor: context.vendor,
     source,
     createdAt: now,
-    expiresAt: now + randomTtlMs(7, 14),
+    expiresAt: now + randomTtlMs(),
   };
 
   const savedEntry = await saveIdentityEntry(
@@ -357,7 +388,7 @@ export async function getFetchUserAgent(
       userAgent,
       profileName: profile.name,
       createdAt: now,
-      expiresAt: now + randomTtlMs(7, 14),
+      expiresAt: now + randomTtlMs(),
     },
   );
 
@@ -467,8 +498,8 @@ export function buildImageDownloadHeaders(
 /**
  * Normalizes a runtime Chromium User-Agent string for browser automation.
  *
- * The normalization removes common headless markers and reduces the Chrome
- * version to the major-only format used by reduced User-Agent strings.
+ * Replaces the `HeadlessChrome` token with `Chrome` and reduces a four-part
+ * Chrome version to its major version followed by `.0.0.0`.
  *
  * @param userAgent - Runtime browser User-Agent string.
  * @returns Normalized User-Agent string suitable for browser requests.
@@ -482,12 +513,13 @@ export function normalizeBrowserUserAgent(userAgent: string): string {
 /**
  * Resolves the browser navigator context used for browser-based page fetches.
  *
- * A cached accepted navigator context may be reused when requested. Otherwise,
- * the runtime navigator context is normalized and returned.
+ * When `preferCached` is true, a non-expired cached browser context is reused
+ * if available. Otherwise, the runtime User-Agent is normalized and the
+ * remaining navigator properties are preserved.
  *
  * @param runtimeNavigator - Navigator context read from the live browser.
  * @param userAgentCacheFile - Path to the persisted request identity cache file.
- * @param preferCached - Whether a cached accepted browser navigator context should be preferred.
+ * @param preferCached - Whether a cached browser navigator context should be preferred.
  * @returns Browser navigator context used for the browser request flow.
  */
 export async function resolveBrowserNavigatorContext(
