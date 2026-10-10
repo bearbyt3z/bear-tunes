@@ -3,12 +3,20 @@ import { z } from 'zod';
 import { BrowserUserAgentSource } from './request-identity.types.js';
 
 /**
- * Validates the common persisted fields shared by request identity cache entries.
+ * Validates a non-negative integer timestamp in milliseconds since the Unix epoch.
+ */
+const timestampMsSchema = z.number().int().nonnegative();
+
+/**
+ * Validates the common fields shared by persisted request identity cache entries.
+ *
+ * Requires a non-empty User-Agent and non-negative integer timestamps in
+ * milliseconds since the Unix epoch.
  */
 export const fingerprintCacheEntrySchema = z.object({
   userAgent: z.string().min(1),
-  createdAt: z.number(),
-  expiresAt: z.number(),
+  createdAt: timestampMsSchema,
+  expiresAt: timestampMsSchema,
 });
 
 /**
