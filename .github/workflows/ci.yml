@@ -5,16 +5,21 @@ on:
     branches:
       - master
   pull_request:
+  schedule:
+    - cron: '15 16 * * 5'
+      timezone: Europe/Warsaw
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
   eyed3-compatibility:
+    if: github.event_name != 'schedule'
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
