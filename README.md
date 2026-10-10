@@ -55,6 +55,8 @@ Beatport is used as the default provider because its catalog offers particularly
 
 Node.js **22.13 or newer is required by the project's development tooling**. Vitest supports Node.js 22.12 or newer, but the project's ESLint dependencies require Node.js 22.13 or newer. Therefore, bear-tunes uses Node.js 22.13 as the minimum supported version to satisfy the requirements of the complete development and test toolchain.
 
+The CI workflow additionally tests the latest LTS and Current releases to detect compatibility regressions in newer Node.js versions.
+
 The project uses a project-local Python virtual environment for `eyeD3`. The pinned `eyeD3` version is defined in [`python-requirements.txt`](./python-requirements.txt) and installed into `.venv` during project setup.
 
 The custom `eyeD3` display plugin replacement targets **`eyeD3` 0.9.7 and newer**. Compatibility is verified automatically in CI against the minimum supported release, the project-pinned release, and the latest available `eyeD3` release.
@@ -425,7 +427,7 @@ The project is organized into focused modules, with the core music-processing fu
 The project uses a small set of automated checks to keep the codebase consistent and buildable during development.
 
 ```text
-lint → typecheck → build
+lint → typecheck → test:coverage → build
 ```
 
 Run the complete local validation with:
@@ -436,31 +438,53 @@ npm run check
 
 ### Available Scripts
 
-| Command               | Purpose                                                      |
-| --------------------- | ------------------------------------------------------------ |
-| `npm run lint`        | Runs ESLint across the project.                              |
-| `npm run lint:fix`    | Automatically fixes available ESLint issues.                 |
-| `npm run typecheck`   | Runs TypeScript type checking without generating output.     |
-| `npm run build`       | Cleans the build output and compiles the TypeScript project. |
-| `npm run clean`       | Removes the generated `dist/` directory.                     |
-| `npm run build-start` | Builds the project and starts the CLI.                       |
-| `npm run check`       | Runs linting, type checking, and the production build.       |
+| Command               | Purpose                                                                     |
+| --------------------- | --------------------------------------------------------------------------- |
+| `npm run lint`        | Runs ESLint across the project.                                             |
+| `npm run lint:fix`    | Automatically fixes available ESLint issues.                                |
+| `npm run typecheck`   | Runs TypeScript type checking without generating output.                    |
+| `npm run build`       | Cleans the build output and compiles the TypeScript project.                |
+| `npm run clean`       | Removes the generated `dist/` directory.                                    |
+| `npm run build-start` | Builds the project and starts the CLI.                                      |
+| `npm run check`       | Runs linting, type checking, tests with coverage, and the production build. |
 
 ### Continuous Integration
 
-The project's automated checks run through GitHub Actions for pushes to `master` and for pull requests.
+The project's automated checks run through GitHub Actions on pushes to `master`, pull requests, and a weekly schedule. The workflow can also be triggered manually through the GitHub Actions interface.
 
-The `check` job runs the standard Node.js quality checks, including linting, type checking, the production build, and coverage reporting.
+The workflow includes two independent jobs: `check` and `eyed3-compatibility`.
 
-The `eyed3-compatibility` job runs the custom `eyeD3` display plugin replacement against three compatibility targets:
+#### Project Checks
 
-* **Minimal** — the minimum supported `eyeD3` release with Python 3.7.17.
-* **Project** — the `eyeD3` release pinned by [`python-requirements.txt`](./python-requirements.txt).
-* **Latest** — the latest available `eyeD3` release with Python 3.14.
+The `check` job runs `npm ci` and `npm run check` across three Node.js configurations:
 
-The compatibility test uses a Docker-based environment so each `eyeD3` release is tested together with an appropriate Python runtime. The test validates the replacement's metadata extraction and output handling rather than requiring a specific `eyeD3` version inside the test itself.
+* **Minimum supported** — Node.js 22.13.0.
+* **LTS** — the latest available Node.js LTS release.
+* **Current** — the latest available Node.js release.
 
-The project-pinned `eyeD3` version remains defined only in [`python-requirements.txt`](./python-requirements.txt), while the CI matrix selects the appropriate requirements file for each compatibility target.
+This matrix helps detect compatibility regressions both at the project's minimum supported Node.js version and as newer releases become available.
+
+Coverage reports are uploaded to Codecov only from the Node.js 22.13.0 job to avoid duplicate reports from the same workflow run.
+
+#### eyeD3 Compatibility
+
+The `eyed3-compatibility` job tests the custom `eyeD3` display plugin replacement in a Docker-based environment using five configurations:
+
+* **Minimal** — Node.js 22.13.0, Python 3.7.17, and the minimum supported `eyeD3` release.
+* **Project** — Node.js 22.13.0, Python 3.10.18, and the project-pinned `eyeD3` version.
+* **Latest** — Node.js 22.13.0, Python 3.14, and the latest available `eyeD3` release.
+* **Node.js LTS** — the latest LTS release, Python 3.10.18, and the project-pinned `eyeD3` version.
+* **Node.js Current** — the latest Node.js release, Python 3.10.18, and the project-pinned `eyeD3` version.
+
+Each configuration builds a separate Docker image and runs the compatibility test suite using the selected Node.js, Python, and Python requirements configuration.
+
+#### Scheduled Runs and Execution Limits
+
+The workflow runs on a weekly schedule defined in [`.github/workflows/ci.yml`](./.github/workflows/ci.yml). Scheduled runs execute only the `check` matrix, allowing the project to detect regressions in newer Node.js releases without repeating the `eyeD3` compatibility matrix.
+
+The workflow also supports manual execution through `workflow_dispatch`. Manual runs execute both jobs.
+
+Matrix jobs are configured not to cancel one another when a single configuration fails. Each job has a 20-minute timeout, and newer runs can cancel superseded runs for the same branch or pull request and event type.
 
 ### `eyeD3` Compatibility Test
 
@@ -470,17 +494,26 @@ The compatibility test can also be run locally using the default project target:
 ./scripts/eyed3-compatibility/run.sh
 ```
 
-Additional compatibility targets can be selected by setting `PYTHON_VERSION` and `REQUIREMENTS_FILE`:
+The Node.js version, Python version, and compatibility requirements can be selected using `NODE_VERSION`, `PYTHON_VERSION`, and `REQUIREMENTS_FILE`:
 
 ```bash
+NODE_VERSION=22.13.0 \
 PYTHON_VERSION=3.7.17 \
 REQUIREMENTS_FILE=python-requirements-minimal.txt \
   ./scripts/eyed3-compatibility/run.sh
 ```
 
 ```bash
+NODE_VERSION=22.13.0 \
 PYTHON_VERSION=3.14 \
 REQUIREMENTS_FILE=python-requirements-latest.txt \
+  ./scripts/eyed3-compatibility/run.sh
+```
+
+```bash
+NODE_VERSION=current \
+PYTHON_VERSION=3.10.18 \
+REQUIREMENTS_FILE=python-requirements.txt \
   ./scripts/eyed3-compatibility/run.sh
 ```
 
