@@ -56,6 +56,9 @@ export interface UAProfile {
   /** Pattern used to recognize User-Agent strings belonging to the profile. */
   match: RegExp;
 
+  /** Patterns that disqualify a User-Agent from the profile. */
+  exclude?: RegExp[];
+
   /** Selection filter describing when the profile is applicable. */
   filter: UAFilter;
 }
