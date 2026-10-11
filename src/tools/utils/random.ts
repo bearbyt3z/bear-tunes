@@ -30,3 +30,19 @@ export function generateRandomHexString(byteLength = 20): string {
 
   return randomBytes(byteLength).toString('hex');
 }
+
+/**
+ * Returns a random integer from the inclusive range between `min` and `max`.
+ *
+ * @param min - Inclusive lower bound.
+ * @param max - Inclusive upper bound.
+ * @returns Random integer from the inclusive range.
+ * @throws {Error} When the bounds do not form a valid integer range.
+ */
+export function generateRandomInteger(min: number, max: number): number {
+  if (!Number.isInteger(min) || !Number.isInteger(max) || min > max) {
+    throw new Error(`Invalid randomInt range: min=${min}, max=${max}`);
+  }
+
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}

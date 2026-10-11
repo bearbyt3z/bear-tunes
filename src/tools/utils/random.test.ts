@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   generateRandomHexString,
+  generateRandomInteger,
 } from '#tools';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('generateRandomHexString', () => {
   it('generates a 40-character hexadecimal string by default', () => {
@@ -53,6 +58,36 @@ describe('generateRandomHexString', () => {
     );
     expect(() => generateRandomHexString(Number.NEGATIVE_INFINITY)).toThrow(
       new RangeError('byteLength must be a non-negative integer.'),
+    );
+  });
+});
+
+describe('generateRandomInteger', () => {
+  it.each([
+    { randomValue: 0, expected: 3 },
+    { randomValue: 1 - Number.EPSILON, expected: 7 },
+  ])(
+    'returns $expected at the corresponding boundary of the range',
+    ({ randomValue, expected }) => {
+      vi.spyOn(Math, 'random').mockReturnValue(randomValue);
+
+      expect(generateRandomInteger(3, 7)).toBe(expected);
+    },
+  );
+
+  it('returns the only possible value when both bounds are equal', () => {
+    expect(generateRandomInteger(5, 5)).toBe(5);
+  });
+
+  it.each([
+    { min: 1.5, max: 5 },
+    { min: 1, max: 5.5 },
+    { min: 5, max: 3 },
+    { min: Number.NaN, max: 5 },
+    { min: 1, max: Number.POSITIVE_INFINITY },
+  ])('throws an error for invalid bounds ($min, $max)', ({ min, max }) => {
+    expect(() => generateRandomInteger(min, max)).toThrow(
+      `Invalid randomInt range: min=${min}, max=${max}`,
     );
   });
 });

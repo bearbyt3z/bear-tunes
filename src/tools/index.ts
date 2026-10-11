@@ -88,6 +88,7 @@ export {
 
 export {
   generateRandomHexString,
+  generateRandomInteger,
 } from './utils/random.js';
 
 export {

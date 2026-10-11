@@ -2,14 +2,17 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import UserAgent from 'user-agents';
-
 import {
   RequestIdentityType,
   BrowserUserAgentSource,
 } from './request-identity.types.js';
 
+import {
+  generateUserAgent,
+  pickRandomProfile,
+} from './request-identity.profiles.js';
 import { identityCacheSchema } from './request-identity.schema.js';
+import { generateRandomInteger } from '../utils/random.js';
 import { isErrorWithStringCode } from '../utils/type-guards.js';
 
 import type { BrowserContextOptions } from 'playwright';
@@ -21,7 +24,6 @@ import type {
   FetchClientProfile,
   ClientRequestProfile,
   IdentityCache,
-  UAProfile,
 } from './request-identity.types.js';
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -31,53 +33,6 @@ const MAX_CACHE_TTL_DAYS = 14;
 
 const DEFAULT_LOCALE = 'en-US';
 const DEFAULT_TIMEZONE_ID = 'Europe/Warsaw';
-
-/**
- * Supported User-Agent profile templates used to generate request identities.
- */
-const UA_PROFILES: UAProfile[] = [
-  {
-    name: 'chrome-windows',
-    match: /Chrome\/(?!.*(?:EdgA?|Edge|OPR|SamsungBrowser)\/)/,
-    filter: { deviceCategory: 'desktop', platform: 'Win32' },
-  },
-  {
-    name: 'firefox-windows',
-    match: /Firefox/,
-    filter: { deviceCategory: 'desktop', platform: 'Win32' },
-  },
-  {
-    name: 'safari-macos',
-    match: /Version\/[\d.]+ Safari\//,
-    filter: { deviceCategory: 'desktop', platform: 'MacIntel' },
-  },
-  {
-    name: 'chrome-mobile',
-    match: /(?:Chrome|CriOS)\/(?!.*(?:EdgA?|Edge|OPR|SamsungBrowser)\/)/,
-    filter: { deviceCategory: 'mobile' },
-  },
-  {
-    name: 'safari-mobile',
-    match: /^(?!.*(?:EdgiOS|CriOS|FxiOS|OPT)\/).*Version\/.*Mobile\/.*Safari\//,
-    filter: { deviceCategory: 'mobile' },
-  },
-];
-
-/**
- * Returns a random integer from the inclusive range between `min` and `max`.
- *
- * @param min - Inclusive lower bound.
- * @param max - Inclusive upper bound.
- * @returns Random integer from the inclusive range.
- * @throws {Error} When the bounds do not form a valid integer range.
- */
-function randomInt(min: number, max: number): number {
-  if (!Number.isInteger(min) || !Number.isInteger(max) || min > max) {
-    throw new Error(`Invalid randomInt range: min=${min}, max=${max}`);
-  }
-
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
 
 /**
  * Returns a random cache lifetime in milliseconds for the inclusive day range.
@@ -92,26 +47,7 @@ function randomTtlMs(
 ): number {
   const minMs = minDays * MILLISECONDS_PER_DAY;
   const maxMs = maxDays * MILLISECONDS_PER_DAY;
-  return randomInt(minMs, maxMs);
-}
-
-/**
- * Selects one configured User-Agent profile template.
- *
- * @returns Selected User-Agent profile template.
- */
-function pickRandomProfile(): UAProfile {
-  return UA_PROFILES[randomInt(0, UA_PROFILES.length - 1)];
-}
-
-/**
- * Generates a concrete User-Agent string from a profile template.
- *
- * @param profile - User-Agent profile template used for generation.
- * @returns Generated User-Agent string.
- */
-function generateUserAgent(profile: UAProfile): string {
-  return new UserAgent([profile.match, profile.filter]).toString();
+  return generateRandomInteger(minMs, maxMs);
 }
 
 /**
