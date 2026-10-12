@@ -9,6 +9,7 @@ import { generateRandomInteger } from '../utils/random.js';
 
 import {
   generateUserAgent,
+  getTopUserAgentCandidates,
   pickRandomProfile,
   UA_PROFILES,
 } from './request-identity.profiles.js';
@@ -158,12 +159,12 @@ function isFilterArray(
 }
 
 function getLastTopCall(): {
-  count: number;
+  count: number | undefined;
   filters: Filter<UserAgentData>[];
 } {
   const call = mockedUserAgentTop.mock.calls.at(-1);
 
-  if (!call || typeof call[0] !== 'number' || !isFilterArray(call[1])) {
+  if (!call || !isFilterArray(call[1])) {
     throw new Error('UserAgent.top was not called with a filter array.');
   }
 
@@ -251,7 +252,7 @@ describe('User-Agent filters', () => {
 
       const { count, filters } = getLastTopCall();
 
-      expect(count).toBe(10);
+      expect(count).toBeUndefined();
       expect(filters).toContain(profile.match);
       expect(filters).toContainEqual({
         deviceCategory: profile.filter.deviceCategory,
@@ -301,6 +302,53 @@ describe('User-Agent exclusion filters', () => {
   });
 });
 
+describe('getTopUserAgentCandidates', () => {
+  it('returns unique candidates in frequency order up to the requested count', () => {
+    const candidates = [
+      createUserAgentData('First/1.0'),
+      createUserAgentData('First/1.0'),
+      createUserAgentData('Second/2.0'),
+      createUserAgentData('Third/3.0'),
+    ];
+
+    mockedUserAgentTop.mockReturnValue(candidates);
+
+    const result = getTopUserAgentCandidates(
+      getProfile('chrome-windows'),
+      2,
+    );
+
+    expect(result.map(({ userAgent }) => userAgent)).toEqual([
+      'First/1.0',
+      'Second/2.0',
+    ]);
+
+    expect(mockedUserAgentTop).toHaveBeenCalledWith(
+      undefined,
+      expect.any(Array),
+    );
+  });
+
+  it.each([-1, 1.5])(
+    'throws a RangeError when the candidate count is %s',
+    (count) => {
+      expect(() =>
+        getTopUserAgentCandidates(getProfile('chrome-windows'), count),
+      ).toThrow(RangeError);
+
+      expect(mockedUserAgentTop).not.toHaveBeenCalled();
+    },
+  );
+
+  it('returns an empty array when the candidate count is zero', () => {
+    expect(
+      getTopUserAgentCandidates(getProfile('chrome-windows'), 0),
+    ).toEqual([]);
+
+    expect(mockedUserAgentTop).not.toHaveBeenCalled();
+  });
+});
+
 describe('generateUserAgent', () => {
   it.each([0, 1, 2])(
     'returns the candidate selected at index %i',
@@ -316,7 +364,10 @@ describe('generateUserAgent', () => {
       mockedGenerateRandomInteger.mockReturnValue(index);
 
       expect(generateUserAgent(profile)).toBe(candidates[index]);
-      expect(mockedUserAgentTop).toHaveBeenCalledWith(10, expect.any(Array));
+      expect(mockedUserAgentTop).toHaveBeenCalledWith(
+        undefined,
+        expect.any(Array),
+      );
       expect(mockedUserAgentTop).toHaveBeenCalledTimes(1);
       expect(mockedGenerateRandomInteger).toHaveBeenCalledWith(
         0,
