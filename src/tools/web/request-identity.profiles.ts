@@ -8,6 +8,11 @@ import { generateRandomInteger } from '../utils/random.js';
 import type { UAProfile } from './request-identity.types.js';
 
 /**
+ * Default maximum number of top-ranked User-Agent candidates to consider.
+ */
+const TOP_USER_AGENT_CANDIDATES_COUNT = 10;
+
+/**
  * User-Agent patterns identifying Microsoft Edge variants across desktop,
  * Android, and iOS.
  */
@@ -139,24 +144,53 @@ function toUserAgentFilters(profile: UAProfile): Filter<UserAgentData>[] {
 }
 
 /**
- * Creates a reusable User-Agent generator configured for the supplied profile.
+ * Returns the most common User-Agent candidates matching the supplied profile.
  *
- * The generator applies the profile's match pattern and device filters while
- * excluding candidates that match any of the profile's exclusion patterns.
+ * Candidates are ordered by frequency and limited to the specified count.
  *
- * @param profile - User-Agent profile template defining the selection criteria.
- * @returns Configured User-Agent generator.
+ * @param profile - User-Agent profile defining the selection criteria.
+ * @param count - Maximum number of candidates to return. Defaults to
+ *   {@link TOP_USER_AGENT_CANDIDATES_COUNT}.
+ * @returns Matching User-Agent candidates ordered by frequency.
  */
-export function createUserAgentGenerator(profile: UAProfile): UserAgent {
-  return new UserAgent(toUserAgentFilters(profile));
+function getTopUserAgentCandidates(
+  profile: UAProfile,
+  count = TOP_USER_AGENT_CANDIDATES_COUNT,
+): UserAgentData[] {
+  return UserAgent.top(
+    count,
+    toUserAgentFilters(profile),
+  );
 }
 
 /**
- * Generates a User-Agent string matching the profile's selection criteria.
+ * Randomly selects a User-Agent candidate matching the supplied profile.
  *
- * @param profile - User-Agent profile template defining the selection criteria.
- * @returns Generated User-Agent string matching the profile criteria.
+ * Selection is uniform across the candidates returned by
+ * {@link getTopUserAgentCandidates}.
+ *
+ * @param profile - User-Agent profile defining the selection criteria.
+ * @returns Randomly selected User-Agent candidate.
+ * @throws {Error} If no matching candidates are found or a candidate
+ *   cannot be selected.
  */
-export function generateUserAgent(profile: UAProfile): UserAgent {
-  return createUserAgentGenerator(profile);
+export function generateUserAgent(profile: UAProfile): UserAgentData {
+  const candidates = getTopUserAgentCandidates(profile);
+
+  if (candidates.length === 0) {
+    throw new Error(
+      `No User-Agent candidates found for profile "${profile.name}".`,
+    );
+  }
+
+  const index = generateRandomInteger(0, candidates.length - 1);
+  const candidate = candidates[index];
+
+  if (!candidate) {
+    throw new Error(
+      `Failed to select a User-Agent for profile "${profile.name}".`,
+    );
+  }
+
+  return candidate;
 }

@@ -315,13 +315,13 @@ export async function getFetchUserAgent(
   }
 
   const profile = pickRandomProfile();
-  const userAgent = generateUserAgent(profile);
+  const userAgent = generateUserAgent(profile).userAgent;
 
   const entry = await saveIdentityEntry(
     userAgentCacheFile,
     RequestIdentityType.Fetch,
     {
-      userAgent: userAgent.toString(),
+      userAgent,
       profileName: profile.name,
       createdAt: now,
       expiresAt: now + randomTtlMs(),
