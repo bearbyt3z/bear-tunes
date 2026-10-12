@@ -1,6 +1,6 @@
 {
   "name": "bear-tunes",
-  "version": "0.42.5",
+  "version": "0.42.6",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./dist/main.js",
   "type": "module",
@@ -88,7 +88,7 @@
     "node-fetch": "^3.3.2",
     "playwright": "^1.62.1",
     "prompt-sync": "^4.2.0",
-    "user-agents": "^1.1.675",
+    "user-agents": "^2.1.210",
     "winston": "^3.19.0",
     "zod": "^4.5.4"
   },
@@ -98,7 +98,6 @@
     "@types/jsdom": "^21.1.7",
     "@types/node": "^25.9.5",
     "@types/node-fetch": "^2.6.13",
-    "@types/user-agents": "^1.0.4",
     "@vitest/coverage-v8": "^5.0.1",
     "ajv": "^8.20.0",
     "eslint": "^10.9.1",

@@ -1,4 +1,7 @@
-import UserAgent from 'user-agents';
+import UserAgent, {
+  type Filter,
+  type UserAgentData,
+} from 'user-agents';
 
 import { generateRandomInteger } from '../utils/random.js';
 
@@ -102,23 +105,50 @@ export function pickRandomProfile(): UAProfile {
 }
 
 /**
+ * Converts a User-Agent profile into filters supported by `user-agents`.
+ *
+ * The resulting filters require a candidate to match `profile.match`, belong
+ * to the configured device category, optionally use the configured platform,
+ * and not match any configured exclusion pattern.
+ *
+ * @param profile - User-Agent profile template to convert.
+ * @returns Filters accepted by the `UserAgent` constructor.
+ */
+function toUserAgentFilters(profile: UAProfile): Filter<UserAgentData>[] {
+  const excludedPatterns = profile.exclude ?? [];
+
+  const filters: Filter<UserAgentData>[] = [
+    profile.match,
+    {
+      deviceCategory: profile.filter.deviceCategory,
+    },
+  ];
+
+  if (profile.filter.platform !== undefined) {
+    filters.push({
+      platform: profile.filter.platform,
+    });
+  }
+
+  filters.push(
+    (data: UserAgentData): boolean =>
+      !excludedPatterns.some((pattern) => pattern.test(data.userAgent)),
+  );
+
+  return filters;
+}
+
+/**
  * Creates a reusable User-Agent generator configured for the supplied profile.
  *
- * Applies the profile's match pattern and device filters while excluding
- * candidates that match any of the profile's exclusion patterns.
+ * The generator applies the profile's match pattern and device filters while
+ * excluding candidates that match any of the profile's exclusion patterns.
  *
  * @param profile - User-Agent profile template defining the selection criteria.
  * @returns Configured User-Agent generator.
  */
 export function createUserAgentGenerator(profile: UAProfile): UserAgent {
-  const excludedPatterns = profile.exclude ?? [];
-
-  return new UserAgent([
-    profile.match,
-    profile.filter,
-    (data: { userAgent: string }): boolean =>
-      !excludedPatterns.some((pattern) => pattern.test(data.userAgent)),
-  ]);
+  return new UserAgent(toUserAgentFilters(profile));
 }
 
 /**
