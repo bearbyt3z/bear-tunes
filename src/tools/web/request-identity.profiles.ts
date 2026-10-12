@@ -102,15 +102,15 @@ export function pickRandomProfile(): UAProfile {
 }
 
 /**
- * Generates a User-Agent string matching the profile's selection criteria.
+ * Creates a reusable User-Agent generator configured for the supplied profile.
  *
  * Applies the profile's match pattern and device filters while excluding
  * candidates that match any of the profile's exclusion patterns.
  *
  * @param profile - User-Agent profile template defining the selection criteria.
- * @returns Generated User-Agent string matching the profile criteria.
+ * @returns Configured User-Agent generator.
  */
-export function generateUserAgent(profile: UAProfile): string {
+export function createUserAgentGenerator(profile: UAProfile): UserAgent {
   const excludedPatterns = profile.exclude ?? [];
 
   return new UserAgent([
@@ -118,5 +118,15 @@ export function generateUserAgent(profile: UAProfile): string {
     profile.filter,
     (data: { userAgent: string }): boolean =>
       !excludedPatterns.some((pattern) => pattern.test(data.userAgent)),
-  ]).toString();
+  ]);
+}
+
+/**
+ * Generates a User-Agent string matching the profile's selection criteria.
+ *
+ * @param profile - User-Agent profile template defining the selection criteria.
+ * @returns Generated User-Agent string matching the profile criteria.
+ */
+export function generateUserAgent(profile: UAProfile): string {
+  return createUserAgentGenerator(profile).toString();
 }
