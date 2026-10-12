@@ -157,6 +157,6 @@ export function createUserAgentGenerator(profile: UAProfile): UserAgent {
  * @param profile - User-Agent profile template defining the selection criteria.
  * @returns Generated User-Agent string matching the profile criteria.
  */
-export function generateUserAgent(profile: UAProfile): string {
-  return createUserAgentGenerator(profile).toString();
+export function generateUserAgent(profile: UAProfile): UserAgent {
+  return createUserAgentGenerator(profile);
 }

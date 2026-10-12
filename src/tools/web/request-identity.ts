@@ -321,7 +321,7 @@ export async function getFetchUserAgent(
     userAgentCacheFile,
     RequestIdentityType.Fetch,
     {
-      userAgent,
+      userAgent: userAgent.toString(),
       profileName: profile.name,
       createdAt: now,
       expiresAt: now + randomTtlMs(),
