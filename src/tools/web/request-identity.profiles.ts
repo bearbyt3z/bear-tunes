@@ -144,23 +144,47 @@ function toUserAgentFilters(profile: UAProfile): Filter<UserAgentData>[] {
 }
 
 /**
- * Returns the most common User-Agent candidates matching the supplied profile.
+ * Returns the most common unique User-Agent candidates matching the profile.
  *
- * Candidates are ordered by frequency and limited to the specified count.
+ * Candidates are ordered by frequency. Duplicate User-Agent strings are
+ * removed, and the result is limited to the specified number of candidates.
  *
  * @param profile - User-Agent profile defining the selection criteria.
- * @param count - Maximum number of candidates to return. Defaults to
+ * @param count - Maximum number of unique candidates to return. Defaults to
  *   {@link TOP_USER_AGENT_CANDIDATES_COUNT}.
- * @returns Matching User-Agent candidates ordered by frequency.
+ * @returns Unique User-Agent candidates ordered by frequency.
  */
 export function getTopUserAgentCandidates(
   profile: UAProfile,
   count = TOP_USER_AGENT_CANDIDATES_COUNT,
 ): UserAgentData[] {
-  return UserAgent.top(
-    count,
+  if (!Number.isInteger(count) || count < 0) {
+    throw new RangeError('Candidate count must be a non-negative integer.');
+  }
+
+  if (count === 0) {
+    return [];
+  }
+
+  // Passing undefined as count returns all entries matching the supplied filters.
+  const candidates = UserAgent.top(
+    undefined,
     toUserAgentFilters(profile),
   );
+
+  const uniqueCandidates = new Map<string, UserAgentData>();
+
+  for (const candidate of candidates) {
+    if (!uniqueCandidates.has(candidate.userAgent)) {
+      uniqueCandidates.set(candidate.userAgent, candidate);
+    }
+
+    if (uniqueCandidates.size >= count) {
+      break;
+    }
+  }
+
+  return [...uniqueCandidates.values()];
 }
 
 /**
