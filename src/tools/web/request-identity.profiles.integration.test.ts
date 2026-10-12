@@ -82,10 +82,16 @@ describe('getTopUserAgentCandidates integration', () => {
         throw testCase.error;
       }
 
-      const { profile, candidates, candidateCount } = testCase;
+      const {
+        profile,
+        candidates,
+        candidateCount,
+        uniqueCandidateCount,
+      } = testCase;
 
       expect(candidates).toHaveLength(candidateCount);
-      expect(candidates.length).toBeGreaterThan(0);
+      expect(candidateCount).toBeGreaterThan(0);
+      expect(uniqueCandidateCount).toBe(candidateCount);
 
       for (const candidate of candidates) {
         expectCandidateToMatchProfile(candidate, profile);
