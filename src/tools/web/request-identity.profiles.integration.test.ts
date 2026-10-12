@@ -38,10 +38,12 @@ type CandidateTestCase =
     profile: UAProfile;
     candidates: UserAgentData[];
     candidateCount: number;
+    uniqueCandidateCount: number;
   }
   | {
     profile: UAProfile;
     candidateCount: 'unavailable';
+    uniqueCandidateCount: 'unavailable';
     error: unknown;
   };
 
@@ -51,16 +53,21 @@ const candidateTestCases: CandidateTestCase[] = UA_PROFILES.map(
   (profile): CandidateTestCase => {
     try {
       const candidates = getTopUserAgentCandidates(profile);
+      const uniqueCandidateCount = new Set(
+        candidates.map(({ userAgent }) => userAgent),
+      ).size;
 
       return {
         profile,
         candidates,
         candidateCount: candidates.length,
+        uniqueCandidateCount,
       };
     } catch (error: unknown) {
       return {
         profile,
         candidateCount: 'unavailable',
+        uniqueCandidateCount: 'unavailable',
         error,
       };
     }
@@ -69,7 +76,7 @@ const candidateTestCases: CandidateTestCase[] = UA_PROFILES.map(
 
 describe('getTopUserAgentCandidates integration', () => {
   it.each(candidateTestCases)(
-    'returns $candidateCount valid candidates for the "$profile.name" profile',
+    'returns $candidateCount valid candidates ($uniqueCandidateCount unique User-Agent strings) for the "$profile.name" profile',
     (testCase) => {
       if ('error' in testCase) {
         throw testCase.error;
