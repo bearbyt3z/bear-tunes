@@ -1,9 +1,91 @@
 import { describe, expect, it } from 'vitest';
 
+import type { UserAgentData } from 'user-agents';
+
 import {
   generateUserAgent,
+  getTopUserAgentCandidates,
   UA_PROFILES,
 } from './request-identity.profiles.js';
+
+import type { UAProfile } from './request-identity.types.js';
+
+function expectCandidateToMatchProfile(
+  candidate: UserAgentData,
+  profile: UAProfile,
+): void {
+  expect(candidate.userAgent).toBeTruthy();
+  expect(profile.match.test(candidate.userAgent)).toBe(true);
+
+  // `user-agents` does not declare `deviceCategory` in its `UserAgentData` type,
+  // so verify the runtime property with `toHaveProperty` instead of dot notation.
+  expect(candidate).toHaveProperty(
+    'deviceCategory',
+    profile.filter.deviceCategory,
+  );
+
+  if (profile.filter.platform !== undefined) {
+    expect(candidate.platform).toBe(profile.filter.platform);
+  }
+
+  for (const pattern of profile.exclude ?? []) {
+    expect(candidate.userAgent).not.toMatch(pattern);
+  }
+}
+
+type CandidateTestCase =
+  | {
+    profile: UAProfile;
+    candidates: UserAgentData[];
+    candidateCount: number;
+  }
+  | {
+    profile: UAProfile;
+    candidateCount: 'unavailable';
+    error: unknown;
+  };
+
+// Vitest resolves test titles during collection, so candidate counts must
+// be determined before the parameterized tests are registered.
+const candidateTestCases: CandidateTestCase[] = UA_PROFILES.map(
+  (profile): CandidateTestCase => {
+    try {
+      const candidates = getTopUserAgentCandidates(profile);
+
+      return {
+        profile,
+        candidates,
+        candidateCount: candidates.length,
+      };
+    } catch (error: unknown) {
+      return {
+        profile,
+        candidateCount: 'unavailable',
+        error,
+      };
+    }
+  },
+);
+
+describe('getTopUserAgentCandidates integration', () => {
+  it.each(candidateTestCases)(
+    'returns $candidateCount valid candidates for the "$profile.name" profile',
+    (testCase) => {
+      if ('error' in testCase) {
+        throw testCase.error;
+      }
+
+      const { profile, candidates, candidateCount } = testCase;
+
+      expect(candidates).toHaveLength(candidateCount);
+      expect(candidates.length).toBeGreaterThan(0);
+
+      for (const candidate of candidates) {
+        expectCandidateToMatchProfile(candidate, profile);
+      }
+    },
+  );
+});
 
 describe('generateUserAgent integration', () => {
   it.each(UA_PROFILES)(
@@ -11,23 +93,7 @@ describe('generateUserAgent integration', () => {
     (profile) => {
       const candidate = generateUserAgent(profile);
 
-      expect(candidate.userAgent).toBeTruthy();
-      expect(profile.match.test(candidate.userAgent)).toBe(true);
-
-      // `user-agents` does not declare `deviceCategory` in its `UserAgentData` type,
-      // so verify the runtime property with `toHaveProperty` instead of dot notation.
-      expect(candidate).toHaveProperty(
-        'deviceCategory',
-        profile.filter.deviceCategory,
-      );
-
-      if (profile.filter.platform !== undefined) {
-        expect(candidate.platform).toBe(profile.filter.platform);
-      }
-
-      for (const pattern of profile.exclude ?? []) {
-        expect(candidate.userAgent).not.toMatch(pattern);
-      }
+      expectCandidateToMatchProfile(candidate, profile);
     },
   );
 });

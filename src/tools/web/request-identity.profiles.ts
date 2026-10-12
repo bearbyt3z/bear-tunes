@@ -153,7 +153,7 @@ function toUserAgentFilters(profile: UAProfile): Filter<UserAgentData>[] {
  *   {@link TOP_USER_AGENT_CANDIDATES_COUNT}.
  * @returns Matching User-Agent candidates ordered by frequency.
  */
-function getTopUserAgentCandidates(
+export function getTopUserAgentCandidates(
   profile: UAProfile,
   count = TOP_USER_AGENT_CANDIDATES_COUNT,
 ): UserAgentData[] {
