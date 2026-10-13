@@ -456,43 +456,46 @@ describe('getFetchUserAgent', () => {
     });
   });
 
-  it('generates and persists a new User-Agent when the cache entry is missing', async () => {
-    const userAgent = await getFetchUserAgent(cacheFilePath);
-
-    expect(userAgent).toBeTruthy();
-
-    const cache = await readPersistedIdentityCache();
-    const entry = cache.fetch;
-
-    if (!entry) {
-      throw new Error('Expected a persisted fetch identity entry.');
-    }
-
-    const profile = UA_PROFILES.find(
-      ({ name }) => name === entry.profileName,
-    );
-
-    if (!profile) {
-      throw new Error(
-        `Unknown persisted User-Agent profile: "${entry.profileName}".`,
+  it.each(
+    UA_PROFILES.map((profile, index) => ({
+      profile,
+      profileName: profile.name,
+      index,
+    })),
+  )(
+    'generates and persists a User-Agent for the $profileName profile',
+    async ({ profile, index }) => {
+      vi.spyOn(Math, 'random').mockReturnValueOnce(
+        (index + 0.5) / UA_PROFILES.length,
       );
-    }
 
-    expect(entry.userAgent).toBe(userAgent);
-    expect(entry.createdAt).toBe(FIXED_NOW.getTime());
-    expect(entry.expiresAt).toBeGreaterThanOrEqual(
-      FIXED_NOW.getTime() + 7 * MILLISECONDS_PER_DAY,
-    );
-    expect(entry.expiresAt).toBeLessThanOrEqual(
-      FIXED_NOW.getTime() + 14 * MILLISECONDS_PER_DAY,
-    );
+      const userAgent = await getFetchUserAgent(cacheFilePath);
+      const cache = await readPersistedIdentityCache();
+      const entry = cache.fetch;
 
-    expect(profile.match.test(userAgent)).toBe(true);
+      if (!entry) {
+        throw new Error('Expected a persisted fetch identity entry.');
+      }
 
-    for (const pattern of profile.exclude ?? []) {
-      expect(userAgent).not.toMatch(pattern);
-    }
-  });
+      expect(userAgent).toBeTruthy();
+      expect(entry.profileName).toBe(profile.name);
+      expect(entry.userAgent).toBe(userAgent);
+      expect(entry.createdAt).toBe(FIXED_NOW.getTime());
+
+      expect(entry.expiresAt).toBeGreaterThanOrEqual(
+        FIXED_NOW.getTime() + 7 * MILLISECONDS_PER_DAY,
+      );
+      expect(entry.expiresAt).toBeLessThanOrEqual(
+        FIXED_NOW.getTime() + 14 * MILLISECONDS_PER_DAY,
+      );
+
+      expect(profile.match.test(userAgent)).toBe(true);
+
+      for (const pattern of profile.exclude ?? []) {
+        expect(userAgent).not.toMatch(pattern);
+      }
+    },
+  );
 
   it('regenerates an expired User-Agent and preserves the browser cache entry', async () => {
     const expiredFetchEntry = createFetchIdentityCacheEntry({
