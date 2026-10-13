@@ -225,6 +225,23 @@ describe('getCachedBrowserUserAgent', () => {
       code: 'ENOTDIR',
     });
   });
+
+  it('propagates read errors that do not have a string error code', async () => {
+    const error = new Error('Unexpected read failure');
+    const readFileSpy = vi
+      .spyOn(nodeFs.promises, 'readFile')
+      .mockRejectedValueOnce(error);
+
+    try {
+      await expect(
+        getCachedBrowserUserAgent(cacheFilePath),
+      ).rejects.toBe(error);
+
+      expect(readFileSpy).toHaveBeenCalledWith(cacheFilePath, 'utf8');
+    } finally {
+      readFileSpy.mockRestore();
+    }
+  });
 });
 
 describe('getCachedBrowserNavigatorContext', () => {
