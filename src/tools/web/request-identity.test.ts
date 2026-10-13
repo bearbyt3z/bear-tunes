@@ -381,6 +381,62 @@ describe('saveBrowserNavigatorContext', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('propagates a directory creation error', async () => {
+    const error = new Error('Unable to create cache directory');
+    const mkdirSpy = vi
+      .spyOn(nodeFs.promises, 'mkdir')
+      .mockRejectedValueOnce(error);
+
+    try {
+      await expect(
+        saveBrowserNavigatorContext(
+          cacheFilePath,
+          createBrowserNavigatorContext(),
+          BrowserUserAgentSource.HeadfulObserved,
+        ),
+      ).rejects.toBe(error);
+
+      expect(mkdirSpy).toHaveBeenCalledWith(tempDirectory, {
+        recursive: true,
+      });
+    } finally {
+      mkdirSpy.mockRestore();
+    }
+  });
+
+  it('preserves the write error when temporary-file cleanup also fails', async () => {
+    const writeError = new Error('Unable to write temporary file');
+    const cleanupError = new Error('Unable to remove temporary file');
+
+    const writeFileSpy = vi
+      .spyOn(nodeFs.promises, 'writeFile')
+      .mockRejectedValueOnce(writeError);
+
+    const cleanupSpy = vi
+      .spyOn(nodeFs.promises, 'rm')
+      .mockRejectedValueOnce(cleanupError);
+
+    try {
+      await expect(
+        saveBrowserNavigatorContext(
+          cacheFilePath,
+          createBrowserNavigatorContext(),
+          BrowserUserAgentSource.HeadfulObserved,
+        ),
+      ).rejects.toBe(writeError);
+
+      expect(writeFileSpy).toHaveBeenCalledTimes(1);
+
+      expect(cleanupSpy).toHaveBeenCalledWith(
+        expect.stringContaining('.tmp-identity-cache.json-'),
+        { force: true },
+      );
+    } finally {
+      cleanupSpy.mockRestore();
+      writeFileSpy.mockRestore();
+    }
+  });
+
   it('removes the temporary file and propagates an atomic rename error', async () => {
     const context: BrowserNavigatorContext = {
       userAgent: CACHED_USER_AGENT,
