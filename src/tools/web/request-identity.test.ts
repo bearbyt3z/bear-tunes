@@ -70,16 +70,14 @@ afterEach(async () => {
 });
 
 function createBrowserCacheEntry(
-  expiresAt: number,
+  overrides: Partial<BrowserIdentityCache> = {},
 ): BrowserIdentityCache {
   return {
-    userAgent: CACHED_USER_AGENT,
-    platform: 'Win32',
-    language: 'en-US',
-    vendor: 'Google Inc.',
-    source: BrowserUserAgentSource.HeadfulObserved,
-    createdAt: Date.now() - 60_000,
-    expiresAt,
+    ...createBrowserNavigatorContext(overrides),
+    source:
+      overrides.source ?? BrowserUserAgentSource.HeadfulObserved,
+    createdAt: overrides.createdAt ?? Date.now() - 60_000,
+    expiresAt: overrides.expiresAt ?? Date.now() + 60_000,
   };
 }
 
@@ -144,7 +142,9 @@ function createRuntimeNavigatorContext(
 describe('getCachedBrowserUserAgent', () => {
   it('returns the User-Agent from a valid, non-expired browser cache entry', async () => {
     await writeIdentityCache({
-      browser: createBrowserCacheEntry(Date.now() + 60_000),
+      browser: createBrowserCacheEntry({
+        expiresAt: Date.now() + 60_000,
+      }),
     });
 
     await expect(
@@ -160,7 +160,9 @@ describe('getCachedBrowserUserAgent', () => {
 
   it('returns undefined when the browser cache entry has expired', async () => {
     await writeIdentityCache({
-      browser: createBrowserCacheEntry(Date.now()),
+      browser: createBrowserCacheEntry({
+        expiresAt: Date.now() - 1,
+      }),
     });
 
     await expect(
@@ -214,7 +216,9 @@ describe('getCachedBrowserUserAgent', () => {
 describe('getCachedBrowserNavigatorContext', () => {
   it('returns the navigator context from a valid browser cache entry', async () => {
     await writeIdentityCache({
-      browser: createBrowserCacheEntry(Date.now() + 60_000),
+      browser: createBrowserCacheEntry({
+        expiresAt: Date.now() + 60_000,
+      }),
     });
 
     await expect(
@@ -237,7 +241,9 @@ describe('getCachedBrowserNavigatorContext', () => {
 
   it('returns undefined when the browser cache entry has expired', async () => {
     await writeIdentityCache({
-      browser: createBrowserCacheEntry(Date.now()),
+      browser: createBrowserCacheEntry({
+        expiresAt: Date.now() - 1,
+      }),
     });
 
     await expect(
@@ -294,10 +300,10 @@ describe('saveBrowserNavigatorContext', () => {
       expiresAt: FIXED_NOW.getTime() + 60_000,
     };
 
-    const existingBrowserEntry: BrowserIdentityCache = {
-      ...createBrowserCacheEntry(FIXED_NOW.getTime() + 60_000),
+    const existingBrowserEntry = createBrowserCacheEntry({
+      expiresAt: FIXED_NOW.getTime() + 60_000,
       userAgent: 'Mozilla/5.0 Existing Browser Client',
-    };
+    });
 
     await writeIdentityCache({
       fetch: existingFetchEntry,
@@ -490,9 +496,9 @@ describe('getFetchUserAgent', () => {
       expiresAt: FIXED_NOW.getTime(),
     };
 
-    const browserEntry = createBrowserCacheEntry(
-      FIXED_NOW.getTime() + MILLISECONDS_PER_DAY,
-    );
+    const browserEntry = createBrowserCacheEntry({
+      expiresAt: FIXED_NOW.getTime() + MILLISECONDS_PER_DAY,
+    });
 
     await writeIdentityCache({
       fetch: expiredFetchEntry,
@@ -668,7 +674,9 @@ describe('normalizeBrowserUserAgent', () => {
 describe('resolveBrowserNavigatorContext', () => {
   it('returns the cached context when preferCached is true and a valid entry exists', async () => {
     await writeIdentityCache({
-      browser: createBrowserCacheEntry(Date.now() + 60_000),
+      browser: createBrowserCacheEntry({
+        expiresAt: Date.now() + 60_000,
+      }),
     });
 
     const runtimeNavigator = createRuntimeNavigatorContext();
@@ -689,7 +697,9 @@ describe('resolveBrowserNavigatorContext', () => {
 
   it('uses the normalized runtime context when preferCached is false', async () => {
     await writeIdentityCache({
-      browser: createBrowserCacheEntry(Date.now() + 60_000),
+      browser: createBrowserCacheEntry({
+        expiresAt: Date.now() + 60_000,
+      }),
     });
 
     const runtimeNavigator = createRuntimeNavigatorContext();
@@ -729,7 +739,9 @@ describe('resolveBrowserNavigatorContext', () => {
 
   it('uses the normalized runtime context when the preferred cache entry has expired', async () => {
     await writeIdentityCache({
-      browser: createBrowserCacheEntry(Date.now()),
+      browser: createBrowserCacheEntry({
+        expiresAt: Date.now(),
+      }),
     });
 
     const runtimeNavigator = createRuntimeNavigatorContext();
