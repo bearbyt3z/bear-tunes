@@ -543,6 +543,40 @@ describe('getFetchUserAgent', () => {
     expect(cache.fetch?.userAgent).toBe(userAgent);
     expect(cache.fetch?.createdAt).toBe(FIXED_NOW.getTime());
   });
+
+  it('recovers from a fetch cache entry that fails schema validation and persists a new identity', async () => {
+    await fs.writeFile(
+      cacheFilePath,
+      JSON.stringify({
+        fetch: {
+          userAgent: '',
+          profileName: '',
+          createdAt: -1,
+          expiresAt: 0,
+        },
+      }),
+      'utf8',
+    );
+
+    const userAgent = await getFetchUserAgent(cacheFilePath);
+
+    expect(userAgent).toBeTruthy();
+
+    const cache = await readPersistedIdentityCache();
+    const entry = cache.fetch;
+
+    if (!entry) {
+      throw new Error('Expected a regenerated fetch identity entry.');
+    }
+
+    expect(entry.userAgent).toBe(userAgent);
+    expect(entry.profileName).not.toBe('');
+    expect(UA_PROFILES.map((profile) => profile.name)).toContain(
+      entry.profileName,
+    );
+    expect(entry.createdAt).toBe(FIXED_NOW.getTime());
+    expect(entry.expiresAt).toBeGreaterThan(FIXED_NOW.getTime());
+  });
 });
 
 describe('getFetchClientProfile', () => {
