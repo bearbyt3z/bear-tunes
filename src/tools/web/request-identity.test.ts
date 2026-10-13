@@ -781,6 +781,12 @@ describe('normalizeBrowserUserAgent', () => {
     );
   });
 
+  it('leaves a three-part Chrome version unchanged', () => {
+    const userAgent = 'Mozilla/5.0 Chrome/124.2.3 Safari/537.36';
+
+    expect(normalizeBrowserUserAgent(userAgent)).toBe(userAgent);
+  });
+
   it('leaves a Firefox User-Agent unchanged', () => {
     const userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0';
