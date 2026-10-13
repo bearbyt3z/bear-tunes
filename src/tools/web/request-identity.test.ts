@@ -306,6 +306,40 @@ describe('saveBrowserNavigatorContext', () => {
     },
   );
 
+  it.each([
+    { randomValue: 0, expectedDays: 7 },
+    { randomValue: 1 - Number.EPSILON, expectedDays: 14 },
+  ])(
+    'uses the inclusive $expectedDays-day TTL boundary when Math.random() returns $randomValue',
+    async ({ randomValue, expectedDays }) => {
+      const randomSpy = vi
+        .spyOn(Math, 'random')
+        .mockReturnValueOnce(randomValue);
+
+      try {
+        await saveBrowserNavigatorContext(
+          cacheFilePath,
+          createBrowserNavigatorContext(),
+          BrowserUserAgentSource.HeadfulObserved,
+        );
+
+        const cache = await readPersistedIdentityCache();
+        const entry = cache.browser;
+
+        if (!entry) {
+          throw new Error('Expected a persisted browser identity entry.');
+        }
+
+        expect(entry.createdAt).toBe(FIXED_NOW.getTime());
+        expect(entry.expiresAt).toBe(
+          FIXED_NOW.getTime() + expectedDays * MILLISECONDS_PER_DAY,
+        );
+      } finally {
+        randomSpy.mockRestore();
+      }
+    },
+  );
+
   it('replaces the browser entry while preserving the existing fetch entry', async () => {
     const existingFetchEntry = createFetchIdentityCacheEntry({
       userAgent: 'Mozilla/5.0 Existing Fetch Client',
