@@ -81,6 +81,20 @@ function createBrowserCacheEntry(
   };
 }
 
+function createFetchIdentityCacheEntry(
+  overrides: Partial<FetchIdentityCache> = {},
+): FetchIdentityCache {
+  return {
+    userAgent:
+      overrides.userAgent ?? 'Mozilla/5.0 Cached Fetch Client',
+    profileName: overrides.profileName ?? 'chrome-windows',
+    createdAt:
+      overrides.createdAt ?? FIXED_NOW.getTime() - 60_000,
+    expiresAt:
+      overrides.expiresAt ?? FIXED_NOW.getTime() + 60_000,
+  };
+}
+
 async function writeIdentityCache(cache: IdentityCache): Promise<void> {
   await fs.writeFile(cacheFilePath, JSON.stringify(cache), 'utf8');
 }
@@ -293,12 +307,9 @@ describe('saveBrowserNavigatorContext', () => {
   );
 
   it('replaces the browser entry while preserving the existing fetch entry', async () => {
-    const existingFetchEntry: FetchIdentityCache = {
+    const existingFetchEntry = createFetchIdentityCacheEntry({
       userAgent: 'Mozilla/5.0 Existing Fetch Client',
-      profileName: 'chrome-windows',
-      createdAt: FIXED_NOW.getTime() - 60_000,
-      expiresAt: FIXED_NOW.getTime() + 60_000,
-    };
+    });
 
     const existingBrowserEntry = createBrowserCacheEntry({
       expiresAt: FIXED_NOW.getTime() + 60_000,
@@ -432,12 +443,7 @@ describe('saveBrowserNavigatorContext', () => {
 
 describe('getFetchUserAgent', () => {
   it('returns the cached User-Agent when a valid fetch entry exists', async () => {
-    const cachedEntry: FetchIdentityCache = {
-      userAgent: 'Mozilla/5.0 Cached Fetch Client',
-      profileName: 'chrome-windows',
-      createdAt: FIXED_NOW.getTime() - 60_000,
-      expiresAt: FIXED_NOW.getTime() + 60_000,
-    };
+    const cachedEntry = createFetchIdentityCacheEntry();
 
     await writeIdentityCache({ fetch: cachedEntry });
 
@@ -489,12 +495,11 @@ describe('getFetchUserAgent', () => {
   });
 
   it('regenerates an expired User-Agent and preserves the browser cache entry', async () => {
-    const expiredFetchEntry: FetchIdentityCache = {
+    const expiredFetchEntry = createFetchIdentityCacheEntry({
       userAgent: 'Expired Cached Fetch Client',
-      profileName: 'chrome-windows',
       createdAt: FIXED_NOW.getTime() - 2 * MILLISECONDS_PER_DAY,
       expiresAt: FIXED_NOW.getTime(),
-    };
+    });
 
     const browserEntry = createBrowserCacheEntry({
       expiresAt: FIXED_NOW.getTime() + MILLISECONDS_PER_DAY,
@@ -539,12 +544,7 @@ describe('getFetchUserAgent', () => {
 
 describe('getFetchClientProfile', () => {
   it('returns the canonical client profile using the cached fetch User-Agent', async () => {
-    const cachedEntry: FetchIdentityCache = {
-      userAgent: 'Mozilla/5.0 Cached Fetch Client',
-      profileName: 'chrome-windows',
-      createdAt: FIXED_NOW.getTime() - 60_000,
-      expiresAt: FIXED_NOW.getTime() + 60_000,
-    };
+    const cachedEntry = createFetchIdentityCacheEntry();
 
     await writeIdentityCache({ fetch: cachedEntry });
 
@@ -804,12 +804,9 @@ describe('saveAcceptedBrowserNavigatorContext', () => {
   });
 
   it('preserves the existing fetch identity when saving the accepted browser context', async () => {
-    const fetchEntry: FetchIdentityCache = {
+    const fetchEntry = createFetchIdentityCacheEntry({
       userAgent: 'Mozilla/5.0 Existing Fetch Client',
-      profileName: 'chrome-windows',
-      createdAt: FIXED_NOW.getTime() - 60_000,
-      expiresAt: FIXED_NOW.getTime() + 60_000,
-    };
+    });
 
     await writeIdentityCache({ fetch: fetchEntry });
 
