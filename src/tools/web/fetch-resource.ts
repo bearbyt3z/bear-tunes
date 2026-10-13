@@ -75,7 +75,10 @@ export async function fetchResource(
       return Promise.resolve(body.toString('utf8'));
     },
     json(): Promise<unknown> {
-      return Promise.resolve(JSON.parse(body.toString('utf8')));
+      return Promise.resolve().then(() => {
+        const parsed: unknown = JSON.parse(body.toString('utf8'));
+        return parsed;
+      });
     },
     arrayBuffer(): Promise<ArrayBuffer> {
       return Promise.resolve(toArrayBuffer(body));
