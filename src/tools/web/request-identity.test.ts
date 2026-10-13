@@ -39,6 +39,12 @@ const FIXED_NOW = new Date('2026-10-13T12:00:00.000Z');
 const CACHED_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36';
 
+const HEADLESS_CHROME_USER_AGENT =
+  'Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/131.0.6778.86 Safari/537.36';
+
+const HEADLESS_CHROME_USER_AGENT_WITH_WEBKIT =
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/131.0.6778.86 Safari/537.36';
+
 let tempDirectory = '';
 let cacheFilePath = '';
 
@@ -110,6 +116,29 @@ function createFetchClientProfile(): FetchClientProfile {
       upgradeInsecureRequests: '1',
     },
   };
+}
+
+function createBrowserNavigatorContext(
+  overrides: Partial<BrowserNavigatorContext> = {},
+): BrowserNavigatorContext {
+  return {
+    userAgent: overrides.userAgent ?? CACHED_USER_AGENT,
+    platform: overrides.platform ?? 'Win32',
+    language: overrides.language ?? 'en-US',
+    vendor: overrides.vendor ?? 'Google Inc.',
+  };
+}
+
+function createRuntimeNavigatorContext(
+  overrides: Partial<BrowserNavigatorContext> = {},
+): BrowserNavigatorContext {
+  return createBrowserNavigatorContext({
+    userAgent: HEADLESS_CHROME_USER_AGENT,
+    platform: 'Linux x86_64',
+    language: 'pl-PL',
+    vendor: 'Runtime Vendor',
+    ...overrides,
+  });
 }
 
 describe('getCachedBrowserUserAgent', () => {
@@ -603,8 +632,7 @@ describe('buildImageDownloadHeaders', () => {
 
 describe('normalizeBrowserUserAgent', () => {
   it('replaces HeadlessChrome and normalizes the Chrome version', () => {
-    const userAgent =
-      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/131.0.6778.86 Safari/537.36';
+    const userAgent = HEADLESS_CHROME_USER_AGENT_WITH_WEBKIT;
 
     expect(normalizeBrowserUserAgent(userAgent)).toBe(
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -643,13 +671,7 @@ describe('resolveBrowserNavigatorContext', () => {
       browser: createBrowserCacheEntry(Date.now() + 60_000),
     });
 
-    const runtimeNavigator: BrowserNavigatorContext = {
-      userAgent:
-        'Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/131.0.6778.86 Safari/537.36',
-      platform: 'Linux x86_64',
-      language: 'pl-PL',
-      vendor: 'Runtime Vendor',
-    };
+    const runtimeNavigator = createRuntimeNavigatorContext();
 
     await expect(
       resolveBrowserNavigatorContext(
@@ -670,13 +692,7 @@ describe('resolveBrowserNavigatorContext', () => {
       browser: createBrowserCacheEntry(Date.now() + 60_000),
     });
 
-    const runtimeNavigator: BrowserNavigatorContext = {
-      userAgent:
-        'Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/131.0.6778.86 Safari/537.36',
-      platform: 'Linux x86_64',
-      language: 'pl-PL',
-      vendor: 'Runtime Vendor',
-    };
+    const runtimeNavigator = createRuntimeNavigatorContext();
 
     await expect(
       resolveBrowserNavigatorContext(
@@ -694,13 +710,7 @@ describe('resolveBrowserNavigatorContext', () => {
   });
 
   it('uses the normalized runtime context when the preferred cache entry is missing', async () => {
-    const runtimeNavigator: BrowserNavigatorContext = {
-      userAgent:
-        'Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/131.0.6778.86 Safari/537.36',
-      platform: 'Linux x86_64',
-      language: 'pl-PL',
-      vendor: 'Runtime Vendor',
-    };
+    const runtimeNavigator = createRuntimeNavigatorContext();
 
     await expect(
       resolveBrowserNavigatorContext(
@@ -722,13 +732,7 @@ describe('resolveBrowserNavigatorContext', () => {
       browser: createBrowserCacheEntry(Date.now()),
     });
 
-    const runtimeNavigator: BrowserNavigatorContext = {
-      userAgent:
-        'Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/131.0.6778.86 Safari/537.36',
-      platform: 'Linux x86_64',
-      language: 'pl-PL',
-      vendor: 'Runtime Vendor',
-    };
+    const runtimeNavigator = createRuntimeNavigatorContext();
 
     await expect(
       resolveBrowserNavigatorContext(
@@ -748,13 +752,10 @@ describe('resolveBrowserNavigatorContext', () => {
 
 describe('saveAcceptedBrowserNavigatorContext', () => {
   it('normalizes and persists the accepted navigator context', async () => {
-    const runtimeNavigator: BrowserNavigatorContext = {
-      userAgent:
-        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/131.0.6778.86 Safari/537.36',
-      platform: 'Linux x86_64',
-      language: 'pl-PL',
+    const runtimeNavigator = createRuntimeNavigatorContext({
+      userAgent: HEADLESS_CHROME_USER_AGENT_WITH_WEBKIT,
       vendor: 'Google Inc.',
-    };
+    });
 
     const expectedContext: BrowserNavigatorContext = {
       ...runtimeNavigator,
@@ -800,13 +801,9 @@ describe('saveAcceptedBrowserNavigatorContext', () => {
 
     await writeIdentityCache({ fetch: fetchEntry });
 
-    const runtimeNavigator: BrowserNavigatorContext = {
-      userAgent:
-        'Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/131.0.6778.86 Safari/537.36',
-      platform: 'Linux x86_64',
-      language: 'pl-PL',
+    const runtimeNavigator = createRuntimeNavigatorContext({
       vendor: 'Google Inc.',
-    };
+    });
 
     await saveAcceptedBrowserNavigatorContext(
       runtimeNavigator,
