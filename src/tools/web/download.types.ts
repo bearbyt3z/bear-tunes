@@ -11,8 +11,15 @@ export interface DownloadFileOptions {
   /**
    * Optional response validator executed after a successful response is received
    * and before writing the response body to disk.
+   *
+   * The validator may be asynchronous, but must not read, consume, or cancel
+   * response.body because the body is streamed to the output file after
+   * validation succeeds.
    */
-  validateResponse?: (response: Response, outputFilePath: string) => void;
+  validateResponse?: (
+    response: Response,
+    outputFilePath: string,
+  ) => void | Promise<void>;
 }
 
 /**

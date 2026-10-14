@@ -55,6 +55,14 @@ function resolveDownloadFilename(url: URL, filename?: string): string {
   return filename;
 }
 
+async function cancelResponseBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // Preserve the original HTTP or validation error.
+  }
+}
+
 /**
  * Downloads a remote file to the local filesystem with `fetch()`.
  *
@@ -81,15 +89,26 @@ export async function downloadFile(
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to download file: HTTP ${response.status} for "${url.toString()}"`);
-  }
+    await cancelResponseBody(response);
 
-  if (options.validateResponse) {
-    options.validateResponse(response, resolvedFilePath);
+    throw new Error(
+      `Failed to download file: HTTP ${response.status} for "${url.toString()}"`,
+    );
   }
 
   if (!response.body) {
-    throw new Error(`Failed to download a file: ${resolvedFilePath} (response body is null)`);
+    throw new Error(
+      `Failed to download a file: ${resolvedFilePath} (response body is null)`,
+    );
+  }
+
+  if (options.validateResponse) {
+    try {
+      await options.validateResponse(response, resolvedFilePath);
+    } catch (error) {
+      await cancelResponseBody(response);
+      throw error;
+    }
   }
 
   const readable = bodyToReadable(response.body);
