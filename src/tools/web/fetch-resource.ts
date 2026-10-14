@@ -24,7 +24,9 @@ function toHeaders(source: Record<string, string | string[] | undefined>): Heade
     }
 
     if (Array.isArray(value)) {
-      headers.set(key, value.join(', '));
+      for (const headerValue of value) {
+        headers.append(key, headerValue);
+      }
     }
   }
 
