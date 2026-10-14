@@ -10,15 +10,60 @@ import { replaceFilenameExtension } from '../utils/path.js';
 import type { DownloadImageOptions } from './download.types.js';
 
 /**
+ * Normalizes a filename extension to its canonical representation.
+ *
+ * Converts the extension to lowercase and maps recognized aliases to
+ * their canonical extensions.
+ *
+ * @param extension - Filename extension to normalize.
+ * @returns Normalized filename extension.
+ */
+function normalizeImageExtension(extension: string): string {
+  const normalizedExtension = extension.toLowerCase();
+
+  switch (normalizedExtension) {
+    case '.jpeg':
+    case '.jpe':
+    case '.jif':
+    case '.jfif':
+    case '.pjpeg':
+    case '.pjp':
+      return '.jpg';
+    default:
+      return normalizedExtension;
+  }
+}
+
+/**
+ * Resolves the canonical filename extension for downloaded artwork.
+ *
+ * Recognized extensions are normalized to their canonical representation.
+ * Unsupported or missing extensions use `.unrecognized`.
+ *
+ * @param artworkUrl - Source artwork URL.
+ * @returns Canonical artwork extension.
+ */
+function resolveArtworkExtension(artworkUrl: URL): string {
+  const sourceExtension = normalizeImageExtension(
+    // URL.pathname always uses POSIX-style separators, so use path.posix helpers
+    // instead of platform-dependent path parsing.
+    path.posix.extname(artworkUrl.pathname),
+  );
+
+  return getExpectedImageMimeType(`artwork${sourceExtension}`)
+    ? sourceExtension
+    : '.unrecognized';
+}
+
+/**
  * Returns the expected image MIME type derived from an output file path.
  *
  * @param outputFilePath - Output file path whose extension is used for MIME type resolution.
  * @returns Expected image MIME type or `undefined` when the extension is not recognized.
  */
 function getExpectedImageMimeType(outputFilePath: string): string | undefined {
-  switch (path.extname(outputFilePath).toLowerCase()) {
+  switch (normalizeImageExtension(path.extname(outputFilePath))) {
     case '.jpg':
-    case '.jpeg':
       return 'image/jpeg';
     case '.png':
       return 'image/png';
@@ -132,9 +177,7 @@ export async function downloadAndSaveArtwork(
     return;
   }
 
-  // URL.pathname always uses POSIX-style separators, so use path.posix helpers
-  // instead of platform-dependent path parsing.
-  const artworkExtension = path.posix.extname(artworkUrl.pathname) || '.unrecognized';
+  const artworkExtension = resolveArtworkExtension(artworkUrl);
   const artworkPath = replaceFilenameExtension(trackPath, artworkExtension);
 
   await downloadImage(artworkUrl, userAgentCacheFile, {
