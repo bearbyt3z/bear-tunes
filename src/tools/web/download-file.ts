@@ -44,9 +44,10 @@ function resolveDownloadFilename(url: URL, filename?: string): string {
     return urlFilename;
   }
 
-  // Use POSIX path helpers here as well, because the derived source name
-  // still comes from a URL path rather than a native filesystem path.
-  if (!path.posix.extname(filename)) {
+  // Check the output path using native path rules, since it may contain
+  // platform-specific separators. The source filename comes from a URL,
+  // so extract its extension using POSIX path rules.
+  if (!path.extname(filename)) {
     const extension = path.posix.extname(urlFilename);
     return extension ? `${filename}${extension}` : filename;
   }
