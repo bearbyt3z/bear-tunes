@@ -1,6 +1,81 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { validateImageMimeType } from './download-image.js';
+import { downloadImage, validateImageMimeType } from './download-image.js';
+
+import type { DownloadFileOptions } from './download.types.js';
+import type { FetchClientProfile } from './request-identity.types.js';
+
+const {
+  downloadFileMock,
+  getFetchClientProfileMock,
+  buildImageDownloadHeadersMock,
+} = vi.hoisted(() => ({
+  downloadFileMock: vi.fn<
+    (url: URL, options: DownloadFileOptions) => Promise<string>
+  >(),
+  getFetchClientProfileMock: vi.fn<
+    (userAgentCacheFile: string) => Promise<FetchClientProfile>
+  >(),
+  buildImageDownloadHeadersMock: vi.fn<
+    (
+      profile: FetchClientProfile,
+      referer?: URL,
+    ) => Record<string, string>
+  >(),
+}));
+
+vi.mock('./download-file.js', () => ({
+  downloadFile: downloadFileMock,
+}));
+
+vi.mock('./request-identity.js', () => ({
+  getFetchClientProfile: getFetchClientProfileMock,
+  buildImageDownloadHeaders: buildImageDownloadHeadersMock,
+}));
+
+const IMAGE_URL = new URL('https://example.test/images/cover.jpg');
+const USER_AGENT_CACHE_FILE = '/cache/request-identity.json';
+const DEFAULT_OUTPUT_FILE_PATH = '/downloads/cover.jpg';
+
+const FETCH_PROFILE: FetchClientProfile = {
+  identity: {
+    userAgent: 'TestBrowser/123.0',
+    locale: 'pl-PL',
+    timezoneId: 'Europe/Warsaw',
+  },
+  device: {
+    viewport: { width: 1280, height: 720 },
+    screen: { width: 1920, height: 1080 },
+    deviceScaleFactor: 1,
+    isMobile: false,
+    hasTouch: false,
+  },
+  request: {
+    accept: 'application/json',
+    acceptLanguage: 'pl-PL,pl;q=0.9',
+    acceptEncoding: 'gzip, deflate',
+    connection: 'keep-alive',
+    upgradeInsecureRequests: '1',
+  },
+};
+
+const IMAGE_REQUEST_HEADERS: Record<string, string> = {
+  'User-Agent': FETCH_PROFILE.identity.userAgent,
+  'Accept': 'image/jpeg,image/png,image/gif,image/svg+xml,image/*;q=0.8,*/*;q=0.5',
+  'Accept-Language': FETCH_PROFILE.request.acceptLanguage,
+  'Accept-Encoding': FETCH_PROFILE.request.acceptEncoding,
+  'Connection': FETCH_PROFILE.request.connection,
+};
+
+beforeEach(() => {
+  downloadFileMock.mockReset();
+  getFetchClientProfileMock.mockReset();
+  buildImageDownloadHeadersMock.mockReset();
+
+  getFetchClientProfileMock.mockResolvedValue(FETCH_PROFILE);
+  buildImageDownloadHeadersMock.mockReturnValue(IMAGE_REQUEST_HEADERS);
+  downloadFileMock.mockResolvedValue(DEFAULT_OUTPUT_FILE_PATH);
+});
 
 describe('validateImageMimeType', () => {
   describe('supported image extensions', () => {
@@ -116,5 +191,102 @@ describe('validateImageMimeType', () => {
         'Expected "image/png", but server responded with "image/jpeg".',
       );
     });
+  });
+});
+
+describe('downloadImage', () => {
+  it('retrieves the client profile and delegates the download with MIME validation', async () => {
+    const result = await downloadImage(
+      IMAGE_URL,
+      USER_AGENT_CACHE_FILE,
+    );
+
+    expect(getFetchClientProfileMock).toHaveBeenCalledExactlyOnceWith(
+      USER_AGENT_CACHE_FILE,
+    );
+
+    expect(buildImageDownloadHeadersMock).toHaveBeenCalledExactlyOnceWith(
+      FETCH_PROFILE,
+      undefined,
+    );
+
+    expect(downloadFileMock).toHaveBeenCalledExactlyOnceWith(
+      IMAGE_URL,
+      {
+        outputFilePath: undefined,
+        headers: IMAGE_REQUEST_HEADERS,
+        validateResponse: validateImageMimeType,
+      },
+    );
+
+    expect(result).toBe(DEFAULT_OUTPUT_FILE_PATH);
+  });
+
+  it('passes a custom output path and Referer to the download dependencies', async () => {
+    const referer = new URL('https://example.test/albums/album-123');
+    const outputFilePath = '/library/artwork/custom-cover.png';
+
+    downloadFileMock.mockResolvedValueOnce(outputFilePath);
+
+    const result = await downloadImage(
+      IMAGE_URL,
+      USER_AGENT_CACHE_FILE,
+      {
+        outputFilePath,
+        referer,
+      },
+    );
+
+    expect(getFetchClientProfileMock).toHaveBeenCalledExactlyOnceWith(
+      USER_AGENT_CACHE_FILE,
+    );
+
+    expect(buildImageDownloadHeadersMock).toHaveBeenCalledExactlyOnceWith(
+      FETCH_PROFILE,
+      referer,
+    );
+
+    expect(downloadFileMock).toHaveBeenCalledExactlyOnceWith(
+      IMAGE_URL,
+      {
+        outputFilePath,
+        headers: IMAGE_REQUEST_HEADERS,
+        validateResponse: validateImageMimeType,
+      },
+    );
+
+    expect(result).toBe(outputFilePath);
+  });
+
+  it('propagates a client profile retrieval error', async () => {
+    const error = new Error('Failed to load client profile');
+
+    getFetchClientProfileMock.mockRejectedValueOnce(error);
+
+    await expect(
+      downloadImage(IMAGE_URL, USER_AGENT_CACHE_FILE),
+    ).rejects.toBe(error);
+
+    expect(buildImageDownloadHeadersMock).not.toHaveBeenCalled();
+    expect(downloadFileMock).not.toHaveBeenCalled();
+  });
+
+  it('propagates a download error', async () => {
+    const error = new Error('Image download failed');
+
+    downloadFileMock.mockRejectedValueOnce(error);
+
+    await expect(
+      downloadImage(IMAGE_URL, USER_AGENT_CACHE_FILE),
+    ).rejects.toBe(error);
+
+    expect(getFetchClientProfileMock).toHaveBeenCalledExactlyOnceWith(
+      USER_AGENT_CACHE_FILE,
+    );
+
+    expect(buildImageDownloadHeadersMock).toHaveBeenCalledExactlyOnceWith(
+      FETCH_PROFILE,
+      undefined,
+    );
   });
 });
