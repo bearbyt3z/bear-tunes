@@ -1,6 +1,12 @@
+import * as path from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { downloadImage, validateImageMimeType } from './download-image.js';
+import {
+  downloadAndSaveArtwork,
+  downloadImage,
+  validateImageMimeType,
+} from './download-image.js';
 
 import type { DownloadFileOptions } from './download.types.js';
 import type { FetchClientProfile } from './request-identity.types.js';
@@ -288,5 +294,158 @@ describe('downloadImage', () => {
       FETCH_PROFILE,
       undefined,
     );
+  });
+});
+
+describe('downloadAndSaveArtwork', () => {
+  const trackPath = path.join('/music', 'track.flac');
+
+  it('returns undefined without downloading when the artwork URL is missing', async () => {
+    await expect(
+      downloadAndSaveArtwork(
+        trackPath,
+        undefined,
+        undefined,
+        USER_AGENT_CACHE_FILE,
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(getFetchClientProfileMock).not.toHaveBeenCalled();
+    expect(buildImageDownloadHeadersMock).not.toHaveBeenCalled();
+    expect(downloadFileMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { sourceExtension: '.jpg', expectedExtension: '.jpg' },
+    { sourceExtension: '.JPEG', expectedExtension: '.jpg' },
+    { sourceExtension: '.JPE', expectedExtension: '.jpg' },
+    { sourceExtension: '.JIF', expectedExtension: '.jpg' },
+    { sourceExtension: '.JFIF', expectedExtension: '.jpg' },
+    { sourceExtension: '.PJPEG', expectedExtension: '.jpg' },
+    { sourceExtension: '.PJP', expectedExtension: '.jpg' },
+    { sourceExtension: '.PNG', expectedExtension: '.png' },
+    { sourceExtension: '.GIF', expectedExtension: '.gif' },
+    { sourceExtension: '.WebP', expectedExtension: '.webp' },
+    { sourceExtension: '.AVIF', expectedExtension: '.avif' },
+    { sourceExtension: '.SVG', expectedExtension: '.svg' },
+  ])(
+    'normalizes artwork extension $sourceExtension to $expectedExtension',
+    async ({ sourceExtension, expectedExtension }) => {
+      const artworkUrl = new URL(
+        `https://example.test/artwork/cover${sourceExtension}?source=test`,
+      );
+
+      const expectedPath = path.join(
+        path.dirname(trackPath),
+        `track${expectedExtension}`,
+      );
+
+      await expect(
+        downloadAndSaveArtwork(
+          trackPath,
+          artworkUrl,
+          undefined,
+          USER_AGENT_CACHE_FILE,
+        ),
+      ).resolves.toBe(expectedPath);
+
+      expect(downloadFileMock).toHaveBeenCalledExactlyOnceWith(
+        artworkUrl,
+        {
+          outputFilePath: expectedPath,
+          headers: IMAGE_REQUEST_HEADERS,
+          validateResponse: validateImageMimeType,
+        },
+      );
+    },
+  );
+
+  it.each(['', '.bin', '.pdf', '.unrecognized'])(
+    'uses the .unrecognized fallback for source extension "%s"',
+    async (sourceExtension) => {
+      const artworkUrl = new URL(
+        `https://example.test/artwork/cover${sourceExtension}`,
+      );
+
+      const expectedPath = path.join(
+        path.dirname(trackPath),
+        'track.unrecognized',
+      );
+
+      await expect(
+        downloadAndSaveArtwork(
+          trackPath,
+          artworkUrl,
+          undefined,
+          USER_AGENT_CACHE_FILE,
+        ),
+      ).resolves.toBe(expectedPath);
+
+      expect(downloadFileMock).toHaveBeenCalledExactlyOnceWith(
+        artworkUrl,
+        {
+          outputFilePath: expectedPath,
+          headers: IMAGE_REQUEST_HEADERS,
+          validateResponse: validateImageMimeType,
+        },
+      );
+    },
+  );
+
+  it('passes the Referer and user-agent cache path through the download flow', async () => {
+    const artworkUrl = new URL(
+      'https://example.test/artwork/cover.PNG?size=large',
+    );
+    const referer = new URL('https://example.test/albums/album-123');
+
+    const expectedPath = path.join(
+      path.dirname(trackPath),
+      'track.png',
+    );
+
+    await expect(
+      downloadAndSaveArtwork(
+        trackPath,
+        artworkUrl,
+        referer,
+        USER_AGENT_CACHE_FILE,
+      ),
+    ).resolves.toBe(expectedPath);
+
+    expect(getFetchClientProfileMock).toHaveBeenCalledExactlyOnceWith(
+      USER_AGENT_CACHE_FILE,
+    );
+
+    expect(buildImageDownloadHeadersMock).toHaveBeenCalledExactlyOnceWith(
+      FETCH_PROFILE,
+      referer,
+    );
+
+    expect(downloadFileMock).toHaveBeenCalledExactlyOnceWith(
+      artworkUrl,
+      {
+        outputFilePath: expectedPath,
+        headers: IMAGE_REQUEST_HEADERS,
+        validateResponse: validateImageMimeType,
+      },
+    );
+  });
+
+  it('propagates a download error without returning the artwork path', async () => {
+    const artworkUrl = new URL(
+      'https://example.test/artwork/cover.jpg',
+    );
+    const error = new Error('Artwork download failed');
+
+    downloadFileMock.mockRejectedValueOnce(error);
+
+    await expect(
+      downloadAndSaveArtwork(
+        trackPath,
+        artworkUrl,
+        undefined,
+        USER_AGENT_CACHE_FILE,
+      ),
+    ).rejects.toBe(error);
   });
 });
