@@ -406,16 +406,17 @@ The project is organized into focused modules, with the core music-processing fu
 
 ### Project tooling
 
-| Path                                  | Purpose |
-| ------------------------------------- | ------- |
-| `.github/workflows/`                  | Continuous integration configuration. |
-| `eslint.config.mjs`                   | ESLint configuration. |
-| `python-requirements.txt`             | Pins the Python dependencies used by the project-local virtual environment. |
-| `python-requirements-minimal.txt`     | Defines the dependencies for the minimum supported `eyeD3` compatibility environment. |
-| `python-requirements-latest.txt`      | Defines the dependencies for the latest `eyeD3` compatibility environment. |
-| `scripts/eyed3-compatibility/`        | Docker-based compatibility tests for the custom `eyeD3` display plugin replacement. |
-| `eyed3-display-plugin-replacement.py` | Custom replacement for the eyeD3 `display` plugin, used to extract MP3 metadata according to `eyed3-display-plugin-pattern.txt`. |
-| `eyed3-display-plugin-pattern.txt`    | Pattern file defining the MP3 metadata fields extracted by `eyed3-display-plugin-replacement.py`, based on the pattern syntax of the original eyeD3 `display` plugin. |
+| Path                                    | Purpose |
+| --------------------------------------- | ------- |
+| `.github/workflows/`                    | Continuous integration configuration. |
+| `eslint.config.mjs`                     | ESLint configuration. |
+| `python-requirements.txt`               | Pins the Python dependencies used by the project-local virtual environment. |
+| `python-requirements-minimal.txt`       | Defines the dependencies for the minimum supported `eyeD3` compatibility environment. |
+| `python-requirements-latest.txt`        | Defines the dependencies for the latest `eyeD3` compatibility environment. |
+| `scripts/eyed3-compatibility/`          | Docker-based compatibility tests for the custom `eyeD3` display plugin replacement. |
+| `eyed3-display-plugin-replacement.py`   | Custom replacement for the eyeD3 `display` plugin, used to extract MP3 metadata according to `eyed3-display-plugin-pattern.txt`. |
+| `eyed3-display-plugin-pattern.txt`      | Pattern file defining the MP3 metadata fields extracted by `eyed3-display-plugin-replacement.py`, based on the pattern syntax of the original eyeD3 `display` plugin. |
+| `scripts/test-cloudflare-challenge.mjs` | Optional integration test for the Cloudflare challenge browser workflow. |
 
 > [!NOTE]
 > The custom eyeD3 display plugin replacement is used because [the original `display` plugin was removed from eyeD3 v0.9.7](https://github.com/nicfit/eyeD3/pull/585). The replacement preserves the pattern-based extraction approach of the original plugin, while `eyed3-display-plugin-pattern.txt` defines which metadata fields are extracted from MP3 files.
@@ -438,15 +439,42 @@ npm run check
 
 ### Available Scripts
 
-| Command               | Purpose                                                                     |
-| --------------------- | --------------------------------------------------------------------------- |
-| `npm run lint`        | Runs ESLint across the project.                                             |
-| `npm run lint:fix`    | Automatically fixes available ESLint issues.                                |
-| `npm run typecheck`   | Runs TypeScript type checking without generating output.                    |
-| `npm run build`       | Cleans the build output and compiles the TypeScript project.                |
-| `npm run clean`       | Removes the generated `dist/` directory.                                    |
-| `npm run build-start` | Builds the project and starts the CLI.                                      |
-| `npm run check`       | Runs linting, type checking, tests with coverage, and the production build. |
+| Command                             | Purpose                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------- |
+| `npm run lint`                      | Runs ESLint across the project.                                                 |
+| `npm run lint:fix`                  | Automatically fixes available ESLint issues.                                    |
+| `npm run typecheck`                 | Runs TypeScript type checking without generating output.                        |
+| `npm run build`                     | Cleans the build output and compiles the TypeScript project.                    |
+| `npm run clean`                     | Removes the generated `dist/` directory.                                        |
+| `npm run build-start`               | Builds the project and starts the CLI.                                          |
+| `npm run check`                     | Runs linting, type checking, tests with coverage, and the production build.     |
+| `npm run test` / `npm test`         | Runs the unit and integration tests with Vitest.                                |
+| `npm run test:coverage`             | Runs the test suite and collects coverage reports.                              |
+| `npm run test:cloudflare-challenge` | Runs the interactive Cloudflare challenge integration test against ZeroCaptcha. |
+
+### Cloudflare Challenge Integration Test
+
+The project includes an optional integration test that exercises the browser fallback against a real Cloudflare challenge hosted by ZeroCaptcha. Unlike the regular test suite, this test depends on an external service and requires manual interaction when a visible browser session is opened.
+
+Run the test with:
+
+```bash
+npm run test:cloudflare-challenge
+```
+
+The command builds the project before executing the test. It first checks whether the HTTP response contains the `cf-mitigated: challenge` header, then exercises the persistent Playwright browser workflow. If a visible browser opens, complete the challenge manually and leave the browser open until the application finishes processing the page.
+
+The test uses a temporary browser profile and user-agent cache, which are removed after the run.
+
+The manual verification timeout defaults to 90 seconds and can be overridden using `CF_CHALLENGE_MANUAL_TIMEOUT_MS`:
+
+```bash
+CF_CHALLENGE_MANUAL_TIMEOUT_MS=120000 npm run test:cloudflare-challenge
+```
+
+The test reports `PASS` when the expected page is retrieved through the browser workflow, `FAIL` when the workflow does not produce the expected result, and `INCONCLUSIVE` when the initial challenge precondition is not confirmed or the headful attempt is not exercised.
+
+This test is intentionally excluded from `npm run check` and the automated CI workflow because its outcome depends on an external service, the availability of a challenge, and manual verification. It is intended for targeted debugging and regression testing of the browser-based challenge workflow.
 
 ### Continuous Integration
 
