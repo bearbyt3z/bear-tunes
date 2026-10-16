@@ -1,6 +1,6 @@
 {
   "name": "bear-tunes",
-  "version": "0.42.38",
+  "version": "0.42.39",
   "description": "flac/mp3 converter & tagging tool based on Beatport tag style",
   "main": "./dist/main.js",
   "type": "module",
@@ -73,7 +73,8 @@
     "build-start": "npm run build && npm run start",
     "check": "npm run lint && npm run typecheck && npm run test:coverage && npm run build",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:cloudflare-challenge": "npm run build && node scripts/test-cloudflare-challenge.mjs"
   },
   "author": "bearbyt3z",
   "license": "GPL-3.0-or-later",
