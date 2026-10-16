@@ -29,6 +29,20 @@ export default defineConfig(
   },
 
   {
+    // Treat .mjs files as Node.js ES modules explicitly,
+    // because the recommended JavaScript config does not declare Node.js
+    // runtime globals such as `console`.
+    files: ['**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
+  {
     files: ['**/*.ts'],
     extends: [
       ...tseslint.configs.recommendedTypeChecked,
