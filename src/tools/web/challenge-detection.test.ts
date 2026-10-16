@@ -16,7 +16,7 @@ const CHALLENGE_MARKERS = [
   'cf-browser-verification',
   'just a moment',
   '/cdn-cgi/challenge-platform/',
-  'turnstile',
+  'cf-turnstile',
 ];
 
 describe('looksLikeChallengeHtml', () => {
@@ -37,6 +37,19 @@ describe('looksLikeChallengeHtml', () => {
         '<div class="cf-turnstile"></div>',
       ),
     ).toBe(true);
+  });
+
+  it('does not detect a challenge when a regular page mentions Turnstile', () => {
+    const html = `
+    <html>
+      <body>
+        <nav>Cloudflare Turnstile solver</nav>
+        <main>Cloudflare WAF interactive challenge test page</main>
+      </body>
+    </html>
+  `;
+
+    expect(looksLikeChallengeHtml(html)).toBe(false);
   });
 
   it('returns false when HTML contains no challenge markers', () => {

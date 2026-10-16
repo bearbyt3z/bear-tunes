@@ -9,7 +9,7 @@ const CHALLENGE_MARKERS = [
   'cf-browser-verification',
   'just a moment',
   '/cdn-cgi/challenge-platform/',
-  'turnstile',
+  'cf-turnstile',
 ] as const;
 
 /**
