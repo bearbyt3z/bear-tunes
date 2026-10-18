@@ -224,16 +224,16 @@ async function waitForLoadStateWithinDeadline(
  * without scheduling waits beyond the supplied deadline.
  *
  * Each load-state wait is capped at one second, and the settling period is
- * limited by the remaining time.
+ * limited by the remaining time. Returns early if a load state cannot be
+ * reached within the available time.
  *
  * @param page - Playwright page to wait on.
  * @param deadline - Absolute deadline in milliseconds, based on `Date.now()`.
- * @returns Whether both load states and the settling period completed in time.
  */
 async function waitUntilPageSettlesWithinDeadline(
   page: Page,
   deadline: number,
-): Promise<boolean> {
+): Promise<void> {
   const domContentLoaded = await waitForLoadStateWithinDeadline(
     page,
     'domcontentloaded',
@@ -241,7 +241,7 @@ async function waitUntilPageSettlesWithinDeadline(
   );
 
   if (!domContentLoaded) {
-    return false;
+    return;
   }
 
   const loaded = await waitForLoadStateWithinDeadline(
@@ -251,18 +251,16 @@ async function waitUntilPageSettlesWithinDeadline(
   );
 
   if (!loaded) {
-    return false;
+    return;
   }
 
   const remainingMs = deadline - Date.now();
 
   if (remainingMs <= 0) {
-    return false;
+    return;
   }
 
   await page.waitForTimeout(Math.min(1000, remainingMs));
-
-  return Date.now() < deadline;
 }
 
 /**
