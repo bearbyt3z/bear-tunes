@@ -167,11 +167,14 @@ function isResolvedPageState(state: PageChallengeState): boolean {
  * Waits for the current document's load states, then allows a short
  * settling period before inspecting the page state.
  *
+ * The wait for the `load` state is limited to ten seconds. If it times out,
+ * the function continues with the settling period.
+ *
  * @param page - Playwright page to wait on.
  */
 async function waitUntilPageSettles(page: Page): Promise<void> {
   await page.waitForLoadState('domcontentloaded').catch(ignoreError);
-  await page.waitForLoadState('load').catch(ignoreError);
+  await page.waitForLoadState('load', { timeout: 10_000 }).catch(ignoreError);
   await page.waitForTimeout(1000);
 }
 
