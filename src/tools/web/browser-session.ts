@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 
-import { chromium } from 'playwright';
+import { chromium, errors } from 'playwright';
 
 import {
   PageFetchFailureReason,
@@ -176,36 +176,135 @@ async function waitUntilPageSettles(page: Page): Promise<void> {
 }
 
 /**
- * Polls the page until the resolved target page is available or the timeout
+ * Waits for a Playwright load state using the remaining time before a deadline.
+ *
+ * Each wait is capped at one second. A Playwright timeout is treated as an
+ * unsuccessful wait, while other errors are propagated.
+ *
+ * @param page - Playwright page to wait on.
+ * @param state - Page load state to wait for.
+ * @param deadline - Absolute deadline in milliseconds, based on `Date.now()`.
+ * @returns Whether the requested load state was reached without a timeout.
+ */
+async function waitForLoadStateWithinDeadline(
+  page: Page,
+  state: 'domcontentloaded' | 'load',
+  deadline: number,
+): Promise<boolean> {
+  const remainingMs = deadline - Date.now();
+
+  if (remainingMs <= 0) {
+    return false;
+  }
+
+  try {
+    await page.waitForLoadState(state, {
+      timeout: Math.min(1000, remainingMs),
+    });
+
+    return true;
+  } catch (error: unknown) {
+    if (error instanceof errors.TimeoutError) {
+      return false;
+    }
+
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error(
+      'Unexpected non-Error value while waiting for page load state.',
+      { cause: error },
+    );
+  }
+}
+
+/**
+ * Waits for the document's loading states and a short settling period
+ * without scheduling waits beyond the supplied deadline.
+ *
+ * Each load-state wait is capped at one second, and the settling period is
+ * limited by the remaining time.
+ *
+ * @param page - Playwright page to wait on.
+ * @param deadline - Absolute deadline in milliseconds, based on `Date.now()`.
+ * @returns Whether both load states and the settling period completed in time.
+ */
+async function waitUntilPageSettlesWithinDeadline(
+  page: Page,
+  deadline: number,
+): Promise<boolean> {
+  const domContentLoaded = await waitForLoadStateWithinDeadline(
+    page,
+    'domcontentloaded',
+    deadline,
+  );
+
+  if (!domContentLoaded) {
+    return false;
+  }
+
+  const loaded = await waitForLoadStateWithinDeadline(
+    page,
+    'load',
+    deadline,
+  );
+
+  if (!loaded) {
+    return false;
+  }
+
+  const remainingMs = deadline - Date.now();
+
+  if (remainingMs <= 0) {
+    return false;
+  }
+
+  await page.waitForTimeout(Math.min(1000, remainingMs));
+
+  return Date.now() < deadline;
+}
+
+/**
+ * Polls the page until a resolved target page is detected or the timeout
  * is reached.
  *
- * The function returns the first resolved page state. If the timeout expires
- * first, it returns the most recent page state so the caller can decide
- * whether to treat it as a failure.
+ * The function waits for page load states and a short settling period
+ * between state inspections. Individual waits are bounded by the remaining
+ * timeout, but page-state inspection may extend the total elapsed time.
+ *
+ * If the timeout is reached before the target page is resolved, the function
+ * returns the last inspected page state so the caller can determine failure.
  *
  * @param page - Playwright page to observe.
- * @param timeoutMs - Maximum time to wait for the resolved target page.
- * @returns The resolved page state or the last observed page state on timeout.
+ * @param timeoutMs - Maximum requested wait duration in milliseconds.
+ * @returns The resolved page state or the last inspected state on timeout.
  */
 async function waitUntilResolvedPage(
   page: Page,
   timeoutMs: number,
 ): Promise<PageChallengeState> {
-  const startedAt = Date.now();
+  const deadline = Date.now() + Math.max(0, timeoutMs);
+  let state = await safeGetPageState(page);
 
   while (true) {
-    await waitUntilPageSettles(page);
-    const state = await safeGetPageState(page);
+    const remainingMs = deadline - Date.now();
+
+    if (remainingMs <= 0) {
+      return state;
+    }
+
+    await waitUntilPageSettlesWithinDeadline(page, deadline);
+
+    state = await safeGetPageState(page);
 
     if (isResolvedPageState(state)) {
       return state;
     }
 
-    if (Date.now() - startedAt > timeoutMs) {
+    if (Date.now() >= deadline) {
       return state;
     }
-
-    await page.waitForTimeout(1000);
   }
 }
 
