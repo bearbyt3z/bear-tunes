@@ -1038,4 +1038,114 @@ describe('fetchPageWithPersistentProfile', () => {
       mocks.saveAcceptedBrowserNavigatorContext,
     ).not.toHaveBeenCalled();
   });
+
+  it('propagates browser context configuration errors before launching a browser', async () => {
+    const configurationError = new Error(
+      'Unable to get browser context options',
+    );
+
+    mocks.getBrowserContextOptions.mockImplementationOnce(() => {
+      throw configurationError;
+    });
+
+    await expect(
+      fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
+        {
+          browserProfileDir,
+          userAgentCacheFile,
+        },
+      ),
+    ).rejects.toBe(configurationError);
+
+    expect(mocks.getBrowserContextOptions).toHaveBeenCalledTimes(1);
+    expect(mocks.launchPersistentContext).not.toHaveBeenCalled();
+    expect(mocks.resolveBrowserNavigatorContext).not.toHaveBeenCalled();
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('propagates headless browser launch errors', async () => {
+    const launchError = new Error('Unable to launch headless browser');
+
+    mocks.launchPersistentContext.mockRejectedValueOnce(launchError);
+
+    await expect(
+      fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
+        {
+          browserProfileDir,
+          userAgentCacheFile,
+        },
+      ),
+    ).rejects.toBe(launchError);
+
+    expect(mocks.launchPersistentContext).toHaveBeenCalledTimes(1);
+
+    expect(mocks.launchPersistentContext).toHaveBeenCalledWith(
+      browserProfileDir,
+      expect.objectContaining({ headless: true }),
+    );
+
+    expect(mocks.resolveBrowserNavigatorContext).not.toHaveBeenCalled();
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('propagates headful browser launch errors after closing the headless context', async () => {
+    const challengeState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+    };
+
+    const { page: headlessPage } = createMockPage(challengeState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const launchError = new Error('Unable to launch headful browser');
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockRejectedValueOnce(launchError);
+
+    await expect(
+      fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
+        {
+          browserProfileDir,
+          userAgentCacheFile,
+        },
+      ),
+    ).rejects.toBe(launchError);
+
+    expect(mocks.launchPersistentContext).toHaveBeenCalledTimes(2);
+
+    expect(mocks.launchPersistentContext).toHaveBeenNthCalledWith(
+      1,
+      browserProfileDir,
+      expect.objectContaining({ headless: true }),
+    );
+
+    expect(mocks.launchPersistentContext).toHaveBeenNthCalledWith(
+      2,
+      browserProfileDir,
+      expect.objectContaining({ headless: false }),
+    );
+
+    expect(headlessPage.goto).toHaveBeenCalledTimes(1);
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+
+    expect(mocks.resolveBrowserNavigatorContext).toHaveBeenCalledTimes(1);
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+  });
 });
