@@ -938,4 +938,104 @@ describe('fetchPageWithPersistentProfile', () => {
     expect(headlessContext.close).toHaveBeenCalledTimes(1);
     expect(headfulContext.close).toHaveBeenCalledTimes(1);
   });
+
+  it('propagates navigator identity persistence errors and closes both browser contexts', async () => {
+    const challengeState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+    };
+
+    const { page: headlessPage } = createMockPage(challengeState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const { page: headfulPage } = createMockPage();
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    const persistenceError = new Error(
+      'Unable to save accepted navigator context',
+    );
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    mocks.saveAcceptedBrowserNavigatorContext.mockRejectedValueOnce(
+      persistenceError,
+    );
+
+    await expect(
+      fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
+        {
+          browserProfileDir,
+          userAgentCacheFile,
+        },
+      ),
+    ).rejects.toBe(persistenceError);
+
+    expect(mocks.resolveBrowserNavigatorContext).toHaveBeenNthCalledWith(
+      1,
+      NAVIGATOR_CONTEXT,
+      userAgentCacheFile,
+      true,
+    );
+
+    expect(mocks.resolveBrowserNavigatorContext).toHaveBeenNthCalledWith(
+      2,
+      NAVIGATOR_CONTEXT,
+      userAgentCacheFile,
+      false,
+    );
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).toHaveBeenCalledWith(NAVIGATOR_CONTEXT, userAgentCacheFile);
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('propagates navigator identity resolution errors and closes the headless browser context', async () => {
+    const identityError = new Error(
+      'Unable to resolve browser navigator context',
+    );
+
+    const { page } = createMockPage();
+    const { context } = createMockContext(page);
+
+    mocks.launchPersistentContext.mockResolvedValueOnce(context);
+    mocks.resolveBrowserNavigatorContext.mockRejectedValueOnce(identityError);
+
+    await expect(
+      fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
+        {
+          browserProfileDir,
+          userAgentCacheFile,
+        },
+      ),
+    ).rejects.toBe(identityError);
+
+    expect(mocks.resolveBrowserNavigatorContext).toHaveBeenCalledWith(
+      NAVIGATOR_CONTEXT,
+      userAgentCacheFile,
+      true,
+    );
+
+    expect(page.goto).not.toHaveBeenCalled();
+
+    expect(mocks.launchPersistentContext).toHaveBeenCalledTimes(1);
+    expect(context.close).toHaveBeenCalledTimes(1);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+  });
 });
