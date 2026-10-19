@@ -566,4 +566,116 @@ describe('fetchPageWithPersistentProfile', () => {
       mocks.saveAcceptedBrowserNavigatorContext,
     ).not.toHaveBeenCalled();
   });
+
+  it('reports a CAPTCHA failure when a reCAPTCHA frame remains present', async () => {
+    const captchaState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+      hasRecaptchaFrame: true,
+    };
+
+    const { page: headlessPage } = createMockPage(captchaState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const { page: headfulPage } = createMockPage(captchaState);
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    const result = await fetchPageWithPersistentProfile(
+      new URL('https://example.test/page'),
+      {
+        browserProfileDir,
+        userAgentCacheFile,
+        manualTimeoutMs: 500,
+      },
+    );
+
+    expect(result).toEqual({
+      success: false,
+      html: null,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.Captcha,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: false,
+          reason: PageFetchFailureReason.Captcha,
+        },
+      ],
+    });
+
+    expect(headfulPage.waitForTimeout).toHaveBeenCalledWith(500);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a missing resolved-page marker when the response is not a usable HTML document', async () => {
+    const unexpectedPage: Partial<MockPageState> = {
+      title: 'Example Page',
+      html: 'The upstream response did not contain an HTML document.',
+    };
+
+    const { page: headlessPage } = createMockPage(unexpectedPage);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const { page: headfulPage } = createMockPage(unexpectedPage);
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    const result = await fetchPageWithPersistentProfile(
+      new URL('https://example.test/page'),
+      {
+        browserProfileDir,
+        userAgentCacheFile,
+        manualTimeoutMs: 500,
+      },
+    );
+
+    expect(result).toEqual({
+      success: false,
+      html: null,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: false,
+          reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
+        },
+      ],
+    });
+
+    expect(headfulPage.waitForTimeout).toHaveBeenCalledWith(500);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
+  });
 });
