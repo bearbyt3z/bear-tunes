@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   getBrowserContextOptions: vi.fn(),
   resolveBrowserNavigatorContext: vi.fn(),
   saveAcceptedBrowserNavigatorContext: vi.fn(),
+  TimeoutError: class TimeoutError extends Error { },
 }));
 
 vi.mock('playwright', () => ({
@@ -24,7 +25,7 @@ vi.mock('playwright', () => ({
     launchPersistentContext: mocks.launchPersistentContext,
   },
   errors: {
-    TimeoutError: class TimeoutError extends Error { },
+    TimeoutError: mocks.TimeoutError,
   },
 }));
 
@@ -151,6 +152,11 @@ function createMockPage(
       timeout: number;
     },
   ) => Promise<null>,
+  onWaitForLoadState?: (
+    loadState: LoadState,
+    options: { timeout?: number } | undefined,
+    state: MockPageState,
+  ) => Promise<void>,
 ): { page: MockPage; state: MockPageState } {
   const state: MockPageState = {
     url: overrides.url ?? 'https://example.test/page',
@@ -198,8 +204,9 @@ function createMockPage(
       loadState: LoadState,
       options?: { timeout?: number },
     ): Promise<void> => {
-      void loadState;
-      void options;
+      if (onWaitForLoadState !== undefined) {
+        return onWaitForLoadState(loadState, options, state);
+      }
 
       return Promise.resolve();
     }),
@@ -677,5 +684,143 @@ describe('fetchPageWithPersistentProfile', () => {
 
     expect(headlessContext.close).toHaveBeenCalledTimes(1);
     expect(headfulContext.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks page state after a load-state timeout and accepts the resolved page', async () => {
+    const challengeState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+    };
+
+    const { page: headlessPage } = createMockPage(challengeState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const { page: headfulPage } = createMockPage(
+      challengeState,
+      undefined,
+      undefined,
+      async (loadState, options, state) => {
+        if (loadState !== 'domcontentloaded' || options?.timeout === undefined) {
+          return;
+        }
+
+        await vi.advanceTimersByTimeAsync(options.timeout);
+
+        state.title = 'Example Page';
+        state.html = RESOLVED_HTML;
+
+        throw new mocks.TimeoutError('Load-state wait timed out');
+      },
+    );
+
+    const {
+      context: headfulContext,
+      cdpSession: headfulCdpSession,
+    } = createMockContext(headfulPage);
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    const result = await fetchPageWithPersistentProfile(
+      new URL('https://example.test/page'),
+      {
+        browserProfileDir,
+        userAgentCacheFile,
+        manualTimeoutMs: 2500,
+      },
+    );
+
+    expect(result).toEqual({
+      success: true,
+      html: RESOLVED_HTML,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: true,
+        },
+      ],
+    });
+
+    expect(headfulPage.waitForLoadState).toHaveBeenCalledWith(
+      'domcontentloaded',
+      { timeout: 1000 },
+    );
+
+    expect(headfulPage.waitForLoadState).toHaveBeenCalledTimes(1);
+
+    expect(headfulCdpSession.send).toHaveBeenCalledWith(
+      'Network.setUserAgentOverride',
+      { userAgent: NAVIGATOR_CONTEXT.userAgent },
+    );
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).toHaveBeenCalledWith(NAVIGATOR_CONTEXT, userAgentCacheFile);
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('propagates non-timeout errors from load-state waits and closes browser contexts', async () => {
+    const challengeState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+    };
+
+    const { page: headlessPage } = createMockPage(challengeState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const loadStateError = new Error('Load-state wait failed');
+
+    const { page: headfulPage } = createMockPage(
+      challengeState,
+      undefined,
+      undefined,
+      () => Promise.reject(loadStateError),
+    );
+
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    await expect(
+      fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
+        {
+          browserProfileDir,
+          userAgentCacheFile,
+          manualTimeoutMs: 5000,
+        },
+      ),
+    ).rejects.toBe(loadStateError);
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
   });
 });
