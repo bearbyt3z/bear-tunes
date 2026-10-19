@@ -220,7 +220,10 @@ function createMockPage(
   return { page, state };
 }
 
-function createMockContext(page: MockPage): {
+function createMockContext(
+  page: MockPage,
+  existingPages: MockPage[] = [page],
+): {
   context: MockContext;
   cdpSession: MockCdpSession;
 } {
@@ -237,7 +240,7 @@ function createMockContext(page: MockPage): {
   };
 
   const context: MockContext = {
-    pages: vi.fn((): MockPage[] => [page]),
+    pages: vi.fn((): MockPage[] => existingPages),
 
     newPage: vi.fn((): Promise<MockPage> => Promise.resolve(page)),
 
@@ -822,5 +825,117 @@ describe('fetchPageWithPersistentProfile', () => {
     expect(
       mocks.saveAcceptedBrowserNavigatorContext,
     ).not.toHaveBeenCalled();
+  });
+
+  it('creates a new page when the persistent context has no existing pages', async () => {
+    const { page } = createMockPage();
+    const { context } = createMockContext(page, []);
+
+    mocks.launchPersistentContext.mockResolvedValueOnce(context);
+
+    const url = new URL('https://example.test/page');
+
+    const result = await fetchPageWithPersistentProfile(url, {
+      browserProfileDir,
+      userAgentCacheFile,
+    });
+
+    expect(result).toEqual({
+      success: true,
+      html: RESOLVED_HTML,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: true,
+        },
+      ],
+    });
+
+    expect(context.pages).toHaveBeenCalledTimes(1);
+    expect(context.newPage).toHaveBeenCalledTimes(1);
+
+    expect(page.goto).toHaveBeenCalledWith(url.toString(), {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+
+    expect(context.close).toHaveBeenCalledTimes(1);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('handles page state read errors as an unresolved page', async () => {
+    const { page: headlessPage } = createMockPage();
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const { page: headfulPage } = createMockPage();
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    vi.spyOn(headlessPage, 'title').mockRejectedValue(
+      new Error('Unable to read headless page title'),
+    );
+    vi.spyOn(headlessPage, 'content').mockRejectedValue(
+      new Error('Unable to read headless page HTML'),
+    );
+    vi.spyOn(headlessPage, '$').mockRejectedValue(
+      new Error('Unable to inspect headless page frames'),
+    );
+
+    vi.spyOn(headfulPage, 'title').mockRejectedValue(
+      new Error('Unable to read headful page title'),
+    );
+    vi.spyOn(headfulPage, 'content').mockRejectedValue(
+      new Error('Unable to read headful page HTML'),
+    );
+    vi.spyOn(headfulPage, '$').mockRejectedValue(
+      new Error('Unable to inspect headful page frames'),
+    );
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    const result = await fetchPageWithPersistentProfile(
+      new URL('https://example.test/page'),
+      {
+        browserProfileDir,
+        userAgentCacheFile,
+        manualTimeoutMs: 500,
+      },
+    );
+
+    expect(result).toEqual({
+      success: false,
+      html: null,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: false,
+          reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
+        },
+      ],
+    });
+
+    expect(headlessPage.title).toHaveBeenCalled();
+    expect(headlessPage.content).toHaveBeenCalled();
+    expect(headlessPage.$).toHaveBeenCalled();
+
+    expect(headfulPage.title).toHaveBeenCalled();
+    expect(headfulPage.content).toHaveBeenCalled();
+    expect(headfulPage.$).toHaveBeenCalled();
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
   });
 });
