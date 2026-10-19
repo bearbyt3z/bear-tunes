@@ -391,4 +391,80 @@ describe('fetchPageWithPersistentProfile', () => {
     expect(headlessContext.close).toHaveBeenCalledTimes(1);
     expect(headfulContext.close).toHaveBeenCalledTimes(1);
   });
+
+  it('returns failure when the headful attempt does not resolve the challenge before the timeout', async () => {
+    const challengeState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+    };
+
+    const { page: headlessPage } = createMockPage(challengeState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const { page: headfulPage } = createMockPage(challengeState);
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    const url = new URL('https://example.test/page');
+    const manualTimeoutMs = 2500;
+
+    const result = await fetchPageWithPersistentProfile(url, {
+      browserProfileDir,
+      userAgentCacheFile,
+      manualTimeoutMs,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      html: null,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+      ],
+    });
+
+    expect(mocks.launchPersistentContext).toHaveBeenCalledTimes(2);
+
+    expect(mocks.launchPersistentContext).toHaveBeenNthCalledWith(
+      1,
+      browserProfileDir,
+      expect.objectContaining({ headless: true }),
+    );
+
+    expect(mocks.launchPersistentContext).toHaveBeenNthCalledWith(
+      2,
+      browserProfileDir,
+      expect.objectContaining({ headless: false }),
+    );
+
+    expect(headfulPage.waitForTimeout).toHaveBeenCalledTimes(3);
+    expect(headfulPage.waitForTimeout).toHaveBeenNthCalledWith(1, 1000);
+    expect(headfulPage.waitForTimeout).toHaveBeenNthCalledWith(2, 1000);
+    expect(headfulPage.waitForTimeout).toHaveBeenNthCalledWith(3, 500);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
+  });
 });
