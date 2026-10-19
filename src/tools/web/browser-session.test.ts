@@ -5,7 +5,10 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fetchPageWithPersistentProfile } from './browser-session.js';
-import { PageFetchMethod } from './browser-session.types.js';
+import {
+  PageFetchFailureReason,
+  PageFetchMethod,
+} from './browser-session.types.js';
 
 import type { BrowserNavigatorContext } from './request-identity.types.js';
 
@@ -137,6 +140,10 @@ afterEach(async () => {
 
 function createMockPage(
   overrides: Partial<MockPageState> = {},
+  onWaitForTimeout?: (
+    timeoutMs: number,
+    state: MockPageState,
+  ) => void,
 ): { page: MockPage; state: MockPageState } {
   const state: MockPageState = {
     url: overrides.url ?? 'https://example.test/page',
@@ -191,6 +198,7 @@ function createMockPage(
 
     waitForTimeout: vi.fn(async (timeoutMs: number): Promise<void> => {
       await vi.advanceTimersByTimeAsync(timeoutMs);
+      onWaitForTimeout?.(timeoutMs, state);
     }),
   };
 
@@ -285,5 +293,102 @@ describe('fetchPageWithPersistentProfile', () => {
     expect(
       mocks.saveAcceptedBrowserNavigatorContext,
     ).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a headful browser when the headless attempt detects a challenge', async () => {
+    const challengeState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+    };
+
+    const { page: headlessPage } = createMockPage(challengeState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const { page: headfulPage } = createMockPage(
+      challengeState,
+      (timeoutMs, state) => {
+        if (timeoutMs > 0) {
+          state.title = 'Example Page';
+          state.html = RESOLVED_HTML;
+        }
+      },
+    );
+
+    const {
+      context: headfulContext,
+      cdpSession: headfulCdpSession,
+    } = createMockContext(headfulPage);
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    const url = new URL('https://example.test/page');
+
+    const result = await fetchPageWithPersistentProfile(url, {
+      browserProfileDir,
+      userAgentCacheFile,
+    });
+
+    expect(result).toEqual({
+      success: true,
+      html: RESOLVED_HTML,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: true,
+        },
+      ],
+    });
+
+    expect(mocks.launchPersistentContext).toHaveBeenCalledTimes(2);
+
+    expect(mocks.launchPersistentContext).toHaveBeenNthCalledWith(
+      1,
+      browserProfileDir,
+      expect.objectContaining({ headless: true }),
+    );
+
+    expect(mocks.launchPersistentContext).toHaveBeenNthCalledWith(
+      2,
+      browserProfileDir,
+      expect.objectContaining({ headless: false }),
+    );
+
+    expect(headlessPage.goto).toHaveBeenCalledWith(url.toString(), {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+
+    expect(headfulPage.goto).toHaveBeenCalledWith(url.toString(), {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+
+    expect(headfulPage.waitForTimeout).toHaveBeenCalledWith(1000);
+
+    expect(headfulCdpSession.send).toHaveBeenCalledWith(
+      'Network.setUserAgentOverride',
+      { userAgent: NAVIGATOR_CONTEXT.userAgent },
+    );
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).toHaveBeenCalledWith(NAVIGATOR_CONTEXT, userAgentCacheFile);
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
   });
 });
