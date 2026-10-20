@@ -498,6 +498,11 @@ export async function fetchPageWithPersistentProfile(
   try {
     const page = context.pages()[0] ?? await context.newPage();
 
+    // Coverage note: Vitest 5.0.5 with the V8 provider reports this call as
+    // uncovered, although the headful fallback test exercises this path and
+    // verifies the CDP User-Agent override. Istanbul reports 100% line coverage
+    // for the same test suite. This appears to be a coverage mapping discrepancy;
+    // recheck after upgrading Vitest before changing this production code.
     const navigatorContext = await applyBrowserNavigatorOverrides(
       context,
       page,
