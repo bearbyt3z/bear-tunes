@@ -1640,4 +1640,78 @@ describe('fetchPageWithPersistentProfile', () => {
       definePropertySpy.mockRestore();
     }
   });
+
+  it('wraps non-Error load-state rejections and preserves the original cause', async () => {
+    const challengeState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+    };
+
+    const { page: headlessPage } = createMockPage(challengeState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const loadStateRejection = 'Unexpected load-state rejection';
+
+    const { page: headfulPage } = createMockPage(
+      challengeState,
+      undefined,
+      undefined,
+      (): Promise<void> => {
+        // Simulate a dependency rejecting with a non-Error value:
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+        return Promise.reject(loadStateRejection);
+      },
+    );
+
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    let caughtError: unknown;
+
+    try {
+      await fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
+        {
+          browserProfileDir,
+          userAgentCacheFile,
+          manualTimeoutMs: 5000,
+        },
+      );
+    } catch (error: unknown) {
+      caughtError = error;
+    }
+
+    expect(caughtError).toBeInstanceOf(Error);
+
+    if (!(caughtError instanceof Error)) {
+      throw new Error('Expected a wrapped load-state error.');
+    }
+
+    expect(caughtError.message).toBe(
+      'Unexpected non-Error value while waiting for page load state.',
+    );
+    expect(caughtError.cause).toBe(loadStateRejection);
+
+    expect(headfulPage.waitForLoadState).toHaveBeenCalledWith(
+      'domcontentloaded',
+      { timeout: 1000 },
+    );
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+  });
 });
