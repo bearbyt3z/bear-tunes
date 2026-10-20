@@ -1148,4 +1148,316 @@ describe('fetchPageWithPersistentProfile', () => {
       mocks.saveAcceptedBrowserNavigatorContext,
     ).not.toHaveBeenCalled();
   });
+
+  it('stops before waiting for a load state when the deadline expires', async () => {
+    const challengeState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+    };
+
+    const { page: headlessPage } = createMockPage(challengeState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const manualTimeoutMs = 500;
+    let restoreDateNow: (() => void) | undefined;
+
+    const {
+      page: headfulPage,
+    } = createMockPage(
+      challengeState,
+      undefined,
+      () => {
+        const startTime = Date.now();
+        let dateNowCalls = 0;
+
+        const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => {
+          dateNowCalls += 1;
+
+          return dateNowCalls <= 2
+            ? startTime
+            : startTime + manualTimeoutMs;
+        });
+
+        restoreDateNow = (): void => dateNowSpy.mockRestore();
+
+        return Promise.resolve(null);
+      },
+    );
+
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    try {
+      const result = await fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
+        {
+          browserProfileDir,
+          userAgentCacheFile,
+          manualTimeoutMs,
+        },
+      );
+
+      expect(result).toEqual({
+        success: false,
+        html: null,
+        attempts: [
+          {
+            method: PageFetchMethod.BrowserHeadless,
+            success: false,
+            reason: PageFetchFailureReason.ChallengeResponse,
+          },
+          {
+            method: PageFetchMethod.BrowserHeadful,
+            success: false,
+            reason: PageFetchFailureReason.ChallengeResponse,
+          },
+        ],
+      });
+
+      expect(headfulPage.waitForLoadState).not.toHaveBeenCalled();
+      expect(headfulPage.waitForTimeout).not.toHaveBeenCalled();
+
+      expect(headlessContext.close).toHaveBeenCalledTimes(1);
+      expect(headfulContext.close).toHaveBeenCalledTimes(1);
+
+      expect(
+        mocks.saveAcceptedBrowserNavigatorContext,
+      ).not.toHaveBeenCalled();
+    } finally {
+      restoreDateNow?.();
+    }
+  });
+
+  it('stops page settling when waiting for the load state times out', async () => {
+    const challengeState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+    };
+
+    const { page: headlessPage } = createMockPage(challengeState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const manualTimeoutMs = 500;
+
+    const { page: headfulPage } = createMockPage(
+      challengeState,
+      undefined,
+      undefined,
+      async (loadState, options) => {
+        if (loadState !== 'load' || options?.timeout === undefined) {
+          return;
+        }
+
+        await vi.advanceTimersByTimeAsync(options.timeout);
+
+        throw new mocks.TimeoutError('Load state wait timed out');
+      },
+    );
+
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    const result = await fetchPageWithPersistentProfile(
+      new URL('https://example.test/page'),
+      {
+        browserProfileDir,
+        userAgentCacheFile,
+        manualTimeoutMs,
+      },
+    );
+
+    expect(result).toEqual({
+      success: false,
+      html: null,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+      ],
+    });
+
+    expect(headfulPage.waitForLoadState).toHaveBeenNthCalledWith(
+      1,
+      'domcontentloaded',
+      { timeout: manualTimeoutMs },
+    );
+
+    expect(headfulPage.waitForLoadState).toHaveBeenNthCalledWith(
+      2,
+      'load',
+      { timeout: manualTimeoutMs },
+    );
+
+    expect(headfulPage.waitForTimeout).not.toHaveBeenCalled();
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips the settling delay when the load state completes at the deadline', async () => {
+    const challengeState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+    };
+
+    const { page: headlessPage } = createMockPage(challengeState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const manualTimeoutMs = 500;
+
+    const { page: headfulPage } = createMockPage(
+      challengeState,
+      undefined,
+      undefined,
+      async (loadState, options) => {
+        if (loadState === 'load' && options?.timeout !== undefined) {
+          await vi.advanceTimersByTimeAsync(options.timeout);
+        }
+      },
+    );
+
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    const result = await fetchPageWithPersistentProfile(
+      new URL('https://example.test/page'),
+      {
+        browserProfileDir,
+        userAgentCacheFile,
+        manualTimeoutMs,
+      },
+    );
+
+    expect(result).toEqual({
+      success: false,
+      html: null,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+      ],
+    });
+
+    expect(headfulPage.waitForLoadState).toHaveBeenCalledTimes(2);
+    expect(headfulPage.waitForTimeout).not.toHaveBeenCalled();
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns the last page state when the deadline expires during the initial inspection', async () => {
+    const challengeState: Partial<MockPageState> = {
+      title: 'Just a moment...',
+      html: `
+      <html>
+        <head><title>Just a moment...</title></head>
+        <body>
+          <div id="challenge-stage">Checking your browser</div>
+        </body>
+      </html>
+    `,
+    };
+
+    const { page: headlessPage } = createMockPage(challengeState);
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const manualTimeoutMs = 500;
+
+    const {
+      page: headfulPage,
+      state: headfulState,
+    } = createMockPage(challengeState);
+
+    vi.spyOn(headfulPage, 'title').mockImplementation(async () => {
+      await vi.advanceTimersByTimeAsync(manualTimeoutMs);
+
+      return headfulState.title;
+    });
+
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    const result = await fetchPageWithPersistentProfile(
+      new URL('https://example.test/page'),
+      {
+        browserProfileDir,
+        userAgentCacheFile,
+        manualTimeoutMs,
+      },
+    );
+
+    expect(result).toEqual({
+      success: false,
+      html: null,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+      ],
+    });
+
+    expect(headfulPage.waitForLoadState).not.toHaveBeenCalled();
+    expect(headfulPage.waitForTimeout).not.toHaveBeenCalled();
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+  });
 });
