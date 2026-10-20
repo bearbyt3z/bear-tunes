@@ -136,6 +136,7 @@ afterEach(async () => {
   browserProfileDir = '';
   userAgentCacheFile = '';
 
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
@@ -223,6 +224,10 @@ function createMockPage(
 function createMockContext(
   page: MockPage,
   existingPages: MockPage[] = [page],
+  onAddInitScript?: (
+    script: (overrides: BrowserNavigatorContext) => void,
+    navigatorContext: BrowserNavigatorContext,
+  ) => void,
 ): {
   context: MockContext;
   cdpSession: MockCdpSession;
@@ -254,8 +259,7 @@ function createMockContext(
       script: (overrides: BrowserNavigatorContext) => void,
       navigatorContext: BrowserNavigatorContext,
     ): Promise<void> => {
-      void script;
-      void navigatorContext;
+      onAddInitScript?.(script, navigatorContext);
 
       return Promise.resolve();
     }),
@@ -1459,5 +1463,181 @@ describe('fetchPageWithPersistentProfile', () => {
     expect(
       mocks.saveAcceptedBrowserNavigatorContext,
     ).not.toHaveBeenCalled();
+  });
+
+  it('installs navigator overrides and masks webdriver in the init script', async () => {
+    class MockNavigator { }
+
+    const navigatorInstance: Record<string, unknown> = {};
+
+    vi.stubGlobal('Navigator', MockNavigator);
+    vi.stubGlobal('navigator', navigatorInstance);
+
+    const { page } = createMockPage();
+
+    const { context } = createMockContext(
+      page,
+      [page],
+      (script, navigatorContext): void => {
+        script(navigatorContext);
+      },
+    );
+
+    mocks.launchPersistentContext.mockResolvedValueOnce(context);
+
+    const result = await fetchPageWithPersistentProfile(
+      new URL('https://example.test/page'),
+      {
+        browserProfileDir,
+        userAgentCacheFile,
+      },
+    );
+
+    expect(result).toEqual({
+      success: true,
+      html: RESOLVED_HTML,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: true,
+        },
+      ],
+    });
+
+    expect(context.addInitScript).toHaveBeenCalledWith(
+      expect.any(Function),
+      NAVIGATOR_CONTEXT,
+    );
+
+    const navigatorProperties: (keyof BrowserNavigatorContext)[] = [
+      'userAgent',
+      'platform',
+      'language',
+      'vendor',
+    ];
+
+    for (const property of navigatorProperties) {
+      const instanceValue: unknown = Reflect.get(
+        navigatorInstance,
+        property,
+      );
+
+      const prototypeValue: unknown = Reflect.get(
+        MockNavigator.prototype,
+        property,
+      );
+
+      expect(instanceValue).toBe(NAVIGATOR_CONTEXT[property]);
+      expect(prototypeValue).toBe(NAVIGATOR_CONTEXT[property]);
+
+      expect(
+        Object.getOwnPropertyDescriptor(navigatorInstance, property)
+          ?.configurable,
+      ).toBe(true);
+
+      expect(
+        Object.getOwnPropertyDescriptor(MockNavigator.prototype, property)
+          ?.configurable,
+      ).toBe(true);
+    }
+
+    const instanceWebdriver: unknown = Reflect.get(
+      navigatorInstance,
+      'webdriver',
+    );
+
+    const prototypeWebdriver: unknown = Reflect.get(
+      MockNavigator.prototype,
+      'webdriver',
+    );
+
+    expect(instanceWebdriver).toBeUndefined();
+    expect(prototypeWebdriver).toBeUndefined();
+
+    expect(context.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('continues when navigator property overrides cannot be defined', async () => {
+    class MockNavigator { }
+
+    const navigatorInstance: Record<string, unknown> = {};
+
+    vi.stubGlobal('Navigator', MockNavigator);
+    vi.stubGlobal('navigator', navigatorInstance);
+
+    const { page } = createMockPage();
+
+    const { context } = createMockContext(
+      page,
+      [page],
+      (script, navigatorContext): void => {
+        script(navigatorContext);
+      },
+    );
+
+    mocks.launchPersistentContext.mockResolvedValueOnce(context);
+
+    const originalDefineProperty = Object.defineProperty;
+
+    const definePropertySpy = vi.spyOn(
+      Object,
+      'defineProperty',
+    ).mockImplementation(
+      (
+        target: unknown,
+        propertyKey: PropertyKey,
+        attributes: PropertyDescriptor,
+      ): unknown => {
+        if (
+          target === MockNavigator.prototype ||
+          target === navigatorInstance
+        ) {
+          throw new Error(
+            `Unable to define navigator property ${String(propertyKey)}`,
+          );
+        }
+
+        if (
+          (typeof target !== 'object' || target === null) &&
+          typeof target !== 'function'
+        ) {
+          throw new TypeError('Object.defineProperty target must be an object.');
+        }
+
+        return originalDefineProperty(target, propertyKey, attributes);
+      },
+    );
+
+    try {
+      const result = await fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
+        {
+          browserProfileDir,
+          userAgentCacheFile,
+        },
+      );
+
+      expect(result).toEqual({
+        success: true,
+        html: RESOLVED_HTML,
+        attempts: [
+          {
+            method: PageFetchMethod.BrowserHeadless,
+            success: true,
+          },
+        ],
+      });
+
+      const navigatorPropertyCalls = definePropertySpy.mock.calls.filter(
+        ([target]) =>
+          target === MockNavigator.prototype ||
+          target === navigatorInstance,
+      );
+
+      expect(navigatorPropertyCalls).toHaveLength(10);
+      expect(context.close).toHaveBeenCalledTimes(1);
+    } finally {
+      definePropertySpy.mockRestore();
+    }
   });
 });
