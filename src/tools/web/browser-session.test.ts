@@ -406,6 +406,13 @@ describe('fetchPageWithPersistentProfile', () => {
       { userAgent: NAVIGATOR_CONTEXT.userAgent },
     );
 
+    expect(mocks.resolveBrowserNavigatorContext).toHaveBeenNthCalledWith(
+      2,
+      NAVIGATOR_CONTEXT,
+      userAgentCacheFile,
+      false,
+    );
+
     expect(
       mocks.saveAcceptedBrowserNavigatorContext,
     ).toHaveBeenCalledWith(NAVIGATOR_CONTEXT, userAgentCacheFile);
