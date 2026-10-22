@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import { fetchWebPage } from './fetch-web-page.js';
-import { PageFetchMethod } from './browser-session.types.js';
+import {
+  PageFetchFailureReason,
+  PageFetchMethod,
+} from './browser-session.types.js';
 
 import type { FetchWebPageOptions } from './fetch-web-page.types.js';
 
@@ -174,5 +177,145 @@ describe('fetchWebPage', () => {
     expect(
       mocks.fetchPageWithPersistentProfile,
     ).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the browser and combines attempts when a challenge is detected', async () => {
+    const url = new URL('https://example.test/protected');
+    const challengeHtml = '<html><body>Verify your browser</body></html>';
+    const browserHtml = `<!doctype html>
+<html>
+  <head><title>Browser Resolved</title></head>
+  <body><main id="browser-content">Resolved by browser</main></body>
+</html>`;
+
+    const response = createMockResponse(challengeHtml, {
+      ok: false,
+      status: 403,
+    });
+
+    mocks.fetchResource.mockResolvedValueOnce(response);
+    mocks.looksLikeChallengeResponse.mockReturnValueOnce(true);
+    mocks.fetchPageWithPersistentProfile.mockResolvedValueOnce({
+      success: true,
+      html: browserHtml,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: true,
+        },
+      ],
+    });
+
+    const result = await fetchWebPage(url, FETCH_OPTIONS);
+
+    expect(result.success).toBe(true);
+    expect(result.attempts).toEqual([
+      {
+        method: PageFetchMethod.Fetch,
+        success: false,
+        status: 403,
+        reason: PageFetchFailureReason.ChallengeResponse,
+      },
+      {
+        method: PageFetchMethod.BrowserHeadless,
+        success: false,
+        reason: PageFetchFailureReason.ChallengeResponse,
+      },
+      {
+        method: PageFetchMethod.BrowserHeadful,
+        success: true,
+      },
+    ]);
+
+    expect(result.document).not.toBeNull();
+
+    if (result.document === null) {
+      throw new Error('Expected a parsed browser HTML document.');
+    }
+
+    expect(result.document.URL).toBe(url.toString());
+    expect(result.document.title).toBe('Browser Resolved');
+    expect(
+      result.document.querySelector('#browser-content')?.textContent,
+    ).toBe('Resolved by browser');
+
+    expect(mocks.fetchPageWithPersistentProfile).toHaveBeenCalledWith(
+      url,
+      {
+        browserProfileDir: FETCH_OPTIONS.browserProfileDir,
+        userAgentCacheFile: FETCH_OPTIONS.userAgentCacheFile,
+      },
+    );
+
+    expect(response.text).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a failed result with combined attempts when browser fallback fails', async () => {
+    const url = new URL('https://example.test/protected');
+    const challengeHtml = '<html><body>Verify your browser</body></html>';
+
+    const response = createMockResponse(challengeHtml, {
+      ok: false,
+      status: 403,
+    });
+
+    mocks.fetchResource.mockResolvedValueOnce(response);
+    mocks.looksLikeChallengeResponse.mockReturnValueOnce(true);
+    mocks.fetchPageWithPersistentProfile.mockResolvedValueOnce({
+      success: false,
+      html: null,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: false,
+          reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
+        },
+      ],
+    });
+
+    const result = await fetchWebPage(url, FETCH_OPTIONS);
+
+    expect(result).toEqual({
+      success: false,
+      document: null,
+      attempts: [
+        {
+          method: PageFetchMethod.Fetch,
+          success: false,
+          status: 403,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ChallengeResponse,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: false,
+          reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
+        },
+      ],
+    });
+
+    expect(mocks.fetchPageWithPersistentProfile).toHaveBeenCalledWith(
+      url,
+      {
+        browserProfileDir: FETCH_OPTIONS.browserProfileDir,
+        userAgentCacheFile: FETCH_OPTIONS.userAgentCacheFile,
+      },
+    );
+
+    expect(response.text).toHaveBeenCalledTimes(1);
   });
 });
