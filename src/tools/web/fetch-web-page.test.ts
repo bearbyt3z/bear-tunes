@@ -318,4 +318,60 @@ describe('fetchWebPage', () => {
 
     expect(response.text).toHaveBeenCalledTimes(1);
   });
+
+  it('propagates resource fetch errors without attempting browser fallback', async () => {
+    const url = new URL('https://example.test/page');
+    const fetchError = new Error('Unable to fetch page resource');
+
+    mocks.fetchResource.mockRejectedValueOnce(fetchError);
+
+    await expect(
+      fetchWebPage(url, FETCH_OPTIONS),
+    ).rejects.toBe(fetchError);
+
+    expect(mocks.getFetchClientProfile).toHaveBeenCalledWith(
+      FETCH_OPTIONS.userAgentCacheFile,
+    );
+
+    expect(mocks.buildFetchHeaders).toHaveBeenCalledWith(
+      FETCH_CLIENT_PROFILE,
+    );
+
+    expect(mocks.fetchResource).toHaveBeenCalledWith(url, {
+      headers: FETCH_HEADERS,
+      followRedirect: true,
+    });
+
+    expect(mocks.looksLikeChallengeResponse).not.toHaveBeenCalled();
+
+    expect(
+      mocks.fetchPageWithPersistentProfile,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('propagates response body read errors without attempting browser fallback', async () => {
+    const url = new URL('https://example.test/page');
+    const response = createMockResponse('');
+    const bodyReadError = new Error('Unable to read response body');
+
+    response.text.mockRejectedValueOnce(bodyReadError);
+    mocks.fetchResource.mockResolvedValueOnce(response);
+
+    await expect(
+      fetchWebPage(url, FETCH_OPTIONS),
+    ).rejects.toBe(bodyReadError);
+
+    expect(mocks.fetchResource).toHaveBeenCalledWith(url, {
+      headers: FETCH_HEADERS,
+      followRedirect: true,
+    });
+
+    expect(response.text).toHaveBeenCalledTimes(1);
+
+    expect(mocks.looksLikeChallengeResponse).not.toHaveBeenCalled();
+
+    expect(
+      mocks.fetchPageWithPersistentProfile,
+    ).not.toHaveBeenCalled();
+  });
 });
