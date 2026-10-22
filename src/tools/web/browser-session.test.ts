@@ -648,57 +648,69 @@ describe('fetchPageWithPersistentProfile', () => {
     expect(headfulContext.close).toHaveBeenCalledTimes(1);
   });
 
-  it('reports a missing resolved-page marker when the response is not a usable HTML document', async () => {
-    const unexpectedPage: Partial<MockPageState> = {
-      title: 'Example Page',
+  it.each([
+    {
+      description: 'a non-HTML response',
       html: 'The upstream response did not contain an HTML document.',
-    };
+    },
+    {
+      description: 'an HTML document without a body',
+      html: '<html><head><title>Example Page</title></head></html>',
+    },
+  ])(
+    'reports a missing resolved-page marker for $description',
+    async ({ html }) => {
+      const unexpectedPage: Partial<MockPageState> = {
+        title: 'Example Page',
+        html,
+      };
 
-    const { page: headlessPage } = createMockPage(unexpectedPage);
-    const { context: headlessContext } = createMockContext(headlessPage);
+      const { page: headlessPage } = createMockPage(unexpectedPage);
+      const { context: headlessContext } = createMockContext(headlessPage);
 
-    const { page: headfulPage } = createMockPage(unexpectedPage);
-    const { context: headfulContext } = createMockContext(headfulPage);
+      const { page: headfulPage } = createMockPage(unexpectedPage);
+      const { context: headfulContext } = createMockContext(headfulPage);
 
-    mocks.launchPersistentContext
-      .mockResolvedValueOnce(headlessContext)
-      .mockResolvedValueOnce(headfulContext);
+      mocks.launchPersistentContext
+        .mockResolvedValueOnce(headlessContext)
+        .mockResolvedValueOnce(headfulContext);
 
-    const result = await fetchPageWithPersistentProfile(
-      new URL('https://example.test/page'),
-      {
-        browserProfileDir,
-        userAgentCacheFile,
-        manualTimeoutMs: 500,
-      },
-    );
-
-    expect(result).toEqual({
-      success: false,
-      html: null,
-      attempts: [
+      const result = await fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
         {
-          method: PageFetchMethod.BrowserHeadless,
-          success: false,
-          reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
+          browserProfileDir,
+          userAgentCacheFile,
+          manualTimeoutMs: 500,
         },
-        {
-          method: PageFetchMethod.BrowserHeadful,
-          success: false,
-          reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
-        },
-      ],
-    });
+      );
 
-    expect(headfulPage.waitForTimeout).toHaveBeenCalledWith(500);
+      expect(result).toEqual({
+        success: false,
+        html: null,
+        attempts: [
+          {
+            method: PageFetchMethod.BrowserHeadless,
+            success: false,
+            reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
+          },
+          {
+            method: PageFetchMethod.BrowserHeadful,
+            success: false,
+            reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
+          },
+        ],
+      });
 
-    expect(
-      mocks.saveAcceptedBrowserNavigatorContext,
-    ).not.toHaveBeenCalled();
+      expect(headfulPage.waitForTimeout).toHaveBeenCalledWith(500);
 
-    expect(headlessContext.close).toHaveBeenCalledTimes(1);
-    expect(headfulContext.close).toHaveBeenCalledTimes(1);
-  });
+      expect(
+        mocks.saveAcceptedBrowserNavigatorContext,
+      ).not.toHaveBeenCalled();
+
+      expect(headlessContext.close).toHaveBeenCalledTimes(1);
+      expect(headfulContext.close).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('rechecks page state after a load-state timeout and accepts the resolved page', async () => {
     const challengeState: Partial<MockPageState> = {
