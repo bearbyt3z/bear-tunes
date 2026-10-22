@@ -317,6 +317,58 @@ describe('fetchPageWithPersistentProfile', () => {
     ).not.toHaveBeenCalled();
   });
 
+  it('returns the resolved headless page when load-state waits fail', async () => {
+    const { page } = createMockPage(
+      {},
+      undefined,
+      undefined,
+      (loadState) => Promise.reject(
+        new Error(`Unable to wait for ${loadState}`),
+      ),
+    );
+
+    const { context } = createMockContext(page);
+
+    mocks.launchPersistentContext.mockResolvedValueOnce(context);
+
+    const result = await fetchPageWithPersistentProfile(
+      new URL('https://example.test/page'),
+      {
+        browserProfileDir,
+        userAgentCacheFile,
+      },
+    );
+
+    expect(result).toEqual({
+      success: true,
+      html: RESOLVED_HTML,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: true,
+        },
+      ],
+    });
+
+    expect(page.waitForLoadState).toHaveBeenNthCalledWith(
+      1,
+      'domcontentloaded',
+    );
+    expect(page.waitForLoadState).toHaveBeenNthCalledWith(
+      2,
+      'load',
+      { timeout: 10_000 },
+    );
+
+    expect(page.waitForTimeout).toHaveBeenCalledWith(1000);
+    expect(mocks.launchPersistentContext).toHaveBeenCalledTimes(1);
+    expect(context.close).toHaveBeenCalledTimes(1);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+  });
+
   it('falls back to a headful browser when the headless attempt detects a challenge', async () => {
     const challengeState: Partial<MockPageState> = {
       title: 'Just a moment...',
