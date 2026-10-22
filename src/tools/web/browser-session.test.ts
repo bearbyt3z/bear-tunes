@@ -1077,6 +1077,88 @@ describe('fetchPageWithPersistentProfile', () => {
     expect(headfulContext.close).toHaveBeenCalledTimes(1);
   });
 
+  it('propagates browser User-Agent override errors and closes the browser context', async () => {
+    const { page } = createMockPage();
+    const { context, cdpSession } = createMockContext(page);
+
+    const userAgentOverrideError = new Error(
+      'Unable to apply browser User-Agent override',
+    );
+
+    vi.spyOn(cdpSession, 'send').mockRejectedValueOnce(
+      userAgentOverrideError,
+    );
+
+    mocks.launchPersistentContext.mockResolvedValueOnce(context);
+
+    await expect(
+      fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
+        {
+          browserProfileDir,
+          userAgentCacheFile,
+        },
+      ),
+    ).rejects.toBe(userAgentOverrideError);
+
+    expect(cdpSession.send).toHaveBeenCalledWith(
+      'Network.setUserAgentOverride',
+      { userAgent: NAVIGATOR_CONTEXT.userAgent },
+    );
+
+    expect(context.addInitScript).not.toHaveBeenCalled();
+    expect(page.goto).not.toHaveBeenCalled();
+
+    expect(context.close).toHaveBeenCalledTimes(1);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('propagates stealth init script installation errors and closes the browser context', async () => {
+    const { page } = createMockPage();
+    const { context, cdpSession } = createMockContext(page);
+
+    const initScriptError = new Error(
+      'Unable to install browser stealth init script',
+    );
+
+    vi.spyOn(context, 'addInitScript').mockRejectedValueOnce(
+      initScriptError,
+    );
+
+    mocks.launchPersistentContext.mockResolvedValueOnce(context);
+
+    await expect(
+      fetchPageWithPersistentProfile(
+        new URL('https://example.test/page'),
+        {
+          browserProfileDir,
+          userAgentCacheFile,
+        },
+      ),
+    ).rejects.toBe(initScriptError);
+
+    expect(cdpSession.send).toHaveBeenCalledWith(
+      'Network.setUserAgentOverride',
+      { userAgent: NAVIGATOR_CONTEXT.userAgent },
+    );
+
+    expect(context.addInitScript).toHaveBeenCalledWith(
+      expect.any(Function),
+      NAVIGATOR_CONTEXT,
+    );
+
+    expect(page.goto).not.toHaveBeenCalled();
+
+    expect(context.close).toHaveBeenCalledTimes(1);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+  });
+
   it('propagates navigator identity resolution errors and closes the headless browser context', async () => {
     const identityError = new Error(
       'Unable to resolve browser navigator context',
