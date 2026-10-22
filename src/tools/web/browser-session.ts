@@ -123,7 +123,14 @@ async function installStealthInitScript(
  * @returns The current page state snapshot.
  */
 async function safeGetPageState(page: Page): Promise<PageChallengeState> {
-  const url = page.url();
+  let url: string;
+
+  try {
+    url = page.url();
+  } catch {
+    url = '';
+  }
+
   const title = await page.title().catch(() => '');
   const html = await page.content().catch(() => '');
   const hasRecaptchaFrame =

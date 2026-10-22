@@ -941,6 +941,62 @@ describe('fetchPageWithPersistentProfile', () => {
     ).not.toHaveBeenCalled();
   });
 
+  it('treats page URL read errors as an unresolved page', async () => {
+    const { page: headlessPage } = createMockPage();
+    const { context: headlessContext } = createMockContext(headlessPage);
+
+    const { page: headfulPage } = createMockPage();
+    const { context: headfulContext } = createMockContext(headfulPage);
+
+    vi.spyOn(headlessPage, 'url').mockImplementation(() => {
+      throw new Error('Unable to read headless page URL');
+    });
+
+    vi.spyOn(headfulPage, 'url').mockImplementation(() => {
+      throw new Error('Unable to read headful page URL');
+    });
+
+    mocks.launchPersistentContext
+      .mockResolvedValueOnce(headlessContext)
+      .mockResolvedValueOnce(headfulContext);
+
+    const result = await fetchPageWithPersistentProfile(
+      new URL('https://example.test/page'),
+      {
+        browserProfileDir,
+        userAgentCacheFile,
+        manualTimeoutMs: 0,
+      },
+    );
+
+    expect(result).toEqual({
+      success: false,
+      html: null,
+      attempts: [
+        {
+          method: PageFetchMethod.BrowserHeadless,
+          success: false,
+          reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
+        },
+        {
+          method: PageFetchMethod.BrowserHeadful,
+          success: false,
+          reason: PageFetchFailureReason.ResolvedPageMarkerNotFound,
+        },
+      ],
+    });
+
+    expect(headlessPage.url).toHaveBeenCalledTimes(1);
+    expect(headfulPage.url).toHaveBeenCalledTimes(1);
+
+    expect(
+      mocks.saveAcceptedBrowserNavigatorContext,
+    ).not.toHaveBeenCalled();
+
+    expect(headlessContext.close).toHaveBeenCalledTimes(1);
+    expect(headfulContext.close).toHaveBeenCalledTimes(1);
+  });
+
   it('handles page state read errors as an unresolved page', async () => {
     const { page: headlessPage } = createMockPage();
     const { context: headlessContext } = createMockContext(headlessPage);
