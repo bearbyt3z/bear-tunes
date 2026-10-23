@@ -189,8 +189,8 @@ describe('fetchWebPage', () => {
 </html>`;
 
     const response = createMockResponse(challengeHtml, {
-      ok: false,
-      status: 403,
+      ok: true,
+      status: 200,
     });
 
     mocks.fetchResource.mockResolvedValueOnce(response);
@@ -218,7 +218,7 @@ describe('fetchWebPage', () => {
       {
         method: PageFetchMethod.Fetch,
         success: false,
-        status: 403,
+        status: 200,
         reason: PageFetchFailureReason.ChallengeResponse,
       },
       {
