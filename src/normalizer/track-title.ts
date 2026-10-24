@@ -29,10 +29,16 @@ const titleNormalizationPipeline = [
 ] as const satisfies readonly TitleNormalizationStep[];
 
 /**
- * Normalizes the "feat" fragment inside a title.
+ * Normalizes the featuring marker in a track title.
  *
- * Standardizes the featuring marker to `feat.` and wraps it in parentheses when
- * it is present but not already enclosed.
+ * Replaces the first standalone `feat` marker, with an optional period,
+ * followed by artist text with the canonical `feat.` notation. If the marker
+ * is not already enclosed in parentheses, wraps the marker and all remaining
+ * title text in parentheses.
+ *
+ * A `feat` marker without following non-whitespace text is left unchanged.
+ * This helper does not parse individual featured artist names or determine
+ * where the featuring fragment ends.
  *
  * @internal
  *
@@ -46,17 +52,21 @@ const titleNormalizationPipeline = [
  * @example
  * normalizeFeaturingInTitle('Title of a Track (feat. Someone)')
  * // => 'Title of a Track (feat. Someone)'
+ *
+ * @example
+ * normalizeFeaturingInTitle('Title of a Track feat')
+ * // => 'Title of a Track feat'
  */
 function normalizeFeaturingInTitle(title: string): string {
-  if (!/\bfeat\b/i.test(title)) {
+  if (!/\bfeat\.?\s+\S/i.test(title)) {
     return title;
   }
 
-  // add a missing dot after the "feat" marker and normalize "Feat" to "feat"
-  let normalizedTitle = title.replace(/\bfeat\.? /i, 'feat. ');
+  // Normalize the "feat" marker and following whitespace.
+  let normalizedTitle = title.replace(/\bfeat\.?\s+/i, 'feat. ');
 
-  // if "feat" is not enclosed in parentheses, add them
-  if (!normalizedTitle.includes('(feat')) {
+  // If the featuring marker is not already enclosed in parentheses, add them.
+  if (!/\(\s*feat\./i.test(normalizedTitle)) {
     normalizedTitle = `${normalizedTitle.replace(/\bfeat\. /, '(feat. ')})`;
   }
 
