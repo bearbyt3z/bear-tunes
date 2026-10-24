@@ -17,14 +17,14 @@ import {
  *
  * @returns `true` when the entry looks like an aggregated artist value such as
  * `Artist A, Artist B`, while both `Artist A` and `Artist B` are already present
- * in the list as standalone entries; otherwise `false`.
+ * in the list as standalone artists, ignoring case; otherwise `false`.
  *
  * @remarks
  * This helper intentionally uses a narrow heuristic. It only checks comma-separated
  * entries and removes them only when every comma-separated part already exists as
- * a separate artist in the same list. The goal is to filter obvious API anomalies
- * such as duplicated combined artist fields without trying to fully parse all
- * possible artist separator formats.
+ * a separate artist in the same list. Comparisons are case-insensitive. The goal
+ * is to filter obvious API anomalies such as duplicated combined artist fields
+ * without trying to fully parse all possible artist separator formats.
  */
 function isCombinedArtistEntry(artist: string, artistArray: readonly string[]): boolean {
   if (!artist.includes(',')) return false;
@@ -47,7 +47,8 @@ function isCombinedArtistEntry(artist: string, artistArray: readonly string[]): 
  * Normalizes values into a canonical track artist list.
  *
  * @param artistArray - Artist name values to normalize. Empty, blank, and
- * duplicated values are removed from the returned list.
+ * duplicated values are removed from the returned list. Duplicate matching
+ * is case-insensitive, and the first occurrence determines the retained spelling.
  *
  * @param title - Optional track title value used to detect artists mentioned after
  * the `feat` or `ft` marker. When an artist appears in that part of the title, the
@@ -72,14 +73,11 @@ function isCombinedArtistEntry(artist: string, artistArray: readonly string[]): 
  * artist entries, for example `Artist A, Artist B`, when all combined parts are
  * already present in the list as standalone artists. This is a narrow heuristic
  * intended to handle malformed API data without trying to parse every possible
- * artist-list format.
+ * artist-list format. These comparisons are case-insensitive.
  *
  * Artist names and the optional title are trimmed and normalized before
- * featured-artist matching, and the final output is deduplicated while
- * preserving the first surviving occurrence.
- *
- * Existing canonical artist names still pass through the same normalization and
- * deduplication rules.
+ * featured-artist matching. The final output is deduplicated case-insensitively,
+ * preserving the spelling and position of the first surviving occurrence.
  */
 export function normalizeTrackArtists(artistArray: readonly string[] | null, title?: string): string[] {
   if (!artistArray) return [];
@@ -108,7 +106,15 @@ export function normalizeTrackArtists(artistArray: readonly string[] | null, tit
     }
   }
 
-  const uniqueArtists = Array.from(new Set(result)); // remove duplicates
+  const seenArtists = new Set<string>();
+  const uniqueArtists = result.filter((artist) => {
+    const artistKey = artist.toLowerCase();
+
+    if (seenArtists.has(artistKey)) return false;
+
+    seenArtists.add(artistKey);
+    return true;
+  });
 
   return uniqueArtists.filter((artist) => !isCombinedArtistEntry(artist, uniqueArtists));
 }
