@@ -139,17 +139,17 @@ function normalizeNestedRemixParentheses(
  */
 function normalizeTitleMixNames(title: string): string {
   return title
-    // add the missing "Mix" suffix
+    // Add the missing "Mix" suffix.
     .replace(/\((Original|Extended|Instrumental|Dub)\)/i, '($1 Mix)')
-    // replace the "RMX" shorthand with "Remix"
+    // Replace the "RMX" shorthand with "Remix".
     .replace(/\((.*)RMX(.*)\)/i, '($1Remix$2)')
-    // remove a duplicated mix/remix fragment (for example one coming from both the title and mix_name)
+    // Remove a duplicated mix/remix fragment (for example one coming from both the title and mix_name).
     .replace(/(\(.*\b(\sMix|Mix\s|\sRemix|Remix\s)\b.*\))\s*(\(.*\b(Mix|Remix)\b.*\))/i, '$1')
-    // e.g.: "Title of a Track - Artist Remix (Original Mix)"
-    // => "Title of a Track (Artist Remix)"
+    // E.g. "Title of a Track - Artist Remix (Original Mix)"
+    // => "Title of a Track (Artist Remix)".
     .replace(/(-|–)\s+(.*Remix)\s+\(Original Mix\)/i, '($2)')
-    // e.g.: "Title of a Track (FirstArtist Remix (SecondArtist Re-Edit))"
-    // => "Title of a Track (FirstArtist Remix) (SecondArtist Re-Edit)"
+    // E.g. "Title of a Track (FirstArtist Remix (SecondArtist Re-Edit))"
+    // => "Title of a Track (FirstArtist Remix) (SecondArtist Re-Edit)".
     .replace(/(\(.*\sRemix(\s+\(.*\))\))/, normalizeNestedRemixParentheses);
 }
 
@@ -230,9 +230,9 @@ export function normalizeTrackTitle(trackName?: string, trackMixName?: string): 
 /**
  * Marks an already normalized track title as a Radio Edit.
  *
- * The input title is expected to be canonical. This function replaces an
- * existing Original Mix or Extended Mix marker, or appends Radio Edit when
- * neither marker is present.
+ * Replaces an existing Original Mix or Extended Mix marker, or appends
+ * Radio Edit when neither marker is present. If Radio Edit is already present,
+ * returns the input unchanged.
  *
  * @param title - Canonical track title to adjust.
  * @returns Title marked as Radio Edit.
