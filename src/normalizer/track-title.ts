@@ -76,9 +76,10 @@ function normalizeFeaturingInTitle(title: string): string {
 /**
  * Normalizes spacing and bracket usage in a title.
  *
- * This step fixes spacing around parentheses, collapses repeated whitespace,
- * converts square brackets to parentheses, and removes duplicated outer
- * parentheses created by earlier transformations or input inconsistencies.
+ * Adds spacing between adjacent parenthesized fragments, removes whitespace
+ * around parentheses, and collapses repeated whitespace. Converts each
+ * square-bracketed fragment to parentheses and removes redundant doubled
+ * parentheses around simple fragments without nested parentheses.
  *
  * @internal
  *
@@ -87,12 +88,12 @@ function normalizeFeaturingInTitle(title: string): string {
  */
 function normalizeTitleSpacingAndParentheses(title: string): string {
   return title
-    .replaceAll(/\)\(/g, ') (') // add space between parentheses
-    .replaceAll(/\s+\)/g, ')') // remove spaces before closing parentheses
-    .replaceAll(/\(\s+/g, '(') // remove spaces after opening parentheses
-    .replaceAll(/\s{2,}/g, ' ') // replace multiple whitespace chars with a single space
-    .replaceAll(/\[(.*)\]/g, '($1)') // replace square brackets by parentheses
-    .replaceAll(/\({2}(.*)\){2}/g, '($1)'); // replace doubled parentheses with a single one
+    .replaceAll(/\)\(/g, ') (') // Add a space between adjacent parentheses.
+    .replaceAll(/\s+\)/g, ')') // Remove whitespace before closing parentheses.
+    .replaceAll(/\(\s+/g, '(') // Remove whitespace after opening parentheses.
+    .replaceAll(/\s{2,}/g, ' ') // Collapse repeated whitespace.
+    .replaceAll(/\[(.*?)\]/g, '($1)') // Convert each square-bracketed fragment separately.
+    .replaceAll(/\(\(([^()]*)\)\)/g, '($1)'); // Collapse doubled parentheses around simple fragments.
 }
 
 /**
