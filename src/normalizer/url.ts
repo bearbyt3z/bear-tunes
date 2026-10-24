@@ -5,8 +5,10 @@ import {
 /**
  * Normalizes a value into a canonical `URL` instance.
  *
- * Parses a string into a valid \URL` instance, or returns an existing valid
- * `URL` instance unchanged. Returns `undefined` when the input is invalid.
+ * Parses an absolute URL string using the shared URL parser, or returns an
+ * existing `URL` instance unchanged. Relative URLs are not accepted because
+ * no base URL is provided. Returns `undefined` for unsupported input types
+ * or strings that cannot be parsed into a valid URL.
  *
  * @param value - Value to normalize.
  * @returns Canonical `URL` instance, or `undefined` when the input is invalid.
