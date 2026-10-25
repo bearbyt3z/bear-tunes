@@ -73,15 +73,12 @@ function normalizeFeaturingInTitle(title: string): string {
 
   // Replace subsequent featuring markers with commas.
   const featuringIndex = normalizedTitle.search(/\bfeat\./i);
+  const titlePrefix = normalizedTitle.slice(0, featuringIndex);
+  const featuringPart = normalizedTitle
+    .slice(featuringIndex)
+    .replace(/\s+\bfeat\.?\s+/gi, ', ');
 
-  if (featuringIndex !== -1) {
-    const titlePrefix = normalizedTitle.slice(0, featuringIndex);
-    const featuringPart = normalizedTitle
-      .slice(featuringIndex)
-      .replace(/\s+\bfeat\.?\s+/gi, ', ');
-
-    normalizedTitle = `${titlePrefix}${featuringPart}`;
-  }
+  normalizedTitle = `${titlePrefix}${featuringPart}`;
 
   // If the featuring fragment is not already enclosed in parentheses, add them.
   if (!/\(\s*feat\./i.test(normalizedTitle)) {
