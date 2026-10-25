@@ -75,6 +75,18 @@ describe('normalizeTrackTitle', () => {
         expect(normalizeTrackTitle(input)).toBe(expected);
       },
     );
+
+    it('combines multiple featuring markers inside existing parentheses', () => {
+      expect(
+        normalizeTrackTitle('Title (feat. Guest One feat Guest Two)'),
+      ).toBe('Title (feat. Guest One, Guest Two)');
+    });
+
+    it('preserves already normalized featuring notation with multiple artists', () => {
+      const title = 'Title (feat. Guest One, Guest Two)';
+
+      expect(normalizeTrackTitle(title)).toBe(title);
+    });
   });
 
   describe('spacing and parentheses', () => {
@@ -226,7 +238,7 @@ describe('forceTrackTitleRadioEdit', () => {
       expected: 'Track Title (Radio Edit)',
     },
     {
-      input: 'Track Title (extended mix)',
+      input: 'Track Title (Extended Mix)',
       expected: 'Track Title (Radio Edit)',
     },
   ])('replaces the mix marker in "$input"', ({ input, expected }) => {
