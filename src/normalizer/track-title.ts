@@ -29,12 +29,14 @@ const titleNormalizationPipeline = [
 ] as const satisfies readonly TitleNormalizationStep[];
 
 /**
- * Normalizes the featuring marker in a track title.
+ * Normalizes featuring markers in a track title.
  *
- * Replaces the first standalone `feat` marker, with an optional period,
- * followed by artist text with the canonical `feat.` notation. If the marker
- * is not already enclosed in parentheses, wraps the marker and all remaining
- * title text in parentheses.
+ * Normalizes the first standalone `feat` marker, with an optional period,
+ * followed by artist text to the canonical `feat.` notation. Replaces
+ * subsequent standalone `feat` markers with commas to combine multiple
+ * featured artists into a single fragment. If the featuring fragment is not
+ * already enclosed in parentheses, wraps it and all remaining title text
+ * in parentheses.
  *
  * A `feat` marker without following non-whitespace text is left unchanged.
  * This helper does not parse individual featured artist names or determine
@@ -50,8 +52,12 @@ const titleNormalizationPipeline = [
  * // => 'Title of a Track (feat. Someone)'
  *
  * @example
- * normalizeFeaturingInTitle('Title of a Track (feat. Someone)')
- * // => 'Title of a Track (feat. Someone)'
+ * normalizeFeaturingInTitle('Title feat Guest One feat Guest Two')
+ * // => 'Title (feat. Guest One, Guest Two)'
+ *
+ * @example
+ * normalizeFeaturingInTitle('Title (feat. Guest One feat Guest Two)')
+ * // => 'Title (feat. Guest One, Guest Two)'
  *
  * @example
  * normalizeFeaturingInTitle('Title of a Track feat')
@@ -65,7 +71,19 @@ function normalizeFeaturingInTitle(title: string): string {
   // Normalize the "feat" marker and following whitespace.
   let normalizedTitle = title.replace(/\bfeat\.?\s+/i, 'feat. ');
 
-  // If the featuring marker is not already enclosed in parentheses, add them.
+  // Replace subsequent featuring markers with commas.
+  const featuringIndex = normalizedTitle.search(/\bfeat\./i);
+
+  if (featuringIndex !== -1) {
+    const titlePrefix = normalizedTitle.slice(0, featuringIndex);
+    const featuringPart = normalizedTitle
+      .slice(featuringIndex)
+      .replace(/\s+\bfeat\.?\s+/gi, ', ');
+
+    normalizedTitle = `${titlePrefix}${featuringPart}`;
+  }
+
+  // If the featuring fragment is not already enclosed in parentheses, add them.
   if (!/\(\s*feat\./i.test(normalizedTitle)) {
     normalizedTitle = `${normalizedTitle.replace(/\bfeat\. /, '(feat. ')})`;
   }
