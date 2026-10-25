@@ -123,10 +123,16 @@ describe('normalizeTrackTitle', () => {
       expect(normalizeTrackTitle(input)).toBe(expected);
     });
 
-    it('replaces the RMX shorthand with Remix', () => {
+    it('replaces the RMX shorthand inside parentheses with Remix', () => {
       expect(
-        normalizeTrackTitle('Track Title (Artist RMX)'),
-      ).toBe('Track Title (Artist Remix)');
+        normalizeTrackTitle('SWEAT DREAMS (Artist RMX)'),
+      ).toBe('SWEAT DREAMS (Artist Remix)');
+    });
+
+    it('preserves the RMX shorthand in the track title', () => {
+      expect(
+        normalizeTrackTitle('SWEAT DREAMS RMX (Original Mix)'),
+      ).toBe('SWEAT DREAMS RMX (Original Mix)');
     });
 
     it('removes a duplicated mix fragment', () => {
