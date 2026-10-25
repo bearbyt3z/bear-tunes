@@ -87,17 +87,17 @@ describe('normalizeTrackTitle', () => {
     it('converts separate square-bracketed fragments to parentheses', () => {
       expect(
         normalizeTrackTitle(
-          'Track   Name [Radio Edit] [Extended Mix]',
+          'Track   Name [Artist Extended Remix] [Radio Edit]',
         ),
-      ).toBe('Track Name (Radio Edit) (Extended Mix)');
+      ).toBe('Track Name (Artist Extended Remix) (Radio Edit)');
     });
 
     it('collapses doubled parentheses around separate fragments', () => {
       expect(
         normalizeTrackTitle(
-          'Track ((Radio Edit)) and ((Extended Mix))',
+          'Track ((Artist Extended Remix)) ((Radio Edit))',
         ),
-      ).toBe('Track (Radio Edit) and (Extended Mix)');
+      ).toBe('Track (Artist Extended Remix) (Radio Edit)');
     });
   });
 
