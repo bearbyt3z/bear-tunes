@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   albumInfoSchema,
   publisherInfoSchema,
+  trackDetailsSchema,
   trackInfoSchema,
 } from './schema.js';
 
@@ -65,6 +66,43 @@ describe('albumInfoSchema', () => {
       }).success,
     ).toBe(false);
   });
+});
+
+describe('albumInfoSchema numeric fields', () => {
+  it.each([
+    { field: 'trackNumber', value: 1 },
+    { field: 'trackTotal', value: 12 },
+  ])('accepts a positive integer for "$field"', ({ field, value }) => {
+    const input = {
+      title: 'Album Name',
+      [field]: value,
+    };
+
+    expect(albumInfoSchema.parse(input)).toEqual(input);
+  });
+
+  it.each(['trackNumber', 'trackTotal'] as const)(
+    'rejects invalid values for "%s"',
+    (field) => {
+      for (const value of [
+        0,
+        -1,
+        1.5,
+        Number.NaN,
+        Number.POSITIVE_INFINITY,
+        Number.NEGATIVE_INFINITY,
+        '12',
+        null,
+      ]) {
+        expect(
+          albumInfoSchema.safeParse({
+            title: 'Album Name',
+            [field]: value,
+          }).success,
+        ).toBe(false);
+      }
+    },
+  );
 });
 
 describe('publisherInfoSchema', () => {
@@ -159,6 +197,103 @@ describe('trackInfoSchema optional text fields', () => {
 
   it('allows all optional text fields to be omitted', () => {
     expect(trackInfoSchema.parse({})).toEqual({});
+  });
+});
+
+describe('trackInfoSchema numeric fields', () => {
+  it('accepts a positive integer year', () => {
+    expect(trackInfoSchema.parse({ year: 2024 })).toEqual({
+      year: 2024,
+    });
+  });
+
+  it.each([
+    0,
+    -1,
+    2024.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    '2024',
+    null,
+  ])('rejects an invalid year (%j)', (year) => {
+    expect(trackInfoSchema.safeParse({ year }).success).toBe(false);
+  });
+
+  it('accepts a positive fractional BPM', () => {
+    expect(trackInfoSchema.parse({ bpm: 128.5 })).toEqual({
+      bpm: 128.5,
+    });
+  });
+
+  it.each([
+    0,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    '128',
+    null,
+  ])('rejects an invalid BPM (%j)', (bpm) => {
+    expect(trackInfoSchema.safeParse({ bpm }).success).toBe(false);
+  });
+});
+
+describe('trackInfoSchema key', () => {
+  it.each([
+    'C',
+    'G#m',
+    'Bb',
+    'Cbm',
+    'A#',
+    'Fm',
+  ])('accepts canonical track key "%s"', (key) => {
+    expect(trackInfoSchema.parse({ key })).toEqual({ key });
+  });
+
+  it.each([
+    'c',
+    'g#m',
+    'H',
+    'C##',
+    'Cbb',
+    'C♭',
+    'C major',
+    '',
+  ])('rejects a non-canonical track key "%s"', (key) => {
+    expect(trackInfoSchema.safeParse({ key }).success).toBe(false);
+  });
+
+  it.each([
+    42,
+    true,
+    null,
+  ])('rejects a non-string track key (%j)', (key) => {
+    expect(trackInfoSchema.safeParse({ key }).success).toBe(false);
+  });
+});
+
+describe('trackDetailsSchema duration', () => {
+  it('accepts a positive fractional duration', () => {
+    expect(trackDetailsSchema.parse({ duration: 184.37 })).toEqual({
+      duration: 184.37,
+    });
+  });
+
+  it.each([
+    0,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    '184.37',
+    null,
+  ])('rejects an invalid duration (%j)', (duration) => {
+    expect(trackDetailsSchema.safeParse({ duration }).success).toBe(false);
+  });
+
+  it('rejects a missing duration', () => {
+    expect(trackDetailsSchema.safeParse({}).success).toBe(false);
   });
 });
 
