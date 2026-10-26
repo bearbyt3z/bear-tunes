@@ -105,6 +105,35 @@ describe('albumInfoSchema numeric fields', () => {
   );
 });
 
+describe('albumInfoSchema URL fields', () => {
+  it.each(['url', 'artwork'] as const)(
+    'accepts a URL instance in "%s"',
+    (field) => {
+      const url = new URL('https://example.com/album');
+      const input = {
+        title: 'Album Name',
+        [field]: url,
+      };
+
+      const result = albumInfoSchema.parse(input);
+
+      expect(result[field]).toBe(url);
+    },
+  );
+
+  it.each(['url', 'artwork'] as const)(
+    'rejects a string value in "%s"',
+    (field) => {
+      expect(
+        albumInfoSchema.safeParse({
+          title: 'Album Name',
+          [field]: 'https://example.com/album',
+        }).success,
+      ).toBe(false);
+    },
+  );
+});
+
 describe('publisherInfoSchema', () => {
   it('accepts a non-empty trimmed name without requiring optional fields', () => {
     const publisherInfo = {
@@ -129,6 +158,35 @@ describe('publisherInfoSchema', () => {
   ])('rejects a name with leading or trailing whitespace (%j)', (name) => {
     expect(publisherInfoSchema.safeParse({ name }).success).toBe(false);
   });
+});
+
+describe('publisherInfoSchema URL fields', () => {
+  it.each(['url', 'logotype'] as const)(
+    'accepts a URL instance in "%s"',
+    (field) => {
+      const url = new URL('https://example.com/publisher');
+      const input = {
+        name: 'Publisher Name',
+        [field]: url,
+      };
+
+      const result = publisherInfoSchema.parse(input);
+
+      expect(result[field]).toBe(url);
+    },
+  );
+
+  it.each(['url', 'logotype'] as const)(
+    'rejects a string value in "%s"',
+    (field) => {
+      expect(
+        publisherInfoSchema.safeParse({
+          name: 'Publisher Name',
+          [field]: 'https://example.com/publisher',
+        }).success,
+      ).toBe(false);
+    },
+  );
 });
 
 describe('trackInfoSchema', () => {
@@ -271,6 +329,33 @@ describe('trackInfoSchema key', () => {
   ])('rejects a non-string track key (%j)', (key) => {
     expect(trackInfoSchema.safeParse({ key }).success).toBe(false);
   });
+});
+
+describe('trackInfoSchema URL fields', () => {
+  it.each(['url', 'waveform'] as const)(
+    'accepts a URL instance in "%s"',
+    (field) => {
+      const url = new URL('https://example.com/track');
+      const input = {
+        [field]: url,
+      };
+
+      const result = trackInfoSchema.parse(input);
+
+      expect(result[field]).toBe(url);
+    },
+  );
+
+  it.each(['url', 'waveform'] as const)(
+    'rejects a string value in "%s"',
+    (field) => {
+      expect(
+        trackInfoSchema.safeParse({
+          [field]: 'https://example.com/track',
+        }).success,
+      ).toBe(false);
+    },
+  );
 });
 
 describe('trackDetailsSchema duration', () => {
