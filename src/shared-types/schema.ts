@@ -4,12 +4,19 @@ import {
   trackKeyPattern,
 } from '#normalizer';
 
+const nonEmptyTrimmedStringSchema = z
+  .string()
+  .min(1, 'Expected a non-empty string')
+  .refine((value) => value.trim() === value, {
+    message: 'String must not contain leading or trailing whitespace',
+  });
+
 /**
  * Runtime validation schema for normalized `AlbumInfo` input.
  */
 export const albumInfoSchema = z.strictObject({
   artists: z.array(z.string()).optional(),
-  title: z.string(),
+  title: nonEmptyTrimmedStringSchema,
   catalogNumber: z.string().optional(),
   trackNumber: z.number().int().positive().optional(),
   trackTotal: z.number().int().positive().optional(),
@@ -21,7 +28,7 @@ export const albumInfoSchema = z.strictObject({
  * Runtime validation schema for normalized `PublisherInfo` input.
  */
 export const publisherInfoSchema = z.strictObject({
-  name: z.string(),
+  name: nonEmptyTrimmedStringSchema,
   url: z.instanceof(URL).optional(),
   logotype: z.instanceof(URL).optional(),
 });
