@@ -18,8 +18,8 @@
  * - When no `|` separator is present, the whole normalized value is treated as `genre`.
  * - URL fields such as `url`, `waveform`, `album.url`, `album.artwork`, `publisher.url`,
  *   and `publisher.logotype` use `URL` instances in the canonical representation.
- * - `released` represents a release date value; when serialized outside runtime objects,
- *   it should be formatted as a date-only value.
+ * - `released`, when present, is a valid `Date` instance representing the release date;
+ *   when serialized outside runtime objects, it should be formatted as a date-only value.
  * - `year` represents a release year value used by some metadata formats.
  * - When `year` is missing and `released` is present, `year` is derived from `released`
  *   during normalization.

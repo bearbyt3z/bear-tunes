@@ -48,7 +48,7 @@ export const trackInfoSchema = z.strictObject({
   artists: z.array(z.string()).optional(),
   title: z.string().optional(),
   remixers: z.array(z.string()).optional(),
-  released: z.instanceof(Date).optional(),
+  released: z.date().optional(),
   year: z.number().int().positive().optional(),
   genre: z.string().optional(),
   subgenre: z.string().optional(),
