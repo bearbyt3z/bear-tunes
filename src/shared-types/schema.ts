@@ -12,10 +12,24 @@ const nonEmptyTrimmedStringSchema = z
   });
 
 /**
+ * Validates a non-empty array of trimmed, non-empty, unique artist names.
+ *
+ * Duplicate matching is case-insensitive. The schema validates the input
+ * without transforming or reordering array entries.
+ */
+const nonEmptyUniqueArtistArraySchema = z
+  .array(nonEmptyTrimmedStringSchema)
+  .min(1, 'Expected at least one artist')
+  .refine(
+    (artists) => new Set(artists.map((artist) => artist.toLowerCase())).size === artists.length,
+    { message: 'Artist names must be unique, ignoring case' },
+  );
+
+/**
  * Runtime validation schema for normalized `AlbumInfo` input.
  */
 export const albumInfoSchema = z.strictObject({
-  artists: z.array(z.string()).optional(),
+  artists: nonEmptyUniqueArtistArraySchema.optional(),
   title: nonEmptyTrimmedStringSchema,
   catalogNumber: nonEmptyTrimmedStringSchema.optional(),
   trackNumber: z.number().int().positive().optional(),
@@ -45,9 +59,9 @@ export const trackDetailsSchema = z.strictObject({
  */
 export const trackInfoSchema = z.strictObject({
   url: z.instanceof(URL).optional(),
-  artists: z.array(z.string()).optional(),
+  artists: nonEmptyUniqueArtistArraySchema.optional(),
   title: nonEmptyTrimmedStringSchema.optional(),
-  remixers: z.array(z.string()).optional(),
+  remixers: nonEmptyUniqueArtistArraySchema.optional(),
   released: z.date().optional(),
   year: z.number().int().positive().optional(),
   genre: nonEmptyTrimmedStringSchema.optional(),
