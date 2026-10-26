@@ -4,6 +4,12 @@ import {
   trackKeyPattern,
 } from '#normalizer';
 
+/**
+ * Validates a non-empty string without leading or trailing whitespace.
+ *
+ * Rejects empty strings and strings that have not been trimmed.
+ * Validates the input without modifying or transforming it.
+ */
 const nonEmptyTrimmedStringSchema = z
   .string()
   .min(1, 'Expected a non-empty string')
