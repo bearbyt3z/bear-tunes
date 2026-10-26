@@ -30,6 +30,41 @@ describe('albumInfoSchema', () => {
   ])('rejects a title with leading or trailing whitespace (%j)', (title) => {
     expect(albumInfoSchema.safeParse({ title }).success).toBe(false);
   });
+
+  it('accepts a canonical catalog number', () => {
+    const albumInfo = {
+      title: 'Album Name',
+      catalogNumber: 'CAT-123',
+    };
+
+    expect(albumInfoSchema.parse(albumInfo)).toEqual(albumInfo);
+  });
+
+  it.each([
+    '',
+    '   ',
+    '\t\n',
+  ])('rejects an empty or whitespace-only catalog number (%j)', (catalogNumber) => {
+    expect(
+      albumInfoSchema.safeParse({
+        title: 'Album Name',
+        catalogNumber,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ' CAT-123',
+    'CAT-123 ',
+    ' CAT-123 ',
+  ])('rejects a catalog number with surrounding whitespace (%j)', (catalogNumber) => {
+    expect(
+      albumInfoSchema.safeParse({
+        title: 'Album Name',
+        catalogNumber,
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe('publisherInfoSchema', () => {
@@ -77,7 +112,52 @@ describe('trackInfoSchema', () => {
     ).toBe(false);
   });
 
-  it('allows the release date to be omitted', () => {
+  it('allows optional fields to be omitted', () => {
+    expect(trackInfoSchema.parse({})).toEqual({});
+  });
+});
+
+const trackInfoTextFields = [
+  'title',
+  'genre',
+  'subgenre',
+  'isrc',
+  'ufid',
+] as const;
+
+describe('trackInfoSchema optional text fields', () => {
+  it.each(trackInfoTextFields)(
+    'accepts a canonical value for "%s"',
+    (field) => {
+      const input = { [field]: 'Canonical Value' };
+
+      expect(trackInfoSchema.parse(input)).toEqual(input);
+    },
+  );
+
+  it.each(trackInfoTextFields)(
+    'rejects empty or whitespace-only values for "%s"',
+    (field) => {
+      for (const value of ['', '   ', '\t\n']) {
+        expect(
+          trackInfoSchema.safeParse({ [field]: value }).success,
+        ).toBe(false);
+      }
+    },
+  );
+
+  it.each(trackInfoTextFields)(
+    'rejects leading or trailing whitespace in "%s"',
+    (field) => {
+      for (const value of [' Value', 'Value ', ' Value ']) {
+        expect(
+          trackInfoSchema.safeParse({ [field]: value }).success,
+        ).toBe(false);
+      }
+    },
+  );
+
+  it('allows all optional text fields to be omitted', () => {
     expect(trackInfoSchema.parse({})).toEqual({});
   });
 });
