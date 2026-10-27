@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   normalizeAlbumInfo,
   normalizePublisherInfo,
+  normalizeTrackDetails,
 } from './normalizer.js';
 
 describe('normalizeAlbumInfo', () => {
@@ -259,6 +260,91 @@ describe('normalizePublisherInfo', () => {
     const originalInput = { ...input };
 
     normalizePublisherInfo(input);
+
+    expect(input).toEqual(originalInput);
+  });
+});
+
+describe('normalizeTrackDetails', () => {
+  it.each([
+    null,
+    undefined,
+    'Track Details',
+    42,
+    true,
+    [],
+    new Date(),
+  ])('returns undefined for non-record input (%j)', (details) => {
+    expect(normalizeTrackDetails(details)).toBeUndefined();
+  });
+
+  it('returns undefined when the duration is missing', () => {
+    expect(normalizeTrackDetails({})).toBeUndefined();
+  });
+
+  it.each([
+    undefined,
+    null,
+    '',
+    '   ',
+    'not a number',
+    0,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    true,
+    [],
+    {},
+  ])('returns undefined for an invalid duration (%j)', (duration) => {
+    expect(normalizeTrackDetails({ duration })).toBeUndefined();
+  });
+
+  it('accepts a positive numeric duration', () => {
+    expect(normalizeTrackDetails({ duration: 184.37 })).toEqual({
+      duration: 184.37,
+    });
+  });
+
+  it('converts a positive numeric string to a number', () => {
+    expect(normalizeTrackDetails({ duration: '184.37' })).toEqual({
+      duration: 184.37,
+    });
+  });
+
+  it.each([
+    { value: 184.376, expected: 184.38 },
+    { value: 184.374, expected: 184.37 },
+    { value: '184.376', expected: 184.38 },
+  ])(
+    'rounds duration $value to two decimal places',
+    ({ value, expected }) => {
+      expect(normalizeTrackDetails({ duration: value })).toEqual({
+        duration: expected,
+      });
+    },
+  );
+
+  it('ignores properties that are not part of TrackDetails', () => {
+    const result = normalizeTrackDetails({
+      duration: 184.37,
+      unexpected: 'value',
+    });
+
+    expect(result).toEqual({
+      duration: 184.37,
+    });
+  });
+
+  it('does not mutate the input object', () => {
+    const input = {
+      duration: '184.376',
+      unexpected: 'value',
+    };
+
+    const originalInput = { ...input };
+
+    normalizeTrackDetails(input);
 
     expect(input).toEqual(originalInput);
   });
