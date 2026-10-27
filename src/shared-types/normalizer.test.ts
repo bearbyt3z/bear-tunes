@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeAlbumInfo } from './normalizer.js';
+import {
+  normalizeAlbumInfo,
+  normalizePublisherInfo,
+} from './normalizer.js';
 
 describe('normalizeAlbumInfo', () => {
   it.each([
@@ -152,6 +155,110 @@ describe('normalizeAlbumInfo', () => {
     };
 
     normalizeAlbumInfo(input);
+
+    expect(input).toEqual(originalInput);
+  });
+});
+
+describe('normalizePublisherInfo', () => {
+  it.each([
+    null,
+    undefined,
+    'Publisher Name',
+    42,
+    true,
+    [],
+    new Date(),
+  ])('returns undefined for non-record input (%j)', (publisher) => {
+    expect(normalizePublisherInfo(publisher)).toBeUndefined();
+  });
+
+  it('returns undefined when the name is missing', () => {
+    expect(normalizePublisherInfo({})).toBeUndefined();
+  });
+
+  it.each([
+    null,
+    42,
+    '',
+    '   ',
+    '\t\n',
+  ])('returns undefined when the name is invalid (%j)', (name) => {
+    expect(normalizePublisherInfo({ name })).toBeUndefined();
+  });
+
+  it('trims the publisher name', () => {
+    const result = normalizePublisherInfo({
+      name: '  Publisher Name  ',
+    });
+
+    expect(result).toEqual({
+      name: 'Publisher Name',
+    });
+  });
+
+  describe('URL fields', () => {
+    it.each(['url', 'logotype'] as const)(
+      'converts an absolute URL string in "%s" to a URL instance',
+      (field) => {
+        const value = 'https://example.com/publisher';
+        const result = normalizePublisherInfo({
+          name: 'Publisher Name',
+          [field]: value,
+        });
+
+        expect(result?.[field]).toBeInstanceOf(URL);
+        expect(result?.[field]?.href).toBe(value);
+      },
+    );
+
+    it.each(['url', 'logotype'] as const)(
+      'preserves a URL instance in "%s"',
+      (field) => {
+        const url = new URL('https://example.com/publisher');
+        const result = normalizePublisherInfo({
+          name: 'Publisher Name',
+          [field]: url,
+        });
+
+        expect(result?.[field]).toBe(url);
+      },
+    );
+  });
+
+  it('omits invalid optional fields without discarding the publisher', () => {
+    const result = normalizePublisherInfo({
+      name: 'Publisher Name',
+      url: '/relative/path',
+      logotype: 42,
+    });
+
+    expect(result).toEqual({
+      name: 'Publisher Name',
+    });
+  });
+
+  it('ignores properties that are not part of PublisherInfo', () => {
+    const result = normalizePublisherInfo({
+      name: 'Publisher Name',
+      unexpected: 'value',
+    });
+
+    expect(result).toEqual({
+      name: 'Publisher Name',
+    });
+  });
+
+  it('does not mutate the input object', () => {
+    const input = {
+      name: ' Publisher Name ',
+      url: 'https://example.com/publisher',
+      logotype: '/relative/path',
+    };
+
+    const originalInput = { ...input };
+
+    normalizePublisherInfo(input);
 
     expect(input).toEqual(originalInput);
   });
