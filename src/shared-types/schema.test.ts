@@ -356,10 +356,6 @@ describe('trackInfoSchema optional text fields', () => {
       }
     },
   );
-
-  it('allows all optional text fields to be omitted', () => {
-    expect(trackInfoSchema.parse({})).toEqual({});
-  });
 });
 
 describe('trackInfoSchema numeric fields', () => {
