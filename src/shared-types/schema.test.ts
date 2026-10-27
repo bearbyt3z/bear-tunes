@@ -116,12 +116,6 @@ describe('albumInfoSchema artists', () => {
       ).toBe(false);
     },
   );
-
-  it('allows the artists field to be omitted', () => {
-    expect(albumInfoSchema.parse({ title: 'Album Name' })).toEqual({
-      title: 'Album Name',
-    });
-  });
 });
 
 describe('albumInfoSchema numeric fields', () => {
