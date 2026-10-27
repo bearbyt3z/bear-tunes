@@ -7,6 +7,33 @@ import {
   trackInfoSchema,
 } from './schema.js';
 
+const invalidArtistArrays = [
+  {
+    description: 'an empty array',
+    value: [],
+  },
+  {
+    description: 'an empty artist name',
+    value: [''],
+  },
+  {
+    description: 'a whitespace-only artist name',
+    value: ['   '],
+  },
+  {
+    description: 'an artist name with leading whitespace',
+    value: [' Artist A'],
+  },
+  {
+    description: 'an artist name with trailing whitespace',
+    value: ['Artist A '],
+  },
+  {
+    description: 'duplicate artist names ignoring case',
+    value: ['Artist A', 'artist a'],
+  },
+];
+
 describe('albumInfoSchema', () => {
   it('accepts a non-empty trimmed title without requiring optional fields', () => {
     const albumInfo = {
@@ -65,6 +92,35 @@ describe('albumInfoSchema', () => {
         catalogNumber,
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('albumInfoSchema artists', () => {
+  it('accepts a non-empty array of canonical artist names', () => {
+    const albumInfo = {
+      title: 'Album Name',
+      artists: ['Artist A', 'Artist B'],
+    };
+
+    expect(albumInfoSchema.parse(albumInfo)).toEqual(albumInfo);
+  });
+
+  it.each(invalidArtistArrays)(
+    'rejects $description',
+    ({ value }) => {
+      expect(
+        albumInfoSchema.safeParse({
+          title: 'Album Name',
+          artists: value,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('allows the artists field to be omitted', () => {
+    expect(albumInfoSchema.parse({ title: 'Album Name' })).toEqual({
+      title: 'Album Name',
+    });
   });
 });
 
@@ -189,6 +245,30 @@ describe('publisherInfoSchema URL fields', () => {
   );
 });
 
+describe('trackDetailsSchema duration', () => {
+  it('accepts a positive fractional duration', () => {
+    expect(trackDetailsSchema.parse({ duration: 184.37 })).toEqual({
+      duration: 184.37,
+    });
+  });
+
+  it.each([
+    0,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    '184.37',
+    null,
+  ])('rejects an invalid duration (%j)', (duration) => {
+    expect(trackDetailsSchema.safeParse({ duration }).success).toBe(false);
+  });
+
+  it('rejects a missing duration', () => {
+    expect(trackDetailsSchema.safeParse({}).success).toBe(false);
+  });
+});
+
 describe('trackInfoSchema', () => {
   it('accepts a valid release date', () => {
     const released = new Date('2024-05-17T00:00:00.000Z');
@@ -209,6 +289,36 @@ describe('trackInfoSchema', () => {
   });
 
   it('allows optional fields to be omitted', () => {
+    expect(trackInfoSchema.parse({})).toEqual({});
+  });
+});
+
+describe('trackInfoSchema artist arrays', () => {
+  it.each(['artists', 'remixers'] as const)(
+    'accepts a non-empty array of canonical names in "%s"',
+    (field) => {
+      const input = {
+        [field]: ['Artist A', 'Artist B'],
+      };
+
+      expect(trackInfoSchema.parse(input)).toEqual(input);
+    },
+  );
+
+  it.each(['artists', 'remixers'] as const)(
+    'rejects invalid arrays in "%s"',
+    (field) => {
+      for (const { value } of invalidArtistArrays) {
+        expect(
+          trackInfoSchema.safeParse({
+            [field]: value,
+          }).success,
+        ).toBe(false);
+      }
+    },
+  );
+
+  it('allows both artist arrays to be omitted', () => {
     expect(trackInfoSchema.parse({})).toEqual({});
   });
 });
@@ -356,116 +466,6 @@ describe('trackInfoSchema URL fields', () => {
       ).toBe(false);
     },
   );
-});
-
-describe('trackDetailsSchema duration', () => {
-  it('accepts a positive fractional duration', () => {
-    expect(trackDetailsSchema.parse({ duration: 184.37 })).toEqual({
-      duration: 184.37,
-    });
-  });
-
-  it.each([
-    0,
-    -1,
-    Number.NaN,
-    Number.POSITIVE_INFINITY,
-    Number.NEGATIVE_INFINITY,
-    '184.37',
-    null,
-  ])('rejects an invalid duration (%j)', (duration) => {
-    expect(trackDetailsSchema.safeParse({ duration }).success).toBe(false);
-  });
-
-  it('rejects a missing duration', () => {
-    expect(trackDetailsSchema.safeParse({}).success).toBe(false);
-  });
-});
-
-const invalidArtistArrays = [
-  {
-    description: 'an empty array',
-    value: [],
-  },
-  {
-    description: 'an empty artist name',
-    value: [''],
-  },
-  {
-    description: 'a whitespace-only artist name',
-    value: ['   '],
-  },
-  {
-    description: 'an artist name with leading whitespace',
-    value: [' Artist A'],
-  },
-  {
-    description: 'an artist name with trailing whitespace',
-    value: ['Artist A '],
-  },
-  {
-    description: 'duplicate artist names ignoring case',
-    value: ['Artist A', 'artist a'],
-  },
-];
-
-describe('albumInfoSchema artists', () => {
-  it('accepts a non-empty array of canonical artist names', () => {
-    const albumInfo = {
-      title: 'Album Name',
-      artists: ['Artist A', 'Artist B'],
-    };
-
-    expect(albumInfoSchema.parse(albumInfo)).toEqual(albumInfo);
-  });
-
-  it.each(invalidArtistArrays)(
-    'rejects $description',
-    ({ value }) => {
-      expect(
-        albumInfoSchema.safeParse({
-          title: 'Album Name',
-          artists: value,
-        }).success,
-      ).toBe(false);
-    },
-  );
-
-  it('allows the artists field to be omitted', () => {
-    expect(albumInfoSchema.parse({ title: 'Album Name' })).toEqual({
-      title: 'Album Name',
-    });
-  });
-});
-
-describe('trackInfoSchema artist arrays', () => {
-  it.each(['artists', 'remixers'] as const)(
-    'accepts a non-empty array of canonical names in "%s"',
-    (field) => {
-      const input = {
-        [field]: ['Artist A', 'Artist B'],
-      };
-
-      expect(trackInfoSchema.parse(input)).toEqual(input);
-    },
-  );
-
-  it.each(['artists', 'remixers'] as const)(
-    'rejects invalid arrays in "%s"',
-    (field) => {
-      for (const { value } of invalidArtistArrays) {
-        expect(
-          trackInfoSchema.safeParse({
-            [field]: value,
-          }).success,
-        ).toBe(false);
-      }
-    },
-  );
-
-  it('allows both artist arrays to be omitted', () => {
-    expect(trackInfoSchema.parse({})).toEqual({});
-  });
 });
 
 describe('strict object validation', () => {
