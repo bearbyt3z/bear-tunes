@@ -467,3 +467,70 @@ describe('trackInfoSchema artist arrays', () => {
     expect(trackInfoSchema.parse({})).toEqual({});
   });
 });
+
+describe('strict object validation', () => {
+  it.each([
+    {
+      description: 'albumInfoSchema',
+      schema: albumInfoSchema,
+      input: { title: 'Album Name', unexpected: true },
+    },
+    {
+      description: 'publisherInfoSchema',
+      schema: publisherInfoSchema,
+      input: { name: 'Publisher Name', unexpected: true },
+    },
+    {
+      description: 'trackDetailsSchema',
+      schema: trackDetailsSchema,
+      input: { duration: 180, unexpected: true },
+    },
+    {
+      description: 'trackInfoSchema',
+      schema: trackInfoSchema,
+      input: { unexpected: true },
+    },
+  ])('rejects unknown root properties in $description', ({ schema, input }) => {
+    expect(schema.safeParse(input).success).toBe(false);
+  });
+
+  it.each([
+    {
+      description: 'album',
+      input: {
+        album: { title: 'Album Name', unexpected: true },
+      },
+    },
+    {
+      description: 'publisher',
+      input: {
+        publisher: { name: 'Publisher Name', unexpected: true },
+      },
+    },
+    {
+      description: 'details',
+      input: {
+        details: { duration: 180, unexpected: true },
+      },
+    },
+  ])('rejects unknown properties in the nested $description object', ({ input }) => {
+    expect(trackInfoSchema.safeParse(input).success).toBe(false);
+  });
+
+  it('accepts known properties in nested objects', () => {
+    const input = {
+      title: 'Track Name',
+      album: {
+        title: 'Album Name',
+      },
+      publisher: {
+        name: 'Publisher Name',
+      },
+      details: {
+        duration: 180,
+      },
+    };
+
+    expect(trackInfoSchema.parse(input)).toEqual(input);
+  });
+});
