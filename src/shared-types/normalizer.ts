@@ -60,9 +60,7 @@ function normalizeTitle(value: unknown): string | undefined {
     return undefined;
   }
 
-  const normalizedTitle = normalizeTrackTitle(normalizedString);
-
-  return normalizedTitle || undefined;
+  return normalizeTrackTitle(normalizedString);
 }
 
 /**
