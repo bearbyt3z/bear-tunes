@@ -410,6 +410,17 @@ describe('normalizeTrackInfo', () => {
     expect(result?.waveform?.href).toBe(waveform);
   });
 
+  it('omits artists when all are already listed as featured in the title', () => {
+    const result = normalizeTrackInfo({
+      title: 'Track Name feat Guest One',
+      artists: ['Guest One'],
+    });
+
+    expect(result).toEqual({
+      title: 'Track Name (feat. Guest One)',
+    });
+  });
+
   it('derives the year from the release date when the input year is invalid', () => {
     const released = new Date('2024-05-17T00:00:00.000Z');
 
