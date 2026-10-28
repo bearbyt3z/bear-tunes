@@ -444,6 +444,15 @@ describe('normalizeTrackInfo', () => {
 
       expect(result).toEqual({});
     });
+
+    it('omits genre info when the main genre before the separator is empty', () => {
+      const result = normalizeTrackInfo({
+        genre: ' | Deep House',
+        subgenre: 'Tech House',
+      });
+
+      expect(result).toEqual({});
+    });
   });
 
   it('omits invalid optional fields while keeping valid fields', () => {
