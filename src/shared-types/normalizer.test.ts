@@ -4,6 +4,7 @@ import {
   normalizeAlbumInfo,
   normalizePublisherInfo,
   normalizeTrackDetails,
+  normalizeTrackInfo,
 } from './normalizer.js';
 
 describe('normalizeAlbumInfo', () => {
@@ -345,6 +346,198 @@ describe('normalizeTrackDetails', () => {
     const originalInput = { ...input };
 
     normalizeTrackDetails(input);
+
+    expect(input).toEqual(originalInput);
+  });
+});
+
+describe('normalizeTrackInfo', () => {
+  it.each([
+    null,
+    undefined,
+    'Track Info',
+    42,
+    true,
+    [],
+    new Date(),
+  ])('returns undefined for non-record input (%j)', (trackInfo) => {
+    expect(normalizeTrackInfo(trackInfo)).toBeUndefined();
+  });
+
+  it('returns an empty object for empty record input', () => {
+    expect(normalizeTrackInfo({})).toEqual({});
+  });
+
+  it('normalizes top-level fields', () => {
+    const released = new Date('2024-05-17T00:00:00.000Z');
+    const url = 'https://example.com/track';
+    const waveform = 'https://example.com/waveform';
+
+    const result = normalizeTrackInfo({
+      url,
+      artists: 'Artist A, Guest One, Artist B',
+      title: '  Track Name feat Guest One  ',
+      remixers: [' Remixer A ', 'Remixer B'],
+      released,
+      year: '2022',
+      genre: ' House ',
+      subgenre: ' Deep House ',
+      bpm: '128.5',
+      key: 'G♯ minor',
+      isrc: ' ISRC123 ',
+      ufid: ' UFID123 ',
+      waveform,
+    });
+
+    expect(result).toMatchObject({
+      artists: ['Artist A', 'Artist B'],
+      title: 'Track Name (feat. Guest One)',
+      remixers: ['Remixer A', 'Remixer B'],
+      released,
+      year: 2022,
+      genre: 'House',
+      subgenre: 'Deep House',
+      bpm: 128.5,
+      key: 'G#m',
+      isrc: 'ISRC123',
+      ufid: 'UFID123',
+    });
+
+    expect(result?.url).toBeInstanceOf(URL);
+    expect(result?.waveform).toBeInstanceOf(URL);
+
+    expect(result?.url?.href).toBe(url);
+    expect(result?.waveform?.href).toBe(waveform);
+  });
+
+  it('derives the year from the release date when the input year is invalid', () => {
+    const released = new Date('2024-05-17T00:00:00.000Z');
+
+    const result = normalizeTrackInfo({
+      released: released.toISOString(),
+      year: 'invalid',
+    });
+
+    expect(result).toEqual({
+      released,
+      year: 2024,
+    });
+  });
+
+  describe('genre fields', () => {
+    it('splits genre and subgenre when genre contains the separator', () => {
+      const result = normalizeTrackInfo({
+        genre: ' House | Deep House ',
+        subgenre: 'Tech House',
+      });
+
+      expect(result).toEqual({
+        genre: 'House',
+        subgenre: 'Deep House',
+      });
+    });
+
+    it('omits subgenre when the main genre is missing', () => {
+      const result = normalizeTrackInfo({
+        subgenre: 'Deep House',
+      });
+
+      expect(result).toEqual({});
+    });
+  });
+
+  it('omits invalid optional fields while keeping valid fields', () => {
+    const result = normalizeTrackInfo({
+      title: ' Track Name ',
+      url: '/relative/path',
+      artists: [null, 42, ' '],
+      remixers: [''],
+      released: 'not a date',
+      year: -1,
+      genre: ' ',
+      subgenre: 'Deep House',
+      bpm: 'invalid',
+      key: 'H major',
+      isrc: ' ',
+      ufid: null,
+      waveform: '/relative/path',
+      album: { title: ' ' },
+      publisher: { name: ' ' },
+      details: { duration: 0 },
+    });
+
+    expect(result).toEqual({
+      title: 'Track Name',
+    });
+  });
+
+  it('normalizes nested album, publisher, and details objects', () => {
+    const result = normalizeTrackInfo({
+      album: {
+        title: ' Album — ‘Edition’ ',
+        trackNumber: '2',
+      },
+      publisher: {
+        name: ' Publisher Name ',
+      },
+      details: {
+        duration: '184.376',
+      },
+    });
+
+    expect(result).toEqual({
+      album: {
+        title: "Album - 'Edition'",
+        trackNumber: 2,
+      },
+      publisher: {
+        name: 'Publisher Name',
+      },
+      details: {
+        duration: 184.38,
+      },
+    });
+  });
+
+  it('ignores properties that are not part of TrackInfo', () => {
+    const result = normalizeTrackInfo({
+      title: 'Track Name',
+      unexpected: 'value',
+    });
+
+    expect(result).toEqual({
+      title: 'Track Name',
+    });
+  });
+
+  it('does not mutate the input object', () => {
+    const input = {
+      title: ' Track Name ',
+      artists: [' Artist A '],
+      album: {
+        title: ' Album Name ',
+        artists: [' Artist B '],
+      },
+      publisher: {
+        name: ' Publisher Name ',
+      },
+      details: {
+        duration: '184.376',
+      },
+    };
+
+    const originalInput = {
+      ...input,
+      artists: [...input.artists],
+      album: {
+        ...input.album,
+        artists: [...input.album.artists],
+      },
+      publisher: { ...input.publisher },
+      details: { ...input.details },
+    };
+
+    normalizeTrackInfo(input);
 
     expect(input).toEqual(originalInput);
   });
