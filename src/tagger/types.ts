@@ -176,10 +176,10 @@ export interface BearTunesTaggerOptions {
   eyeD3DisplayPluginPatternFile: string;
 
   /**
-   * Maximum accepted duration difference, in seconds, between local and remote
-   * track metadata before user confirmation is requested.
+   * Maximum accepted duration difference, in milliseconds, between local and
+   * remote track metadata before user confirmation is requested.
    */
-  lengthDifferenceAccepted: number;
+  lengthDifferenceAcceptedMs: number;
 
   /**
    * Enables diagnostic log messages emitted by the tagger.

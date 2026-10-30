@@ -239,26 +239,27 @@ describe('publisherInfoSchema URL fields', () => {
   );
 });
 
-describe('trackDetailsSchema duration', () => {
-  it('accepts a positive fractional duration', () => {
-    expect(trackDetailsSchema.parse({ duration: 184.37 })).toEqual({
-      duration: 184.37,
+describe('trackDetailsSchema durationMs', () => {
+  it('accepts a positive integer duration in milliseconds', () => {
+    expect(trackDetailsSchema.parse({ durationMs: 184376 })).toEqual({
+      durationMs: 184376,
     });
   });
 
   it.each([
     0,
     -1,
+    184376.5,
     Number.NaN,
     Number.POSITIVE_INFINITY,
     Number.NEGATIVE_INFINITY,
-    '184.37',
+    '184376',
     null,
-  ])('rejects an invalid duration (%j)', (duration) => {
-    expect(trackDetailsSchema.safeParse({ duration }).success).toBe(false);
+  ])('rejects an invalid durationMs (%j)', (durationMs) => {
+    expect(trackDetailsSchema.safeParse({ durationMs }).success).toBe(false);
   });
 
-  it('rejects a missing duration', () => {
+  it('rejects a missing durationMs', () => {
     expect(trackDetailsSchema.safeParse({}).success).toBe(false);
   });
 });
@@ -473,7 +474,7 @@ describe('strict object validation', () => {
     {
       description: 'trackDetailsSchema',
       schema: trackDetailsSchema,
-      input: { duration: 180, unexpected: true },
+      input: { durationMs: 180, unexpected: true },
     },
     {
       description: 'trackInfoSchema',
@@ -500,7 +501,7 @@ describe('strict object validation', () => {
     {
       description: 'details',
       input: {
-        details: { duration: 180, unexpected: true },
+        details: { durationMs: 180, unexpected: true },
       },
     },
   ])('rejects unknown properties in the nested $description object', ({ input }) => {
@@ -517,7 +518,7 @@ describe('strict object validation', () => {
         name: 'Publisher Name',
       },
       details: {
-        duration: 180,
+        durationMs: 180,
       },
     };
 

@@ -279,7 +279,7 @@ describe('normalizeTrackDetails', () => {
     expect(normalizeTrackDetails(details)).toBeUndefined();
   });
 
-  it('returns undefined when the duration is missing', () => {
+  it('returns undefined when durationMs is missing', () => {
     expect(normalizeTrackDetails({})).toBeUndefined();
   });
 
@@ -291,55 +291,44 @@ describe('normalizeTrackDetails', () => {
     'not a number',
     0,
     -1,
+    184376.5,
+    '184376.5',
     Number.NaN,
     Number.POSITIVE_INFINITY,
     Number.NEGATIVE_INFINITY,
     true,
     [],
     {},
-  ])('returns undefined for an invalid duration (%j)', (duration) => {
-    expect(normalizeTrackDetails({ duration })).toBeUndefined();
+  ])('returns undefined for an invalid durationMs (%j)', (durationMs) => {
+    expect(normalizeTrackDetails({ durationMs })).toBeUndefined();
   });
 
-  it('accepts a positive numeric duration', () => {
-    expect(normalizeTrackDetails({ duration: 184.37 })).toEqual({
-      duration: 184.37,
+  it('accepts a positive integer duration in milliseconds without modification', () => {
+    expect(normalizeTrackDetails({ durationMs: 184376 })).toEqual({
+      durationMs: 184376,
     });
   });
 
-  it('converts a positive numeric string to a number', () => {
-    expect(normalizeTrackDetails({ duration: '184.37' })).toEqual({
-      duration: 184.37,
+  it('converts a positive integer numeric string to a number', () => {
+    expect(normalizeTrackDetails({ durationMs: '184376' })).toEqual({
+      durationMs: 184376,
     });
   });
-
-  it.each([
-    { value: 184.376, expected: 184.38 },
-    { value: 184.374, expected: 184.37 },
-    { value: '184.376', expected: 184.38 },
-  ])(
-    'rounds duration $value to two decimal places',
-    ({ value, expected }) => {
-      expect(normalizeTrackDetails({ duration: value })).toEqual({
-        duration: expected,
-      });
-    },
-  );
 
   it('ignores properties that are not part of TrackDetails', () => {
     const result = normalizeTrackDetails({
-      duration: 184.37,
+      durationMs: 184376,
       unexpected: 'value',
     });
 
     expect(result).toEqual({
-      duration: 184.37,
+      durationMs: 184376,
     });
   });
 
   it('does not mutate the input object', () => {
     const input = {
-      duration: '184.376',
+      durationMs: '184376',
       unexpected: 'value',
     };
 
@@ -483,7 +472,7 @@ describe('normalizeTrackInfo', () => {
       waveform: '/relative/path',
       album: { title: ' ' },
       publisher: { name: ' ' },
-      details: { duration: 0 },
+      details: { durationMs: 0 },
     });
 
     expect(result).toEqual({
@@ -501,7 +490,7 @@ describe('normalizeTrackInfo', () => {
         name: ' Publisher Name ',
       },
       details: {
-        duration: '184.376',
+        durationMs: '184376',
       },
     });
 
@@ -514,7 +503,7 @@ describe('normalizeTrackInfo', () => {
         name: 'Publisher Name',
       },
       details: {
-        duration: 184.38,
+        durationMs: 184376,
       },
     });
   });
@@ -542,7 +531,7 @@ describe('normalizeTrackInfo', () => {
         name: ' Publisher Name ',
       },
       details: {
-        duration: '184.376',
+        durationMs: '184376',
       },
     };
 

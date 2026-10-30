@@ -109,7 +109,7 @@ describe('removeUndefinedObjectFields', () => {
       bpm: 128,
       url: new URL('https://example.com/track'),
       details: {
-        duration: 245,
+        durationMs: 245,
       },
     };
 
@@ -122,7 +122,7 @@ describe('removeUndefinedObjectFields', () => {
       bpm: 128,
       url: new URL('https://example.com/track'),
       details: {
-        duration: 245,
+        durationMs: 245,
       },
     });
   });

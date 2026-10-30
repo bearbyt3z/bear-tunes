@@ -55,9 +55,11 @@ export const publisherInfoSchema = z.strictObject({
 
 /**
  * Runtime validation schema for normalized `TrackDetails` input.
+ *
+ * Validates `durationMs` as a positive integer number of milliseconds.
  */
 export const trackDetailsSchema = z.strictObject({
-  duration: z.number().positive(),
+  durationMs: z.number().int().positive(),
 });
 
 /**

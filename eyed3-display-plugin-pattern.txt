@@ -22,6 +22,6 @@
     "trackTotal": "%track-total%"
   }\,
   "details": {
-    "duration": "$length()"
+    "durationMs": $duration_ms()
   }
 }

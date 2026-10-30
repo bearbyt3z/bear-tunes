@@ -106,8 +106,12 @@ function getBeatportOriginalImageUrl(
  * Maps a Beatport search-result track entry to canonical `TrackInfo`.
  *
  * This function performs source-specific field mapping and delegates final
- * canonical value normalization to `normalizeTrackInfo()`. It does not log and
- * does not validate the resulting output schema.
+ * canonical value normalization to `normalizeTrackInfo()`.
+ *
+ * The optional Beatport `length` field is already expressed in milliseconds
+ * and is mapped unchanged to canonical `details.durationMs`.
+ *
+ * The function does not log and does not validate the resulting output schema.
  *
  * @param trackEntry - Beatport search result track object.
  * @param domainUrl - Beatport domain URL used to build the canonical track URL.
@@ -133,7 +137,7 @@ export function mapBeatportSearchResultTrackToTrackInfo(
 
   const [genre, subgenre] = trackEntry.genre.map((genreEntry) => genreEntry.genre_name);
 
-  const details = (trackEntry.length === undefined) ? undefined : { duration: trackEntry.length / 1000 };
+  const details = (trackEntry.length === undefined) ? undefined : { durationMs: trackEntry.length };
 
   return normalizeTrackInfo({
     url: `${domainUrl}/track/${slugify(trackEntry.track_name)}/${trackEntry.track_id}`,
@@ -206,8 +210,12 @@ export function mapBeatportPublisherToPublisherInfo(
  * Maps a Beatport full-track payload to canonical `TrackInfo`.
  *
  * This function performs source-specific field mapping and delegates final
- * canonical value normalization to `normalizeTrackInfo()`. It does not log and
- * does not validate the resulting output schema.
+ * canonical value normalization to `normalizeTrackInfo()`.
+ *
+ * Beatport's `track_length_ms` field is mapped unchanged to canonical
+ * `details.durationMs`.
+ *
+ * The function does not log and does not validate the resulting output schema.
  *
  * @param trackData - Beatport full track object.
  * @param trackUrl - Canonical Beatport track URL.
@@ -251,7 +259,7 @@ export function mapBeatportTrackToTrackInfo(
     publisher,
     album,
     details: {
-      duration: trackData.track_length_ms / 1000.0,
+      durationMs: trackData.track_length_ms,
     },
   });
 }

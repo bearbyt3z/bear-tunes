@@ -106,7 +106,7 @@ export type {
 const defaultTaggerOptions = Object.freeze({
   dataProvider: new BeatportDataProvider(),
   eyeD3DisplayPluginPatternFile: './eyed3-display-plugin-pattern.txt',
-  lengthDifferenceAccepted: 3,
+  lengthDifferenceAcceptedMs: 3_000,
   verbose: false,
   eyed3Verbose: false,
   metaflacVerbose: false,
@@ -386,6 +386,9 @@ export class BearTunesTagger {
    * Resolves a significant duration mismatch between a local track and a
    * selected remote track.
    *
+   * Durations are compared in milliseconds. Conversion to seconds is performed
+   * only when formatting duration values for human-readable log messages.
+   *
    * @param localTrackInfo - Metadata read from the local audio file.
    * @param remoteTrackInfo - Metadata of the selected remote track.
    * @returns How the duration mismatch should be handled.
@@ -397,15 +400,15 @@ export class BearTunesTagger {
     if (
       !localTrackInfo.details
       || !remoteTrackInfo.details
-      || Math.abs(remoteTrackInfo.details.duration - localTrackInfo.details.duration) <= this.options.lengthDifferenceAccepted
+      || Math.abs(remoteTrackInfo.details.durationMs - localTrackInfo.details.durationMs) <= this.options.lengthDifferenceAcceptedMs
     ) {
       return 'keep-match';
     }
 
     logger.warn(
       'Matched track has different duration: '
-      + `${secondsToTimeFormat(remoteTrackInfo.details.duration)} vs. `
-      + `${secondsToTimeFormat(localTrackInfo.details.duration)} (input track)\n`
+      + `${secondsToTimeFormat(remoteTrackInfo.details.durationMs / 1000)} vs. `
+      + `${secondsToTimeFormat(localTrackInfo.details.durationMs / 1000)} (input track)\n`
       + `URL: ${remoteTrackInfo.url?.toString() ?? 'Undefined'}`,
     );
 
@@ -871,16 +874,21 @@ export class BearTunesTagger {
   }
 
   /**
-   * Extracts FLAC track duration from STREAMINFO values reported by `metaflac`.
+   * Extracts FLAC track duration in milliseconds from STREAMINFO values
+   * reported by `metaflac`.
    *
-   * The duration is computed from `total samples / sample rate` using a single
-   * `metaflac` invocation. The method returns `undefined` when the command fails,
-   * the output is incomplete, or the parsed numeric values are invalid.
+   * The duration is calculated from `total samples / sample rate` and converted
+   * to integer milliseconds by rounding to the nearest millisecond.
    *
-   * @param flacFilePath Path to the FLAC file.
-   * @returns Track duration in seconds, or `undefined` when it cannot be determined.
+   * The method uses a single `metaflac` invocation and returns `undefined`
+   * when the command fails, the output is incomplete, or the parsed values
+   * are invalid.
+   *
+   * @param flacFilePath - Path to the FLAC file.
+   * @returns Track duration in integer milliseconds, or `undefined` when it
+   * cannot be determined.
    */
-  private static extractFlacDuration(flacFilePath: string): number | undefined {
+  private static extractFlacDurationMs(flacFilePath: string): number | undefined {
     const metaflacResult = childProcess.spawnSync('metaflac', [
       '--show-total-samples',
       '--show-sample-rate',
@@ -917,7 +925,12 @@ export class BearTunesTagger {
     const totalSamples = Number.parseInt(lines[0], 10);
     const sampleRate = Number.parseInt(lines[1], 10);
 
-    if (!Number.isFinite(totalSamples) || !Number.isFinite(sampleRate) || sampleRate <= 0) {
+    if (
+      !Number.isFinite(totalSamples)
+      || totalSamples <= 0
+      || !Number.isFinite(sampleRate)
+      || sampleRate <= 0
+    ) {
       logger.warn('Invalid FLAC stream info values for duration extraction', {
         flacFilePath,
         totalSamples: lines[0],
@@ -927,7 +940,7 @@ export class BearTunesTagger {
       return undefined;
     }
 
-    return totalSamples / sampleRate;
+    return Math.round((totalSamples / sampleRate) * 1000);
   }
 
   /**
@@ -987,14 +1000,14 @@ export class BearTunesTagger {
     }
 
     const tags = BearTunesTagger.parseMetaflacTags(metaflacResult.stdout);
-    const duration = BearTunesTagger.extractFlacDuration(flacFilePath);
+    const durationMs = BearTunesTagger.extractFlacDurationMs(flacFilePath);
 
     const rawTrackInfo = {
       artists: BearTunesTagger.getMultiMetaflacTag(tags, 'ARTIST'),
       title: BearTunesTagger.getSingleMetaflacTag(tags, 'TITLE'),
       genre: BearTunesTagger.getSingleMetaflacTag(tags, 'GENRE'),
       released: BearTunesTagger.getSingleMetaflacTag(tags, 'DATE'),
-      details: (duration !== undefined) ? { duration } : undefined,
+      details: (durationMs !== undefined) ? { durationMs } : undefined,
       album: {
         artists: BearTunesTagger.getMultiMetaflacTag(tags, 'ALBUMARTIST'),
         title: BearTunesTagger.getSingleMetaflacTag(tags, 'ALBUM'),
@@ -1269,7 +1282,7 @@ export class BearTunesTagger {
     inputTrackInfo: TrackInfo,
     winner: MatchingTrack | undefined,
     candidateReleased: Date | undefined,
-    candidateDuration: number,
+    candidateDurationMs: number,
     score: number,
   ): boolean {
     if (!winner) {
@@ -1284,19 +1297,19 @@ export class BearTunesTagger {
       && (!winner.released || candidateReleased < winner.released)
     );
 
-    const currentDurationDistance = inputTrackInfo.details
-      ? Math.abs(candidateDuration - inputTrackInfo.details.duration)
+    const currentDurationDistanceMs = inputTrackInfo.details
+      ? Math.abs(candidateDurationMs - inputTrackInfo.details.durationMs)
       : undefined;
 
-    const winnerDurationDistance = inputTrackInfo.details && winner.details
-      ? Math.abs(winner.details.duration - inputTrackInfo.details.duration)
+    const winnerDurationDistanceMs = inputTrackInfo.details && winner.details
+      ? Math.abs(winner.details.durationMs - inputTrackInfo.details.durationMs)
       : undefined;
 
     const hasSameScoreButCloserDuration = (
       score === winner.score
-      && currentDurationDistance !== undefined
-      && winnerDurationDistance !== undefined
-      && currentDurationDistance < winnerDurationDistance
+      && currentDurationDistanceMs !== undefined
+      && winnerDurationDistanceMs !== undefined
+      && currentDurationDistanceMs < winnerDurationDistanceMs
     );
 
     return hasBetterScore
@@ -1320,7 +1333,7 @@ export class BearTunesTagger {
       bpm: trackInfo.bpm,
       isrc: trackInfo.isrc,
       details: trackInfo.details
-        ? { duration: trackInfo.details.duration }
+        ? { durationMs: trackInfo.details.durationMs }
         : undefined,
       score,
       scoreKeywords,
@@ -1361,7 +1374,7 @@ export class BearTunesTagger {
         trackInfo,
         winner,
         candidateTrack.released,
-        candidateTrack.details.duration,
+        candidateTrack.details.durationMs,
         score,
       )) {
         winner = BearTunesTagger.createMatchingTrack(

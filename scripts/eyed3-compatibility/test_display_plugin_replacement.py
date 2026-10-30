@@ -130,9 +130,13 @@ def validate_output(output, metadata):
         'Unexpected track total.',
     )
 
+    duration_ms = output['details']['durationMs']
+
     require(
-        float(output['details']['duration']) > 0,
-        'Expected a positive duration.',
+        isinstance(duration_ms, int)
+        and not isinstance(duration_ms, bool)
+        and duration_ms > 0,
+        'Expected a positive integer duration in milliseconds.',
     )
 
     require(

@@ -29,7 +29,8 @@
  * - `key` uses the canonical normalized track key representation.
  * - `album` is present only when it contains at least a valid normalized `title`.
  * - `publisher` is present only when it contains at least a valid normalized `name`.
- * - `details` is present only when it contains a valid positive `duration`.
+ * - `details` is present only when it contains a valid positive integer
+ *   `durationMs` value expressed in milliseconds.
  *
  * This type is intended to represent already-normalized metadata, not raw source payloads.
  */
@@ -96,14 +97,16 @@ export interface PublisherInfo {
 /**
  * Canonical technical details associated with {@link TrackInfo}.
  *
- * This type is source-independent and represents normalized technical metadata for a track.
+ * This type is source-independent and represents normalized technical metadata
+ * for a track.
  *
  * Canonical rules:
- * - `duration` is a required positive number expressed in seconds and may be fractional.
- * - The whole object is omitted from canonical `TrackInfo` when `duration` cannot be normalized.
+ * - `durationMs` is a required positive integer expressed in milliseconds.
+ * - The whole object is omitted from canonical `TrackInfo` when `durationMs`
+ *   cannot be normalized.
  */
 export interface TrackDetails {
-  duration: number;
+  durationMs: number;
 }
 
 /**

@@ -14,7 +14,6 @@ import {
 import {
   isObjectRecord,
   removeUndefinedObjectFields,
-  roundToDecimalPlaces,
 } from '#tools';
 
 import type {
@@ -202,31 +201,30 @@ export function normalizePublisherInfo(publisher: unknown): PublisherInfo | unde
 /**
  * Normalizes the `TrackInfo.details` object.
  *
- * Requires a valid positive normalized `duration`; when `duration` cannot be
+ * Requires a valid positive integer `durationMs`; when `durationMs` cannot be
  * normalized, the whole `details` object is omitted.
  *
- * Converts the `duration` field from a positive numeric string or number into a
- * positive number and canonicalizes it to seconds rounded to two decimal
- * places. This rounding is part of the `TrackInfo` domain model, so callers do
- * not need to round `duration` values themselves.
+ * Converts `durationMs` from a positive integer numeric string or number into
+ * a positive integer number of milliseconds. No unit conversion or rounding
+ * is performed; source adapters are responsible for converting duration
+ * values into milliseconds before normalization.
  *
  * @param details - Raw `details` value to normalize.
- * @returns The normalized `details` object with canonical `duration`
- * precision, or `undefined` when the input is invalid or when `duration`
- * cannot be normalized.
+ * @returns The normalized `details` object, or `undefined` when the input is
+ * invalid or when `durationMs` cannot be normalized.
  */
 export function normalizeTrackDetails(details: unknown): TrackDetails | undefined {
   if (!isObjectRecord(details)) {
     return undefined;
   }
 
-  const duration = normalizePositiveNumber(details.duration);
-  if (duration === undefined) {
+  const durationMs = normalizePositiveInteger(details.durationMs);
+  if (durationMs === undefined) {
     return undefined;
   }
 
   return {
-    duration: roundToDecimalPlaces(duration, 2),
+    durationMs,
   };
 }
 

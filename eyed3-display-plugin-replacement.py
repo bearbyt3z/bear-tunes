@@ -1,3 +1,10 @@
+"""Render BearTunes metadata using eyeD3 display-plugin pattern syntax.
+
+Implements the subset of the original eyeD3 display-plugin syntax required
+by the configured pattern, with BearTunes-specific extensions.
+"""
+
+import math
 import sys
 
 import eyed3
@@ -43,6 +50,34 @@ def get_nested_attribute_value(obj, *attributes):
         return ''
 
     return str(value)
+
+
+def get_duration_ms(audio):
+    """Return audio duration as a JSON-compatible integer in milliseconds.
+
+    eyeD3 exposes the audio duration in seconds. Convert this value to the
+    nearest millisecond at the source boundary, before it enters the canonical
+    TrackInfo model.
+
+    Returns:
+        A string containing an integer number of milliseconds, or the JSON
+        literal ``null`` when the duration is unavailable or invalid.
+    """
+    info = getattr(audio, 'info', None)
+    duration_seconds = getattr(info, 'time_secs', None)
+
+    if isinstance(duration_seconds, bool) or not isinstance(
+        duration_seconds,
+        (int, float),
+    ):
+        return 'null'
+
+    if not math.isfinite(duration_seconds) or duration_seconds <= 0:
+        return 'null'
+
+    duration_ms = math.floor(duration_seconds * 1000 + 0.5)
+
+    return str(duration_ms)
 
 
 def get_music_cd_id(audio):
@@ -471,9 +506,6 @@ def main():
         '%album-artist%': ('tag', 'album_artist'),
         '%track%': ('tag', 'track_num', 'count'),
         '%track-total%': ('tag', 'track_num', 'total'),
-
-        # Track length in seconds
-        '$length()': ('info', 'time_secs'),
     }
 
     for placeholder, attributes in metadata_replacements.items():
@@ -483,6 +515,12 @@ def main():
             placeholder,
             escape_replacement_value(value, escape_backslashes),
         )
+
+    # BearTunes-specific extension: export track duration as integer milliseconds.
+    pattern = pattern.replace(
+        '$duration_ms()',
+        get_duration_ms(audio),
+    )
 
     # Music CD ID
     pattern = pattern.replace(
