@@ -213,15 +213,15 @@ def main():
         f'Missing test metadata file: {TEST_METADATA_FILE}',
     )
 
-    print('Validating duration conversion...')
-    validate_duration_ms_conversion()
-    print('Duration conversion validation passed.')
-
     python_version = platform.python_version()
     eyed3_version = get_package_version('eyeD3')
 
     print(f'Python: {python_version}')
     print(f'eyeD3: {eyed3_version}')
+
+    print('Validating duration conversion...')
+    validate_duration_ms_conversion()
+    print('Duration conversion validation passed.')
 
     with TEST_METADATA_FILE.open(encoding='utf-8') as metadata_file:
         metadata = json.load(metadata_file)
