@@ -215,6 +215,7 @@ def main():
 
     print('Validating duration conversion...')
     validate_duration_ms_conversion()
+    print('Duration conversion validation passed.')
 
     python_version = platform.python_version()
     eyed3_version = get_package_version('eyeD3')
