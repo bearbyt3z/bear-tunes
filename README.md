@@ -227,7 +227,7 @@ const converter = new BearTunesConverter({
 
 const tagger = new BearTunesTagger({
   dataProvider: new BeatportDataProvider(),
-  lengthDifferenceAccepted: 5,
+  lengthDifferenceAcceptedMs: 4_000,
 });
 
 const renamer = new BearTunesRenamer({
@@ -254,6 +254,8 @@ await processor.processAllFilesInDirectory(
 ```
 
 This approach allows the processor to reuse fully configured components while keeping each dependency independently replaceable and reusable.
+
+The `lengthDifferenceAcceptedMs` option defines the maximum accepted difference between local and remote track durations, expressed in milliseconds. For example, `4_000` allows a duration difference of up to four seconds without requiring user confirmation.
 
 ### Using Individual Components
 
