@@ -1,11 +1,13 @@
 """Test the eyeD3 display plugin replacement against a generated MP3 fixture."""
 
+import importlib.util
 import json
 import platform
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 
 WORK_DIR = Path('/work')
@@ -81,6 +83,41 @@ def run_replacement(mp3_path):
     print(json.dumps(output, indent=2))
 
     return output
+
+
+def validate_duration_ms_conversion():
+    """Verify conversion of eyeD3 duration from seconds to milliseconds."""
+    spec = importlib.util.spec_from_file_location(
+        'eyed3_display_plugin_replacement',
+        str(REPLACEMENT_SCRIPT),
+    )
+
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            'Unable to load eyed3-display-plugin-replacement.py.',
+        )
+
+    replacement_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(replacement_module)
+
+    test_cases = [
+        (184.376, '184376'),
+        (184.3766, '184377'),
+    ]
+
+    for duration_seconds, expected_duration_ms in test_cases:
+        audio = SimpleNamespace(
+            info=SimpleNamespace(time_secs=duration_seconds),
+        )
+
+        actual_duration_ms = replacement_module.get_duration_ms(audio)
+
+        require(
+            actual_duration_ms == expected_duration_ms,
+            f'Expected {duration_seconds} seconds to produce '
+            f'{expected_duration_ms} milliseconds, '
+            f'got {actual_duration_ms}.',
+        )
 
 
 def validate_output(output, metadata):
@@ -175,6 +212,9 @@ def main():
         TEST_METADATA_FILE.is_file(),
         f'Missing test metadata file: {TEST_METADATA_FILE}',
     )
+
+    print('Validating duration conversion...')
+    validate_duration_ms_conversion()
 
     python_version = platform.python_version()
     eyed3_version = get_package_version('eyeD3')
