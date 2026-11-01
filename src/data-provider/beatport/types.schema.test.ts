@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  beatportArtistWithRoleInfoSchema,
+  beatportGenreInfoSchema,
+  beatportLabelInfoSchema,
+  beatportReleaseInfoSchema,
   beatportSearchResultArtistInfoSchema,
   beatportSearchResultGenreInfoSchema,
   beatportSearchResultLabelInfoSchema,
   beatportSearchResultReleaseInfoSchema,
   beatportSearchResultTrackInfoArraySchema,
   beatportSearchResultTrackInfoSchema,
+  beatportSubGenreInfoSchema,
+  beatportTrackInfoSchema,
 } from './types.schema.js';
 
 import {
@@ -45,6 +51,51 @@ const validSearchResultTrack = {
   track_name: 'Example Track',
   track_number: 0,
   genre: [validSearchResultGenre],
+};
+
+const validDetailedTrackArtist = {
+  id: 0,
+  name: 'Example Artist',
+  type: BeatportArtistType.Artist,
+};
+
+const validDetailedTrackSubGenre = {
+  id: 0,
+  name: 'Tech House',
+};
+
+const validDetailedTrackGenre = {
+  id: 0,
+  name: 'House',
+  sub_genre: validDetailedTrackSubGenre,
+};
+
+const validDetailedTrackRelease = {
+  id: 0,
+  name: 'Example Release',
+  image_url: 'https://example.com/release.jpg',
+  release_date: '2025-01-01',
+  slug: 'example-release',
+};
+
+const validDetailedTrackLabel = {
+  id: 0,
+  name: 'Example Label',
+  slug: 'example-label',
+};
+
+const validDetailedTrack = {
+  artists: [validDetailedTrackArtist],
+  genre: validDetailedTrackGenre,
+  track_id: 0,
+  track_waveform_url: 'https://example.com/waveform',
+  key: 'C Minor',
+  track_length_ms: 0,
+  mix_name: 'Extended Mix',
+  track_name: 'Example Track',
+  track_number: 0,
+  release: validDetailedTrackRelease,
+  label: validDetailedTrackLabel,
 };
 
 describe('Beatport search result schemas', () => {
@@ -258,6 +309,187 @@ describe('Beatport search result schemas', () => {
             track_id: -1,
           },
         ]).success,
+      ).toBe(false);
+    });
+  });
+});
+
+describe('Beatport detailed track schemas', () => {
+  describe('beatportArtistWithRoleInfoSchema', () => {
+    it('accepts a valid artist with zero identifier', () => {
+      expect(
+        beatportArtistWithRoleInfoSchema.safeParse(
+          validDetailedTrackArtist,
+        ).success,
+      ).toBe(true);
+    });
+
+    it.each([-1, 1.5])(
+      'rejects an invalid artist identifier: %s',
+      (artistId) => {
+        expect(
+          beatportArtistWithRoleInfoSchema.safeParse({
+            ...validDetailedTrackArtist,
+            id: artistId,
+          }).success,
+        ).toBe(false);
+      },
+    );
+  });
+
+  describe('beatportGenreInfoSchema', () => {
+    it('accepts a valid genre with zero identifier', () => {
+      expect(
+        beatportGenreInfoSchema.safeParse(
+          validDetailedTrackGenre,
+        ).success,
+      ).toBe(true);
+    });
+
+    it.each([-1, 1.5])(
+      'rejects an invalid genre identifier: %s',
+      (genreId) => {
+        expect(
+          beatportGenreInfoSchema.safeParse({
+            ...validDetailedTrackGenre,
+            id: genreId,
+          }).success,
+        ).toBe(false);
+      },
+    );
+
+    it('accepts a null subgenre object', () => {
+      expect(
+        beatportGenreInfoSchema.safeParse({
+          ...validDetailedTrackGenre,
+          sub_genre: null,
+        }).success,
+      ).toBe(true);
+    });
+  });
+
+  describe('beatportSubGenreInfoSchema', () => {
+    it('accepts a valid subgenre with zero identifier', () => {
+      expect(
+        beatportSubGenreInfoSchema.safeParse(
+          validDetailedTrackSubGenre,
+        ).success,
+      ).toBe(true);
+    });
+
+    it.each([
+      { id: null, name: 'Tech House' },
+      { id: 0, name: null },
+      { id: null, name: null },
+    ])('accepts nullable subgenre properties: %o', (subGenre) => {
+      expect(
+        beatportSubGenreInfoSchema.safeParse(subGenre).success,
+      ).toBe(true);
+    });
+
+    it.each([-1, 1.5])(
+      'rejects an invalid subgenre identifier: %s',
+      (subGenreId) => {
+        expect(
+          beatportSubGenreInfoSchema.safeParse({
+            ...validDetailedTrackSubGenre,
+            id: subGenreId,
+          }).success,
+        ).toBe(false);
+      },
+    );
+  });
+
+  describe('beatportReleaseInfoSchema', () => {
+    it('accepts a valid release with zero identifier', () => {
+      expect(
+        beatportReleaseInfoSchema.safeParse(
+          validDetailedTrackRelease,
+        ).success,
+      ).toBe(true);
+    });
+
+    it.each([-1, 1.5])(
+      'rejects an invalid release identifier: %s',
+      (releaseId) => {
+        expect(
+          beatportReleaseInfoSchema.safeParse({
+            ...validDetailedTrackRelease,
+            id: releaseId,
+          }).success,
+        ).toBe(false);
+      },
+    );
+  });
+
+  describe('beatportLabelInfoSchema', () => {
+    it('accepts a valid label with zero identifier', () => {
+      expect(
+        beatportLabelInfoSchema.safeParse(
+          validDetailedTrackLabel,
+        ).success,
+      ).toBe(true);
+    });
+
+    it.each([-1, 1.5])(
+      'rejects an invalid label identifier: %s',
+      (labelId) => {
+        expect(
+          beatportLabelInfoSchema.safeParse({
+            ...validDetailedTrackLabel,
+            id: labelId,
+          }).success,
+        ).toBe(false);
+      },
+    );
+  });
+
+  describe('beatportTrackInfoSchema', () => {
+    it('accepts a valid detailed track with zero numeric values', () => {
+      expect(
+        beatportTrackInfoSchema.safeParse(
+          validDetailedTrack,
+        ).success,
+      ).toBe(true);
+    });
+
+    it.each([
+      ['track_id', -1],
+      ['track_id', 1.5],
+      ['track_length_ms', -1],
+      ['track_length_ms', 1.5],
+      ['track_number', -1],
+      ['track_number', 1.5],
+    ])(
+      'rejects an invalid %s value: %s',
+      (field, value) => {
+        expect(
+          beatportTrackInfoSchema.safeParse({
+            ...validDetailedTrack,
+            [field]: value,
+          }).success,
+        ).toBe(false);
+      },
+    );
+
+    it.each([0, 128.5])(
+      'accepts BPM value %s',
+      (bpm) => {
+        expect(
+          beatportTrackInfoSchema.safeParse({
+            ...validDetailedTrack,
+            bpm,
+          }).success,
+        ).toBe(true);
+      },
+    );
+
+    it('rejects a negative BPM value', () => {
+      expect(
+        beatportTrackInfoSchema.safeParse({
+          ...validDetailedTrack,
+          bpm: -1,
+        }).success,
       ).toBe(false);
     });
   });
