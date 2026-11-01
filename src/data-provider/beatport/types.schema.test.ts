@@ -270,11 +270,20 @@ describe('Beatport search result schemas', () => {
           ...validSearchResultTrack,
           bpm: 128.5,
           catalog_number: 'CAT-001',
-          isrc: null,
+          isrc: 'USRC17607839',
           key_id: 0,
           key_name: 'C Minor',
           length: 184376,
           track_image_uri: 'https://example.com/track.jpg',
+        }).success,
+      ).toBe(true);
+    });
+
+    it('accepts a null ISRC', () => {
+      expect(
+        beatportSearchResultTrackInfoSchema.safeParse({
+          ...validSearchResultTrack,
+          isrc: null,
         }).success,
       ).toBe(true);
     });
@@ -491,6 +500,27 @@ describe('Beatport detailed track schemas', () => {
       ).toBe(true);
     });
 
+    it('accepts an optional catalog number', () => {
+      expect(
+        beatportTrackInfoSchema.safeParse({
+          ...validDetailedTrack,
+          catalog_number: 'CAT-001',
+        }).success,
+      ).toBe(true);
+    });
+
+    it.each(['USRC17607839', null])(
+      'accepts ISRC value %s',
+      (isrc) => {
+        expect(
+          beatportTrackInfoSchema.safeParse({
+            ...validDetailedTrack,
+            isrc,
+          }).success,
+        ).toBe(true);
+      },
+    );
+
     it.each([
       ['track_id', -1],
       ['track_id', 1.5],
@@ -537,6 +567,15 @@ describe('beatportAlbumInfoSchema', () => {
   it('accepts a valid album with zero numeric values', () => {
     expect(
       beatportAlbumInfoSchema.safeParse(validAlbum).success,
+    ).toBe(true);
+  });
+
+  it('accepts an optional catalog number', () => {
+    expect(
+      beatportAlbumInfoSchema.safeParse({
+        ...validAlbum,
+        catalog_number: 'CAT-001',
+      }).success,
     ).toBe(true);
   });
 
