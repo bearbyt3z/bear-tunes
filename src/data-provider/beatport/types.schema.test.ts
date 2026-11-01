@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  beatportAlbumInfoSchema,
   beatportArtistWithRoleInfoSchema,
   beatportGenreInfoSchema,
   beatportLabelInfoSchema,
@@ -96,6 +97,35 @@ const validDetailedTrack = {
   track_number: 0,
   release: validDetailedTrackRelease,
   label: validDetailedTrackLabel,
+};
+
+const validAlbumArtist = {
+  id: 0,
+  name: 'Example Artist',
+};
+
+const validAlbumImage = {
+  id: 0,
+  uri: 'https://example.com/album.jpg',
+};
+
+const validAlbum = {
+  artists: [validAlbumArtist],
+  bpm_range: {
+    min: 0,
+    max: 0,
+  },
+  id: 0,
+  image: validAlbumImage,
+  label: validDetailedTrackLabel,
+  name: 'Example Album',
+  new_release_date: '2025-01-01',
+  remixers: [validAlbumArtist],
+  slug: 'example-album',
+  tracks: [
+    'https://www.beatport.com/track/example-track/123456',
+  ],
+  track_count: 0,
 };
 
 describe('Beatport search result schemas', () => {
@@ -492,5 +522,125 @@ describe('Beatport detailed track schemas', () => {
         }).success,
       ).toBe(false);
     });
+  });
+});
+
+describe('beatportAlbumInfoSchema', () => {
+  it('accepts a valid album with zero numeric values', () => {
+    expect(
+      beatportAlbumInfoSchema.safeParse(validAlbum).success,
+    ).toBe(true);
+  });
+
+  it('accepts fractional BPM range values', () => {
+    expect(
+      beatportAlbumInfoSchema.safeParse({
+        ...validAlbum,
+        bpm_range: {
+          min: 120.5,
+          max: 130.75,
+        },
+      }).success,
+    ).toBe(true);
+  });
+
+  describe('numeric identifiers and counts', () => {
+    it.each([-1, 1.5])(
+      'rejects an invalid artist identifier: %s',
+      (id) => {
+        expect(
+          beatportAlbumInfoSchema.safeParse({
+            ...validAlbum,
+            artists: [{ ...validAlbumArtist, id }],
+          }).success,
+        ).toBe(false);
+      },
+    );
+
+    it.each([-1, 1.5])(
+      'rejects an invalid remixer identifier: %s',
+      (id) => {
+        expect(
+          beatportAlbumInfoSchema.safeParse({
+            ...validAlbum,
+            remixers: [{ ...validAlbumArtist, id }],
+          }).success,
+        ).toBe(false);
+      },
+    );
+
+    it.each([-1, 1.5])(
+      'rejects an invalid image identifier: %s',
+      (id) => {
+        expect(
+          beatportAlbumInfoSchema.safeParse({
+            ...validAlbum,
+            image: {
+              ...validAlbumImage,
+              id,
+            },
+          }).success,
+        ).toBe(false);
+      },
+    );
+
+    it.each([-1, 1.5])(
+      'rejects an invalid label identifier: %s',
+      (id) => {
+        expect(
+          beatportAlbumInfoSchema.safeParse({
+            ...validAlbum,
+            label: {
+              ...validDetailedTrackLabel,
+              id,
+            },
+          }).success,
+        ).toBe(false);
+      },
+    );
+
+    it.each([-1, 1.5])(
+      'rejects an invalid album identifier: %s',
+      (id) => {
+        expect(
+          beatportAlbumInfoSchema.safeParse({
+            ...validAlbum,
+            id,
+          }).success,
+        ).toBe(false);
+      },
+    );
+
+    it.each([-1, 1.5])(
+      'rejects an invalid track count: %s',
+      (trackCount) => {
+        expect(
+          beatportAlbumInfoSchema.safeParse({
+            ...validAlbum,
+            track_count: trackCount,
+          }).success,
+        ).toBe(false);
+      },
+    );
+  });
+
+  describe('BPM range', () => {
+    it.each([
+      ['min', -1],
+      ['max', -1],
+    ] as const)(
+      'rejects a negative BPM range value for "%s"',
+      (bound, value) => {
+        expect(
+          beatportAlbumInfoSchema.safeParse({
+            ...validAlbum,
+            bpm_range: {
+              ...validAlbum.bpm_range,
+              [bound]: value,
+            },
+          }).success,
+        ).toBe(false);
+      },
+    );
   });
 });
