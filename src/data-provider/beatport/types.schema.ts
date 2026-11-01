@@ -13,7 +13,7 @@ export const beatportArtistTypeSchema = z.enum(BeatportArtistType);
  * Runtime validation schema for raw `BeatportSearchResultArtistInfo` input.
  */
 export const beatportSearchResultArtistInfoSchema = z.object({
-  artist_id: z.number(),
+  artist_id: z.number().int().nonnegative(),
   artist_name: z.string(),
   artist_type_name: beatportArtistTypeSchema,
 });
@@ -22,7 +22,7 @@ export const beatportSearchResultArtistInfoSchema = z.object({
  * Runtime validation schema for raw `BeatportSearchResultLabelInfo` input.
  */
 export const beatportSearchResultLabelInfoSchema = z.object({
-  label_id: z.number(),
+  label_id: z.number().int().nonnegative(),
   label_name: z.string(),
 });
 
@@ -30,7 +30,7 @@ export const beatportSearchResultLabelInfoSchema = z.object({
  * Runtime validation schema for raw `BeatportSearchResultReleaseInfo` input.
  */
 export const beatportSearchResultReleaseInfoSchema = z.object({
-  release_id: z.number(),
+  release_id: z.number().int().nonnegative(),
   release_name: z.string(),
   release_image_url: z.string().optional(),
 });
@@ -39,7 +39,7 @@ export const beatportSearchResultReleaseInfoSchema = z.object({
  * Runtime validation schema for raw `BeatportSearchResultGenreInfo` input.
  */
 export const beatportSearchResultGenreInfoSchema = z.object({
-  genre_id: z.number(),
+  genre_id: z.number().int().nonnegative(),
   genre_name: z.string(),
 });
 
@@ -49,19 +49,19 @@ export const beatportSearchResultGenreInfoSchema = z.object({
 export const beatportSearchResultTrackInfoSchema = z.object({
   score: z.number(),
   artists: z.array(beatportSearchResultArtistInfoSchema),
-  bpm: z.number().optional(),
+  bpm: z.number().nonnegative().optional(),
   catalog_number: z.string().optional(),
   isrc: z.string().nullable().optional(),
-  key_id: z.number().optional(),
+  key_id: z.number().int().nonnegative().optional(),
   key_name: z.string().optional(),
   label: beatportSearchResultLabelInfoSchema,
-  length: z.number().optional(),
+  length: z.number().int().nonnegative().optional(),
   mix_name: z.string(),
   release: beatportSearchResultReleaseInfoSchema,
   release_date: z.string(),
-  track_id: z.number(),
+  track_id: z.number().int().nonnegative(),
   track_name: z.string(),
-  track_number: z.number(),
+  track_number: z.number().int().nonnegative(),
   track_image_uri: z.string().optional(),
   genre: z.array(beatportSearchResultGenreInfoSchema),
 });
@@ -77,7 +77,7 @@ export const beatportSearchResultTrackInfoArraySchema = z.array(
  * Runtime validation schema for raw `BeatportArtistInfo` input.
  */
 export const beatportArtistInfoSchema = z.object({
-  id: z.number(),
+  id: z.number().int().nonnegative(),
   name: z.string(),
 });
 
@@ -92,7 +92,7 @@ export const beatportArtistWithRoleInfoSchema = beatportArtistInfoSchema.extend(
  * Runtime validation schema for raw `BeatportSubGenreInfo` input.
  */
 export const beatportSubGenreInfoSchema = z.object({
-  id: z.number().nullable(),
+  id: z.number().int().nonnegative().nullable(),
   name: z.string().nullable(),
 });
 
@@ -100,7 +100,7 @@ export const beatportSubGenreInfoSchema = z.object({
  * Runtime validation schema for raw `BeatportGenreInfo` input.
  */
 export const beatportGenreInfoSchema = z.object({
-  id: z.number(),
+  id: z.number().int().nonnegative(),
   name: z.string(),
   sub_genre: beatportSubGenreInfoSchema.nullable(),
 });
@@ -109,7 +109,7 @@ export const beatportGenreInfoSchema = z.object({
  * Runtime validation schema for raw `BeatportImageInfo` input.
  */
 export const beatportImageInfoSchema = z.object({
-  id: z.number(),
+  id: z.number().int().nonnegative(),
   uri: z.string(),
 });
 
@@ -117,7 +117,7 @@ export const beatportImageInfoSchema = z.object({
  * Runtime validation schema for raw `BeatportLabelInfo` input.
  */
 export const beatportLabelInfoSchema = z.object({
-  id: z.number(),
+  id: z.number().int().nonnegative(),
   name: z.string(),
   slug: z.string(),
 });
@@ -126,7 +126,7 @@ export const beatportLabelInfoSchema = z.object({
  * Runtime validation schema for raw `BeatportReleaseInfo` input.
  */
 export const beatportReleaseInfoSchema = z.object({
-  id: z.number(),
+  id: z.number().int().nonnegative(),
   name: z.string(),
   image_url: z.string(),
   release_date: z.string(),
@@ -138,17 +138,17 @@ export const beatportReleaseInfoSchema = z.object({
  */
 export const beatportTrackInfoSchema = z.object({
   artists: z.array(beatportArtistWithRoleInfoSchema),
-  bpm: z.number().optional(),
+  bpm: z.number().nonnegative().optional(),
   catalog_number: z.string().optional(),
   genre: beatportGenreInfoSchema,
-  track_id: z.number(),
+  track_id: z.number().int().nonnegative(),
   track_waveform_url: z.string(),
   isrc: z.string().nullable().optional(),
   key: z.string(),
-  track_length_ms: z.number(),
+  track_length_ms: z.number().int().nonnegative(),
   mix_name: z.string(),
   track_name: z.string(),
-  track_number: z.number(),
+  track_number: z.number().int().nonnegative(),
   release: beatportReleaseInfoSchema,
   label: beatportLabelInfoSchema,
 });
@@ -159,11 +159,11 @@ export const beatportTrackInfoSchema = z.object({
 export const beatportAlbumInfoSchema = z.object({
   artists: z.array(beatportArtistInfoSchema),
   bpm_range: z.object({
-    min: z.number(),
-    max: z.number(),
+    min: z.number().nonnegative(),
+    max: z.number().nonnegative(),
   }),
   catalog_number: z.string().optional(),
-  id: z.number(),
+  id: z.number().int().nonnegative(),
   image: beatportImageInfoSchema,
   label: beatportLabelInfoSchema,
   name: z.string(),
@@ -171,14 +171,14 @@ export const beatportAlbumInfoSchema = z.object({
   remixers: z.array(beatportArtistInfoSchema),
   slug: z.string(),
   tracks: z.array(z.string()),
-  track_count: z.number(),
+  track_count: z.number().int().nonnegative(),
 });
 
 /**
  * Runtime validation schema for raw `BeatportPublisherInfo` input.
  */
 export const beatportPublisherInfoSchema = z.object({
-  id: z.number(),
+  id: z.number().int().nonnegative(),
   image_url: z.string().nullable(),
   name: z.string(),
   slug: z.string(),
