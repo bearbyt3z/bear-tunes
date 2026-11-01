@@ -5,6 +5,7 @@ import {
   beatportArtistWithRoleInfoSchema,
   beatportGenreInfoSchema,
   beatportLabelInfoSchema,
+  beatportPublisherInfoSchema,
   beatportReleaseInfoSchema,
   beatportSearchResultArtistInfoSchema,
   beatportSearchResultGenreInfoSchema,
@@ -126,6 +127,13 @@ const validAlbum = {
     'https://www.beatport.com/track/example-track/123456',
   ],
   track_count: 0,
+};
+
+const validPublisher = {
+  id: 0,
+  image_url: null,
+  name: 'Example Publisher',
+  slug: 'example-publisher',
 };
 
 describe('Beatport search result schemas', () => {
@@ -642,5 +650,48 @@ describe('beatportAlbumInfoSchema', () => {
         ).toBe(false);
       },
     );
+  });
+});
+
+describe('beatportPublisherInfoSchema', () => {
+  it('accepts a valid publisher with zero identifier and null image URL', () => {
+    expect(
+      beatportPublisherInfoSchema.safeParse(validPublisher).success,
+    ).toBe(true);
+  });
+
+  it('accepts a publisher with a non-null image URL', () => {
+    expect(
+      beatportPublisherInfoSchema.safeParse({
+        ...validPublisher,
+        image_url: 'https://example.com/publisher.jpg',
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([-1, 1.5])(
+    'rejects an invalid publisher identifier: %s',
+    (id) => {
+      expect(
+        beatportPublisherInfoSchema.safeParse({
+          ...validPublisher,
+          id,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('rejects a publisher with a missing image URL', () => {
+    const publisherWithoutImageUrl = {
+      id: validPublisher.id,
+      name: validPublisher.name,
+      slug: validPublisher.slug,
+    };
+
+    expect(
+      beatportPublisherInfoSchema.safeParse(
+        publisherWithoutImageUrl,
+      ).success,
+    ).toBe(false);
   });
 });
