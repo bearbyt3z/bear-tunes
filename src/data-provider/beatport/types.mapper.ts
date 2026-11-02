@@ -228,6 +228,13 @@ export function mapBeatportPublisherToPublisherInfo(
  * Beatport's `track_length_ms` field is mapped unchanged to canonical
  * `details.durationMs`.
  *
+ * Only artists with the `Artist` role are mapped to canonical `artists`.
+ * Both `Remixer` and `Beatsource Remixer` roles are mapped to `remixers`.
+ * Other artist roles are ignored.
+ *
+ * The optional `album` and `publisher` inputs are included in the canonical
+ * track information only when valid normalized values are available.
+ *
  * The function does not log and does not validate the resulting output schema.
  *
  * @param trackData - Beatport full track object.
