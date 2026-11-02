@@ -79,15 +79,18 @@ function getBeatportArtistNamesByRole<T>(
  *
  * Beatport image URLs may include either concrete dimensions, such as
  * `/image_size/1400x1400/`, or dynamic placeholders, such as
- * `/image_size/{w}x{h}/`. Both variants are converted to the original
- * `/image/` resource path.
+ * `/image_size/{w}x{h}/`. The first matching size transform is replaced
+ * with the original `/image/` resource path.
  *
- * When `imageUrl` is undefined, the function returns undefined without
- * attempting URL normalization.
+ * URLs without a matching image-size transform are returned unchanged.
+ *
+ * When `imageUrl` is `null` or `undefined`, the function returns
+ * `undefined` without attempting URL normalization.
  *
  * @param imageUrl - Beatport image or waveform URL to normalize, when available.
- * @returns URL pointing to the original, unscaled media resource, or
- * `undefined` when no URL was provided.
+ * @returns URL with the supported image-size transform replaced, the unchanged
+ * input URL when no matching transform is present, or `undefined` when no URL
+ * was provided.
  */
 function getBeatportOriginalImageUrl(imageUrl: string): string;
 function getBeatportOriginalImageUrl(
