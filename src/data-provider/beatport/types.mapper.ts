@@ -108,6 +108,9 @@ function getBeatportOriginalImageUrl(
  * This function performs source-specific field mapping and delegates final
  * canonical value normalization to `normalizeTrackInfo()`.
  *
+ * The first genre entry is mapped to canonical `genre`, and the second,
+ * when present, to canonical `subgenre`. Further entries are ignored.
+ *
  * The optional Beatport `length` field is already expressed in milliseconds
  * and is mapped unchanged to canonical `details.durationMs`.
  *
@@ -135,7 +138,9 @@ export function mapBeatportSearchResultTrackToTrackInfo(
     (artist) => artist.artist_name,
   );
 
-  const [genre, subgenre] = trackEntry.genre.map((genreEntry) => genreEntry.genre_name);
+  const [genreEntry, subgenreEntry] = trackEntry.genre;
+  const genre = genreEntry?.genre_name;
+  const subgenre = subgenreEntry?.genre_name;
 
   const details = (trackEntry.length === undefined) ? undefined : { durationMs: trackEntry.length };
 
