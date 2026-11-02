@@ -202,6 +202,8 @@ export function mapBeatportAlbumToAlbumInfo(
  * canonical value normalization to `normalizePublisherInfo()`. It does not log and
  * does not validate the resulting output schema.
  *
+ * A `null` Beatport `image_url` is mapped to an omitted canonical `logotype`.
+ *
  * @param publisherData - Beatport publisher object.
  * @param publisherUrl - Canonical Beatport publisher URL.
  * @returns Canonical `PublisherInfo`, or `undefined` when the mapped value cannot be normalized.
