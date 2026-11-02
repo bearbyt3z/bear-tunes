@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  mapBeatportAlbumToAlbumInfo,
   mapBeatportSearchResultTrackToTrackInfo,
 } from './types.mapper.js';
 
@@ -9,6 +10,7 @@ import {
 } from './types.js';
 
 import type {
+  BeatportAlbumInfo,
   BeatportSearchResultTrackInfo,
 } from './types.js';
 
@@ -41,6 +43,44 @@ const validSearchResultTrack: BeatportSearchResultTrackInfo = {
     },
   ],
 };
+
+const validAlbumData: BeatportAlbumInfo = {
+  artists: [
+    {
+      id: 101,
+      name: 'Primary Artist',
+    },
+    {
+      id: 102,
+      name: 'Second Artist',
+    },
+  ],
+  bpm_range: {
+    min: 120,
+    max: 130,
+  },
+  catalog_number: 'CAT-001',
+  id: 123456,
+  image: {
+    id: 201,
+    uri: 'https://example.com/image_size/1400x1400/album.jpg',
+  },
+  label: {
+    id: 301,
+    name: 'Example Label',
+    slug: 'example-label',
+  },
+  name: 'Example Album',
+  new_release_date: '2025-01-15',
+  remixers: [],
+  slug: 'example-album',
+  tracks: [],
+  track_count: 12,
+};
+
+const validAlbumUrl = new URL(
+  'https://www.beatport.com/release/example-album/123456',
+);
 
 describe('mapBeatportSearchResultTrackToTrackInfo', () => {
   it('maps a Beatport search result to canonical TrackInfo', () => {
@@ -165,5 +205,141 @@ describe('mapBeatportSearchResultTrackToTrackInfo', () => {
     );
 
     expect(result).not.toHaveProperty('details');
+  });
+});
+
+describe('mapBeatportAlbumToAlbumInfo', () => {
+  it('maps a Beatport album to canonical AlbumInfo', () => {
+    const result = mapBeatportAlbumToAlbumInfo(
+      validAlbumData,
+      validAlbumUrl,
+      3,
+    );
+
+    expect(result).toEqual({
+      title: 'Example Album',
+      artists: [
+        'Primary Artist',
+        'Second Artist',
+      ],
+      catalogNumber: 'CAT-001',
+      trackNumber: 3,
+      trackTotal: 12,
+      url: validAlbumUrl,
+      artwork: new URL(
+        'https://example.com/image/album.jpg',
+      ),
+    });
+  });
+
+  describe('artwork URL normalization', () => {
+    it.each([
+      {
+        imageUrl: 'https://example.com/image_size/{w}x{h}/album.jpg',
+        expectedUrl: 'https://example.com/image/album.jpg',
+      },
+      {
+        imageUrl: 'https://example.com/image/album.jpg',
+        expectedUrl: 'https://example.com/image/album.jpg',
+      },
+    ])(
+      'maps artwork URL "$imageUrl" to "$expectedUrl"',
+      ({ imageUrl, expectedUrl }) => {
+        const albumData: BeatportAlbumInfo = {
+          ...validAlbumData,
+          image: {
+            ...validAlbumData.image,
+            uri: imageUrl,
+          },
+        };
+
+        const result = mapBeatportAlbumToAlbumInfo(
+          albumData,
+          validAlbumUrl,
+          3,
+        );
+
+        expect(result?.artwork).toEqual(new URL(expectedUrl));
+      },
+    );
+
+    it('omits artwork when the image URL is invalid', () => {
+      const albumData: BeatportAlbumInfo = {
+        ...validAlbumData,
+        image: {
+          ...validAlbumData.image,
+          uri: 'invalid-url',
+        },
+      };
+
+      const result = mapBeatportAlbumToAlbumInfo(
+        albumData,
+        validAlbumUrl,
+        3,
+      );
+
+      expect(result).not.toHaveProperty('artwork');
+    });
+  });
+
+  describe('track number normalization', () => {
+    it.each([0, -1, 1.5])(
+      'omits an invalid track number: %s',
+      (trackNumber) => {
+        const result = mapBeatportAlbumToAlbumInfo(
+          validAlbumData,
+          validAlbumUrl,
+          trackNumber,
+        );
+
+        expect(result).not.toHaveProperty('trackNumber');
+      },
+    );
+  });
+
+  it('omits track total when Beatport reports zero tracks', () => {
+    const albumData: BeatportAlbumInfo = {
+      ...validAlbumData,
+      track_count: 0,
+    };
+
+    const result = mapBeatportAlbumToAlbumInfo(
+      albumData,
+      validAlbumUrl,
+      3,
+    );
+
+    expect(result).not.toHaveProperty('trackTotal');
+  });
+
+  it('omits catalog number when Beatport does not provide it', () => {
+    const albumData: BeatportAlbumInfo = {
+      ...validAlbumData,
+    };
+
+    delete albumData.catalog_number;
+
+    const result = mapBeatportAlbumToAlbumInfo(
+      albumData,
+      validAlbumUrl,
+      3,
+    );
+
+    expect(result).not.toHaveProperty('catalogNumber');
+  });
+
+  it('returns undefined when the album title cannot be normalized', () => {
+    const albumData: BeatportAlbumInfo = {
+      ...validAlbumData,
+      name: '   ',
+    };
+
+    const result = mapBeatportAlbumToAlbumInfo(
+      albumData,
+      validAlbumUrl,
+      3,
+    );
+
+    expect(result).toBeUndefined();
   });
 });
