@@ -185,7 +185,7 @@ export function mapBeatportAlbumToAlbumInfo(
     trackNumber: tryParsePositiveInteger(trackNumber),
     trackTotal: albumData.track_count,
     url: albumUrl,
-    artwork: getBeatportOriginalImageUrl(albumData.image?.uri),
+    artwork: getBeatportOriginalImageUrl(albumData.image.uri),
   });
 }
 
@@ -254,8 +254,8 @@ export function mapBeatportTrackToTrackInfo(
     title: normalizeTrackTitle(trackData.track_name, trackData.mix_name),
     remixers,
     released: trackData.release.release_date,
-    genre: trackData.genre?.name,
-    subgenre: trackData.genre?.sub_genre?.name,
+    genre: trackData.genre.name,
+    subgenre: trackData.genre.sub_genre?.name,
     bpm: trackData.bpm,
     key: trackData.key,
     isrc: trackData.isrc,
