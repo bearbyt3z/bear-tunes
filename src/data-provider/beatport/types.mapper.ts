@@ -171,6 +171,9 @@ export function mapBeatportSearchResultTrackToTrackInfo(
  * canonical value normalization to `normalizeAlbumInfo()`. It does not log and
  * does not validate the resulting output schema.
  *
+ * The supplied track number is retained only when it is a positive integer;
+ * otherwise, it is omitted from the normalized album information.
+ *
  * @param albumData - Beatport album object.
  * @param albumUrl - Canonical Beatport album URL.
  * @param trackNumber - Track number within the album.
