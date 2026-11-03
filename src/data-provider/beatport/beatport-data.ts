@@ -1,7 +1,7 @@
 import logger from '#logger';
 import {
   formatZodErrorIssues,
-  isObjectArray,
+  isUnknownArray,
 } from '#tools';
 
 import { extractNextJSData } from './nextjs-data.js';
@@ -32,12 +32,14 @@ import type {
  * const problematicItem = getProblematicArrayItem(rawTrackArray, issues);
  * ```
  *
- * @typeParam T - Type of objects stored in the input array.
+ * @typeParam T - Type of items stored in the input array.
  * @param input - Array to read the problematic item from.
  * @param issues - Validation issues whose paths may point to array items.
- * @returns The item at the first numeric index found in issue paths, or `undefined` if no such index exists.
+ * @returns The item at the first numeric index found in issue paths, or
+ * `undefined` if no numeric index is found or the index does not reference
+ * an existing array item.
  */
-function getProblematicArrayItem<T extends object>(
+function getProblematicArrayItem<T>(
   input: readonly T[],
   issues: { path: unknown[] }[],
 ): T | undefined {
@@ -67,6 +69,7 @@ function getProblematicArrayItem<T extends object>(
  * @param inputKeywords - Keywords used to search for tracks on Beatport.
  * @returns An array of validated search result track info objects, or `undefined`
  * when the payload is unavailable or invalid.
+ * @throws {TypeError} When the fetched page contains missing or malformed Next.js data.
  */
 export async function fetchBeatportSearchTrackPayload(
   searchUrl: URL,
@@ -101,7 +104,7 @@ export async function fetchBeatportSearchTrackPayload(
   });
 
   if (!parsedTrackArray.success) {
-    const problematicItem = isObjectArray(rawTrackArray)
+    const problematicItem = isUnknownArray(rawTrackArray)
       ? getProblematicArrayItem(rawTrackArray, parsedTrackArray.error.issues)
       : undefined;
 
@@ -128,6 +131,7 @@ export async function fetchBeatportSearchTrackPayload(
  * @param trackUrl - URL of the Beatport track page.
  * @returns Validated Beatport track info, or `undefined` when the payload
  * is unavailable or invalid.
+ * @throws {TypeError} When the fetched page contains missing or malformed Next.js data.
  */
 export async function fetchBeatportTrackPayload(
   trackUrl: URL,
@@ -163,15 +167,17 @@ export async function fetchBeatportTrackPayload(
  *
  * The function constructs the release URL from the domain URL and release
  * information, requests the Next.js data payload, and validates the response
- * against the shared Beatport album info schema. If the release info is
- * missing, the URL cannot be built, or the payload is unavailable or invalid,
- * a warning is logged (when applicable) and `undefined` is returned.
+ * against the shared Beatport album info schema. If the release information is
+ * missing, `undefined` is returned without making a request. If the payload is
+ * unavailable or invalid, a warning is logged and `undefined` is returned.
  *
  * @param domainUrl - Base domain URL for Beatport (e.g. `https://www.beatport.com`).
  * @param releaseInfo - Release metadata used to build the album URL.
  * @returns An object containing the album URL and validated album info, or
  * `undefined` when the release info is missing or the payload is unavailable
  * or invalid.
+ * @throws {TypeError} When the URL cannot be constructed or the fetched page
+ * contains missing or malformed Next.js data.
  */
 export async function fetchBeatportAlbumPayload(
   domainUrl: string,
@@ -217,15 +223,17 @@ export async function fetchBeatportAlbumPayload(
  *
  * The function constructs the label URL from the domain URL and label
  * information, requests the Next.js data payload, and validates the response
- * against the shared Beatport publisher info schema. If the label info is
- * missing, the URL cannot be built, or the payload is unavailable or invalid,
- * a warning is logged (when applicable) and `undefined` is returned.
+ * against the shared Beatport publisher info schema. If the label information is
+ * missing, `undefined` is returned without making a request. If the payload is
+ * unavailable or invalid, a warning is logged and `undefined` is returned.
  *
  * @param domainUrl - Base domain URL for Beatport (e.g. `https://www.beatport.com`).
  * @param labelInfo - Label metadata used to build the publisher URL.
  * @returns An object containing the publisher URL and validated publisher info, or
  * `undefined` when the label info is missing or the payload is unavailable
  * or invalid.
+ * @throws {TypeError} When the URL cannot be constructed or the fetched page
+ * contains missing or malformed Next.js data.
  */
 export async function fetchBeatportPublisherPayload(
   domainUrl: string,
