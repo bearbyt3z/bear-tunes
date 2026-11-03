@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   mapBeatportAlbumToAlbumInfo,
+  mapBeatportPublisherToPublisherInfo,
   mapBeatportSearchResultTrackToTrackInfo,
 } from './types.mapper.js';
 
@@ -11,6 +12,7 @@ import {
 
 import type {
   BeatportAlbumInfo,
+  BeatportPublisherInfo,
   BeatportSearchResultTrackInfo,
 } from './types.js';
 
@@ -80,6 +82,17 @@ const validAlbumData: BeatportAlbumInfo = {
 
 const validAlbumUrl = new URL(
   'https://www.beatport.com/release/example-album/123456',
+);
+
+const validPublisherData: BeatportPublisherInfo = {
+  id: 401,
+  image_url: 'https://example.com/image_size/1400x1400/publisher.jpg',
+  name: ' Example Publisher ',
+  slug: 'example-publisher',
+};
+
+const validPublisherUrl = new URL(
+  'https://www.beatport.com/label/example-publisher/401',
 );
 
 describe('mapBeatportSearchResultTrackToTrackInfo', () => {
@@ -338,6 +351,91 @@ describe('mapBeatportAlbumToAlbumInfo', () => {
       albumData,
       validAlbumUrl,
       3,
+    );
+
+    expect(result).toBeUndefined();
+  });
+});
+
+describe('mapBeatportPublisherToPublisherInfo', () => {
+  it('maps a Beatport publisher to canonical PublisherInfo', () => {
+    const result = mapBeatportPublisherToPublisherInfo(
+      validPublisherData,
+      validPublisherUrl,
+    );
+
+    expect(result).toEqual({
+      name: 'Example Publisher',
+      url: validPublisherUrl,
+      logotype: new URL(
+        'https://example.com/image/publisher.jpg',
+      ),
+    });
+  });
+
+  it('omits logotype when Beatport image URL is null', () => {
+    const publisherData: BeatportPublisherInfo = {
+      ...validPublisherData,
+      image_url: null,
+    };
+
+    const result = mapBeatportPublisherToPublisherInfo(
+      publisherData,
+      validPublisherUrl,
+    );
+
+    expect(result).toEqual({
+      name: 'Example Publisher',
+      url: validPublisherUrl,
+    });
+
+    expect(result).not.toHaveProperty('logotype');
+  });
+
+  it('preserves an image URL without a size transform', () => {
+    const publisherData: BeatportPublisherInfo = {
+      ...validPublisherData,
+      image_url: 'https://example.com/image/publisher.jpg',
+    };
+
+    const result = mapBeatportPublisherToPublisherInfo(
+      publisherData,
+      validPublisherUrl,
+    );
+
+    expect(result?.logotype).toEqual(
+      new URL('https://example.com/image/publisher.jpg'),
+    );
+  });
+
+  it('omits logotype when the image URL is invalid', () => {
+    const publisherData: BeatportPublisherInfo = {
+      ...validPublisherData,
+      image_url: 'invalid-url',
+    };
+
+    const result = mapBeatportPublisherToPublisherInfo(
+      publisherData,
+      validPublisherUrl,
+    );
+
+    expect(result).toEqual({
+      name: 'Example Publisher',
+      url: validPublisherUrl,
+    });
+
+    expect(result).not.toHaveProperty('logotype');
+  });
+
+  it('returns undefined when the publisher name cannot be normalized', () => {
+    const publisherData: BeatportPublisherInfo = {
+      ...validPublisherData,
+      name: '   ',
+    };
+
+    const result = mapBeatportPublisherToPublisherInfo(
+      publisherData,
+      validPublisherUrl,
     );
 
     expect(result).toBeUndefined();
