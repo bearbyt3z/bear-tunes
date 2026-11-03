@@ -17,7 +17,9 @@ import {
  * under `props.pageProps.dehydratedState.queries`.
  *
  * @param url - Absolute URL of the Next.js page.
- * @returns Extracted query payload, or `undefined` when the page could not be fetched.
+ * @returns The first query payload, or `undefined` when the page could not be fetched.
+ * If the payload contains a `data` array, the array is returned; otherwise, the
+ * entire payload is returned.
  * @throws {TypeError} When the page does not expose the expected Next.js structure.
  */
 export async function extractNextJSData(url: URL): Promise<unknown> {
