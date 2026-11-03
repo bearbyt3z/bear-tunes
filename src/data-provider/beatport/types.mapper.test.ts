@@ -264,9 +264,6 @@ describe('mapBeatportSearchResultTrackToTrackInfo', () => {
       genre: 'Trance (Raw / Deep / Hypnotic)',
       subgenre: 'Deep Trance',
     });
-
-    expect(result).not.toHaveProperty('genre', 'Additional Genre');
-    expect(result).not.toHaveProperty('subgenre', 'Additional Genre');
   });
 
   it('omits subgenre when only the main genre is provided', () => {
@@ -604,6 +601,7 @@ describe('mapBeatportTrackToTrackInfo', () => {
     it.each([
       null,
       { id: null, name: null },
+      { id: 202, name: null },
     ] as const)(
       'omits subgenre when Beatport does not provide a subgenre name: %o',
       (subGenre) => {
