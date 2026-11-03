@@ -31,13 +31,42 @@ vi.mock('#tools', async (importOriginal) => {
 
 const pageUrl = new URL('https://www.beatport.com/track/example-track/123456');
 
-function createNextJSPageDocument(queries: unknown[]): Document {
+function createNextJSPageDocument(nextJSText?: string): Document {
   const document = new JSDOM().window.document;
-  const nextJSElement = document.createElement('script');
 
-  nextJSElement.id = '__NEXT_DATA__';
-  nextJSElement.type = 'application/json';
-  nextJSElement.textContent = JSON.stringify({
+  if (nextJSText !== undefined) {
+    const nextJSElement = document.createElement('script');
+
+    nextJSElement.id = '__NEXT_DATA__';
+    nextJSElement.type = 'application/json';
+    nextJSElement.textContent = nextJSText;
+
+    document.body.append(nextJSElement);
+  }
+
+  return document;
+}
+
+function mockSuccessfulPageWithText(nextJSText?: string): void {
+  mocks.fetchWebPage.mockResolvedValueOnce({
+    success: true,
+    document: createNextJSPageDocument(nextJSText),
+    attempts: [],
+  });
+}
+
+function mockSuccessfulPageWithPayload(payload: unknown): void {
+  const nextJSText = JSON.stringify(payload);
+
+  if (nextJSText === undefined) {
+    throw new Error('Cannot serialize Next.js test payload.');
+  }
+
+  mockSuccessfulPageWithText(nextJSText);
+}
+
+function createNextJSPageData(queries: unknown[]): unknown {
+  return {
     props: {
       pageProps: {
         dehydratedState: {
@@ -45,19 +74,31 @@ function createNextJSPageDocument(queries: unknown[]): Document {
         },
       },
     },
-  });
-
-  document.body.append(nextJSElement);
-
-  return document;
+  };
 }
 
 function mockSuccessfulPage(queries: unknown[]): void {
-  mocks.fetchWebPage.mockResolvedValueOnce({
-    success: true,
-    document: createNextJSPageDocument(queries),
-    attempts: [],
-  });
+  mockSuccessfulPageWithPayload(createNextJSPageData(queries));
+}
+
+async function expectTypeError(
+  operation: Promise<unknown>,
+  expectedMessage: string,
+): Promise<TypeError> {
+  const error = await operation.then(
+    () => undefined,
+    (reason: unknown) => reason,
+  );
+
+  expect(error).toBeInstanceOf(TypeError);
+
+  if (!(error instanceof TypeError)) {
+    throw new Error('Expected extractNextJSData() to reject with TypeError.');
+  }
+
+  expect(error.message).toBe(expectedMessage);
+
+  return error;
 }
 
 describe('extractNextJSData', () => {
@@ -69,7 +110,7 @@ describe('extractNextJSData', () => {
   it('returns undefined when the page fetch is unsuccessful', async () => {
     mocks.fetchWebPage.mockResolvedValueOnce({
       success: false,
-      document: createNextJSPageDocument([]),
+      document: createNextJSPageDocument('{}'),
       attempts: [],
     });
 
@@ -179,4 +220,175 @@ describe('extractNextJSData', () => {
       expect(result).toEqual(stateData);
     },
   );
+
+  describe('invalid Next.js data', () => {
+    it('throws when the Next.js data element is missing', async () => {
+      mockSuccessfulPageWithText();
+
+      await expectTypeError(
+        extractNextJSData(pageUrl),
+        'Cannot obtain Next.js object.',
+      );
+    });
+
+    it('throws when the Next.js data element has empty text', async () => {
+      mockSuccessfulPageWithText('');
+
+      await expectTypeError(
+        extractNextJSData(pageUrl),
+        'Cannot obtain Next.js object.',
+      );
+    });
+
+    it('throws when the Next.js data contains invalid JSON', async () => {
+      mockSuccessfulPageWithText('{"props":');
+
+      const error = await expectTypeError(
+        extractNextJSData(pageUrl),
+        'Cannot parse Next.js object.',
+      );
+
+      expect(error.cause).toBeInstanceOf(SyntaxError);
+    });
+
+    it.each([
+      {
+        description: 'null',
+        payload: null,
+      },
+      {
+        description: 'an array',
+        payload: [],
+      },
+      {
+        description: 'a string',
+        payload: 'invalid payload',
+      },
+    ])(
+      'throws when the parsed Next.js value is $description',
+      async ({ payload }) => {
+        mockSuccessfulPageWithPayload(payload);
+
+        await expectTypeError(
+          extractNextJSData(pageUrl),
+          'Parsed Next.js object is not an object.',
+        );
+      },
+    );
+
+    it.each([
+      {
+        description: '`props` is not an object',
+        payload: {
+          props: null,
+        },
+        expectedMessage: 'Cannot unpack props from Next.js object.',
+      },
+      {
+        description: '`pageProps` is missing',
+        payload: {
+          props: {},
+        },
+        expectedMessage: 'Cannot unpack pageProps from Next.js object.',
+      },
+      {
+        description: '`dehydratedState` is missing',
+        payload: {
+          props: {
+            pageProps: {},
+          },
+        },
+        expectedMessage: 'Cannot unpack dehydratedState from Next.js object.',
+      },
+      {
+        description: '`queries` is not an array',
+        payload: {
+          props: {
+            pageProps: {
+              dehydratedState: {
+                queries: {},
+              },
+            },
+          },
+        },
+        expectedMessage: 'Cannot unpack queries from Next.js object.',
+      },
+      {
+        description: '`queries` is empty',
+        payload: {
+          props: {
+            pageProps: {
+              dehydratedState: {
+                queries: [],
+              },
+            },
+          },
+        },
+        expectedMessage: 'Cannot unpack queries from Next.js object.',
+      },
+      {
+        description: 'the first query is not an object',
+        payload: createNextJSPageData([null]),
+        expectedMessage: 'Cannot unpack first query from Next.js object.',
+      },
+      {
+        description: 'the first query has no state',
+        payload: createNextJSPageData([{}]),
+        expectedMessage: 'Cannot unpack state from Next.js object.',
+      },
+    ])(
+      'throws when $description',
+      async ({ payload, expectedMessage }) => {
+        mockSuccessfulPageWithPayload(payload);
+
+        await expectTypeError(
+          extractNextJSData(pageUrl),
+          expectedMessage,
+        );
+      },
+    );
+
+    it.each([
+      {
+        description: 'missing',
+        state: {},
+      },
+      {
+        description: 'null',
+        state: {
+          data: null,
+        },
+      },
+      {
+        description: 'false',
+        state: {
+          data: false,
+        },
+      },
+      {
+        description: 'zero',
+        state: {
+          data: 0,
+        },
+      },
+      {
+        description: 'an empty string',
+        state: {
+          data: '',
+        },
+      },
+    ])(
+      'throws when query state data is $description',
+      async ({ state }) => {
+        mockSuccessfulPageWithPayload(
+          createNextJSPageData([{ state }]),
+        );
+
+        await expectTypeError(
+          extractNextJSData(pageUrl),
+          'Cannot unpack state data from Next.js object.',
+        );
+      },
+    );
+  });
 });
