@@ -204,6 +204,10 @@ describe('extractNextJSData', () => {
         },
       },
     },
+    {
+      description: 'when state.data is already an array',
+      stateData: ['track-1', 'track-2'],
+    },
   ])(
     'returns the entire query payload $description',
     async ({ stateData }) => {
