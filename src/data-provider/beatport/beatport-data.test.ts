@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchBeatportSearchTrackPayload } from './beatport-data.js';
+import {
+  fetchBeatportSearchTrackPayload,
+  fetchBeatportTrackPayload,
+} from './beatport-data.js';
 
 import { BeatportArtistType } from './types.js';
 
 import type {
   BeatportSearchResultTrackInfo,
+  BeatportTrackInfo,
 } from './types.js';
 
 const mocks = vi.hoisted(() => ({
@@ -70,6 +74,49 @@ const validSearchResultTrack: BeatportSearchResultTrackInfo = {
       genre_name: 'House',
     },
   ],
+};
+
+const trackUrl = new URL(
+  'https://www.beatport.com/track/example-track/123456',
+);
+
+const validTrackData: BeatportTrackInfo = {
+  artists: [
+    {
+      id: 101,
+      name: 'Primary Artist',
+      type: BeatportArtistType.Artist,
+    },
+  ],
+  genre: {
+    id: 201,
+    name: 'House',
+    sub_genre: {
+      id: 202,
+      name: 'Soulful',
+    },
+  },
+  track_id: 123456,
+  track_waveform_url: 'https://example.com/image_size/1400x1400/waveform.png',
+  key: 'C Minor',
+  track_length_ms: 184376,
+  mix_name: 'Extended Mix',
+  track_name: 'Example Track',
+  track_number: 3,
+  release: {
+    id: 301,
+    name: 'Example Release',
+    image_url: 'https://example.com/release.jpg',
+    release_date: '2025-01-15',
+    slug: 'example-release',
+  },
+  label: {
+    id: 401,
+    name: 'Example Label',
+    slug: 'example-label',
+  },
+  bpm: 128.5,
+  isrc: 'USRC17607839',
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -264,6 +311,74 @@ describe('fetchBeatportSearchTrackPayload', () => {
         searchParameters,
         inputKeywords,
       ),
+    ).rejects.toBe(extractionError);
+
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchBeatportTrackPayload', () => {
+  beforeEach(() => {
+    mocks.extractNextJSData.mockReset();
+    mocks.loggerWarn.mockReset();
+  });
+
+  it('returns validated track metadata', async () => {
+    mocks.extractNextJSData.mockResolvedValueOnce(validTrackData);
+
+    const result = await fetchBeatportTrackPayload(trackUrl);
+
+    expect(result).toEqual(validTrackData);
+
+    expect(mocks.extractNextJSData).toHaveBeenCalledOnce();
+    expect(mocks.extractNextJSData).toHaveBeenCalledWith(trackUrl);
+
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('logs a warning and returns undefined when the payload is unavailable', async () => {
+    mocks.extractNextJSData.mockResolvedValueOnce(undefined);
+
+    const result = await fetchBeatportTrackPayload(trackUrl);
+
+    expect(result).toBeUndefined();
+
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(
+      'No Beatport track payload available',
+      {
+        trackUrl: trackUrl.toString(),
+      },
+    );
+  });
+
+  it('logs validation errors and returns undefined for an invalid payload', async () => {
+    mocks.extractNextJSData.mockResolvedValueOnce(null);
+
+    const result = await fetchBeatportTrackPayload(trackUrl);
+
+    expect(result).toBeUndefined();
+
+    const logContext = getLoggedWarningContext(
+      'Cannot validate raw Beatport track payload',
+    );
+
+    expect(logContext.trackUrl).toBe(trackUrl.toString());
+
+    expect(getFirstLoggedIssue(logContext)).toMatchObject({
+      code: 'invalid_type',
+      path: '',
+    });
+  });
+
+  it('propagates TypeError from Next.js data extraction', async () => {
+    const extractionError = new TypeError(
+      'Malformed Next.js payload.',
+    );
+
+    mocks.extractNextJSData.mockRejectedValueOnce(extractionError);
+
+    await expect(
+      fetchBeatportTrackPayload(trackUrl),
     ).rejects.toBe(extractionError);
 
     expect(mocks.loggerWarn).not.toHaveBeenCalled();
