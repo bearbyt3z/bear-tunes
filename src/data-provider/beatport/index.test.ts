@@ -261,7 +261,6 @@ describe('BeatportDataProvider', () => {
 
     const searchParameters = {
       order: 'relevance',
-      per_page: '25',
     };
 
     const options: Partial<BeatportDataProviderOptions> = {
@@ -764,6 +763,31 @@ describe('BeatportDataProvider', () => {
       customDomainUrl,
       validDetailedTrackData.label,
     );
+
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('uses the configured domain URL when mapping track candidates', async () => {
+    const customDomainUrl = 'https://catalog.example.com/';
+
+    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
+      validSearchResultTrack,
+    ]);
+
+    const provider = new BeatportDataProvider({
+      domainUrl: customDomainUrl,
+    });
+
+    const result = await provider.findTrackCandidates(inputKeywords);
+
+    expect(result).toEqual([
+      {
+        ...expectedTrackInfo,
+        url: new URL(
+          'https://catalog.example.com/track/example-track/123456',
+        ),
+      },
+    ]);
 
     expect(mocks.loggerWarn).not.toHaveBeenCalled();
   });
