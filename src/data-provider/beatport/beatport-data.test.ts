@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   fetchBeatportAlbumPayload,
+  fetchBeatportPublisherPayload,
   fetchBeatportSearchTrackPayload,
   fetchBeatportTrackPayload,
 } from './beatport-data.js';
@@ -10,6 +11,7 @@ import { BeatportArtistType } from './types.js';
 
 import type {
   BeatportAlbumInfo,
+  BeatportPublisherInfo,
   BeatportSearchResultTrackInfo,
   BeatportTrackInfo,
 } from './types.js';
@@ -155,10 +157,21 @@ const validAlbumData: BeatportAlbumInfo = {
   track_count: 12,
 };
 
+const validPublisherData: BeatportPublisherInfo = {
+  id: 401,
+  image_url: 'https://example.com/label.jpg',
+  name: 'Example Label',
+  slug: 'example-label',
+};
+
 const domainUrl = 'https://www.beatport.com';
 
 const expectedAlbumUrl = new URL(
   'https://www.beatport.com/release/example-release/301',
+);
+
+const expectedPublisherUrl = new URL(
+  'https://www.beatport.com/label/example-label/401',
 );
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -526,6 +539,138 @@ describe('fetchBeatportAlbumPayload', () => {
       fetchBeatportAlbumPayload(
         'not-a-valid-url',
         validTrackData.release,
+      ),
+    ).rejects.toBeInstanceOf(TypeError);
+
+    expect(mocks.extractNextJSData).not.toHaveBeenCalled();
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchBeatportPublisherPayload', () => {
+  beforeEach(() => {
+    mocks.extractNextJSData.mockReset();
+    mocks.loggerWarn.mockReset();
+  });
+
+  it('constructs the publisher URL and returns validated publisher metadata', async () => {
+    mocks.extractNextJSData.mockResolvedValueOnce(validPublisherData);
+
+    const result = await fetchBeatportPublisherPayload(
+      domainUrl,
+      validTrackData.label,
+    );
+
+    expect(result).toEqual({
+      publisherUrl: expectedPublisherUrl,
+      publisherData: validPublisherData,
+    });
+
+    expect(mocks.extractNextJSData).toHaveBeenCalledOnce();
+    expect(mocks.extractNextJSData).toHaveBeenCalledWith(
+      expectedPublisherUrl,
+    );
+
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('accepts null as the publisher image URL', async () => {
+    const publisherData: BeatportPublisherInfo = {
+      ...validPublisherData,
+      image_url: null,
+    };
+
+    mocks.extractNextJSData.mockResolvedValueOnce(publisherData);
+
+    const result = await fetchBeatportPublisherPayload(
+      domainUrl,
+      validTrackData.label,
+    );
+
+    expect(result).toEqual({
+      publisherUrl: expectedPublisherUrl,
+      publisherData,
+    });
+
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('returns undefined without making a request when label information is missing', async () => {
+    const result = await fetchBeatportPublisherPayload(
+      domainUrl,
+      undefined,
+    );
+
+    expect(result).toBeUndefined();
+
+    expect(mocks.extractNextJSData).not.toHaveBeenCalled();
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('logs a warning and returns undefined when the payload is unavailable', async () => {
+    mocks.extractNextJSData.mockResolvedValueOnce(undefined);
+
+    const result = await fetchBeatportPublisherPayload(
+      domainUrl,
+      validTrackData.label,
+    );
+
+    expect(result).toBeUndefined();
+
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(
+      'No Beatport publisher payload available',
+      {
+        publisherUrl: expectedPublisherUrl.toString(),
+      },
+    );
+  });
+
+  it('logs validation errors and returns undefined for an invalid payload', async () => {
+    mocks.extractNextJSData.mockResolvedValueOnce(null);
+
+    const result = await fetchBeatportPublisherPayload(
+      domainUrl,
+      validTrackData.label,
+    );
+
+    expect(result).toBeUndefined();
+
+    const logContext = getLoggedWarningContext(
+      'Cannot validate raw Beatport publisher payload',
+    );
+
+    expect(logContext.publisherUrl).toBe(
+      expectedPublisherUrl.toString(),
+    );
+
+    expect(getFirstLoggedIssue(logContext)).toMatchObject({
+      code: 'invalid_type',
+      path: '',
+    });
+  });
+
+  it('propagates TypeError from Next.js data extraction', async () => {
+    const extractionError = new TypeError(
+      'Malformed Next.js payload.',
+    );
+
+    mocks.extractNextJSData.mockRejectedValueOnce(extractionError);
+
+    await expect(
+      fetchBeatportPublisherPayload(
+        domainUrl,
+        validTrackData.label,
+      ),
+    ).rejects.toBe(extractionError);
+
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('propagates TypeError when the publisher URL cannot be constructed', async () => {
+    await expect(
+      fetchBeatportPublisherPayload(
+        'not-a-valid-url',
+        validTrackData.label,
       ),
     ).rejects.toBeInstanceOf(TypeError);
 
