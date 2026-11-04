@@ -76,9 +76,12 @@ export class BeatportDataProvider extends DataProvider {
   private readonly options: BeatportDataProviderOptions;
 
   /**
-   * Creates a Beatport data provider with merged default and custom options.
+   * Creates a Beatport data provider using default configuration with
+   * caller-supplied option overrides.
    *
-   * @param options - Partial Beatport provider configuration overriding defaults.
+   * @param options - Partial provider configuration. Supplied properties
+   * override their corresponding defaults. When provided,
+   * `trackSearchParameters` replaces the default parameter object.
    */
   constructor(options: Partial<BeatportDataProviderOptions> = {}) {
     super();
@@ -102,15 +105,17 @@ export class BeatportDataProvider extends DataProvider {
   }
 
   /**
-   * Finds canonical track metadata candidates for the provided search keywords.
+   * Finds usable canonical track metadata candidates for the provided search keywords.
    *
-   * Each returned candidate contains metadata available in a Beatport search
-   * result. Entries that cannot be mapped or validated as canonical TrackInfo
-   * are skipped and logged.
+   * Each candidate contains metadata mapped from a validated Beatport search result.
+   * Entries that cannot be mapped or validated, or lack the required identification
+   * fields or track duration details, are skipped and logged.
    *
-   * @param inputKeywords - Keywords used to search Beatport tracks.
-   * @returns Candidate metadata, an empty array when no matching Beatport tracks
-   * are found, or undefined when Beatport search data is unavailable.
+   * @param inputKeywords - Keywords used to search for tracks on Beatport.
+   * @returns Usable candidate metadata, an empty array when no usable candidates
+   * are found, or `undefined` when the search payload is unavailable or invalid.
+   * @throws {TypeError} When the configured search URL cannot be constructed or
+   * the fetched page does not expose the expected Next.js data structure.
    */
   async findTrackCandidates(
     inputKeywords: readonly string[],
@@ -181,9 +186,18 @@ export class BeatportDataProvider extends DataProvider {
   /**
    * Resolves canonical metadata for a selected Beatport track URL.
    *
+   * The method retrieves and validates the full track payload, then maps it to
+   * canonical TrackInfo. Album and publisher metadata are fetched concurrently
+   * and included only when valid normalized values are available.
+   *
+   * Missing or invalid album and publisher metadata does not prevent the main
+   * track information from being returned.
+   *
    * @param trackUrl - URL of the selected Beatport track.
-   * @returns Canonical track metadata, or undefined when it cannot be retrieved,
-   * mapped, or validated.
+   * @returns Canonical track metadata, or `undefined` when the main track payload
+   * is unavailable or invalid, or its mapped data cannot be normalized or validated.
+   * @throws {TypeError} When Next.js data extraction fails or a related album
+   * or publisher URL cannot be constructed.
    */
   async getTrackInfo(trackUrl: URL): Promise<TrackInfo | undefined> {
     const trackData = await fetchBeatportTrackPayload(trackUrl);
