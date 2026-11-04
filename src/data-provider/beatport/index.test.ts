@@ -12,7 +12,9 @@ import type {
 
 import type {
   BeatportAlbumInfo,
+  BeatportAlbumPayloadResult,
   BeatportPublisherInfo,
+  BeatportPublisherPayloadResult,
   BeatportSearchResultTrackInfo,
   BeatportTrackInfo,
 } from './types.js';
@@ -667,6 +669,101 @@ describe('BeatportDataProvider', () => {
 
     expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledOnce();
     expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledOnce();
+
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('fetches album and publisher metadata concurrently', async () => {
+    let resolveAlbumPayload!: (
+      value: BeatportAlbumPayloadResult | undefined,
+    ) => void;
+
+    let resolvePublisherPayload!: (
+      value: BeatportPublisherPayloadResult | undefined,
+    ) => void;
+
+    const albumPayloadPromise = new Promise<
+      BeatportAlbumPayloadResult | undefined
+    >((resolve) => {
+      resolveAlbumPayload = resolve;
+    });
+
+    const publisherPayloadPromise = new Promise<
+      BeatportPublisherPayloadResult | undefined
+    >((resolve) => {
+      resolvePublisherPayload = resolve;
+    });
+
+    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+      validDetailedTrackData,
+    );
+
+    mocks.fetchBeatportAlbumPayload.mockReturnValueOnce(
+      albumPayloadPromise,
+    );
+
+    mocks.fetchBeatportPublisherPayload.mockReturnValueOnce(
+      publisherPayloadPromise,
+    );
+
+    const provider = new BeatportDataProvider();
+
+    const resultPromise = provider.getTrackInfo(trackUrl);
+
+    await Promise.resolve();
+
+    expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledOnce();
+    expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledOnce();
+
+    resolveAlbumPayload({
+      albumUrl: expectedAlbumUrl,
+      albumData: validDetailedAlbumData,
+    });
+
+    resolvePublisherPayload({
+      publisherUrl: expectedPublisherUrl,
+      publisherData: validDetailedPublisherData,
+    });
+
+    await expect(resultPromise).resolves.toEqual(expectedDetailedTrackInfo);
+
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('uses the configured domain URL when fetching album and publisher metadata', async () => {
+    const customDomainUrl = 'https://catalog.example.com';
+
+    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+      validDetailedTrackData,
+    );
+
+    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
+      albumUrl: expectedAlbumUrl,
+      albumData: validDetailedAlbumData,
+    });
+
+    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
+      publisherUrl: expectedPublisherUrl,
+      publisherData: validDetailedPublisherData,
+    });
+
+    const provider = new BeatportDataProvider({
+      domainUrl: customDomainUrl,
+    });
+
+    const result = await provider.getTrackInfo(trackUrl);
+
+    expect(result).toEqual(expectedDetailedTrackInfo);
+
+    expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledWith(
+      customDomainUrl,
+      validDetailedTrackData.release,
+    );
+
+    expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledWith(
+      customDomainUrl,
+      validDetailedTrackData.label,
+    );
 
     expect(mocks.loggerWarn).not.toHaveBeenCalled();
   });
