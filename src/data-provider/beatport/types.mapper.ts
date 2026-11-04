@@ -148,7 +148,10 @@ export function mapBeatportSearchResultTrackToTrackInfo(
   const details = (trackEntry.length === undefined) ? undefined : { durationMs: trackEntry.length };
 
   return normalizeTrackInfo({
-    url: `${domainUrl}/track/${slugify(trackEntry.track_name)}/${trackEntry.track_id}`,
+    url: new URL(
+      `/track/${slugify(trackEntry.track_name)}/${trackEntry.track_id}`,
+      domainUrl,
+    ),
     artists,
     title: normalizeTrackTitle(
       trackEntry.track_name,
