@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  fetchBeatportAlbumPayload,
   fetchBeatportSearchTrackPayload,
   fetchBeatportTrackPayload,
 } from './beatport-data.js';
@@ -8,6 +9,7 @@ import {
 import { BeatportArtistType } from './types.js';
 
 import type {
+  BeatportAlbumInfo,
   BeatportSearchResultTrackInfo,
   BeatportTrackInfo,
 } from './types.js';
@@ -118,6 +120,46 @@ const validTrackData: BeatportTrackInfo = {
   bpm: 128.5,
   isrc: 'USRC17607839',
 };
+
+const validAlbumData: BeatportAlbumInfo = {
+  artists: [
+    {
+      id: 101,
+      name: 'Primary Artist',
+    },
+    {
+      id: 102,
+      name: 'Second Artist',
+    },
+  ],
+  bpm_range: {
+    min: 120,
+    max: 130,
+  },
+  catalog_number: 'CAT-001',
+  id: 123456,
+  image: {
+    id: 201,
+    uri: 'https://example.com/image_size/1400x1400/album.jpg',
+  },
+  label: {
+    id: 301,
+    name: 'Example Label',
+    slug: 'example-label',
+  },
+  name: 'Example Album',
+  new_release_date: '2025-01-15',
+  remixers: [],
+  slug: 'example-album',
+  tracks: [],
+  track_count: 12,
+};
+
+const domainUrl = 'https://www.beatport.com';
+
+const expectedAlbumUrl = new URL(
+  'https://www.beatport.com/release/example-release/301',
+);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object'
@@ -381,6 +423,113 @@ describe('fetchBeatportTrackPayload', () => {
       fetchBeatportTrackPayload(trackUrl),
     ).rejects.toBe(extractionError);
 
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchBeatportAlbumPayload', () => {
+  beforeEach(() => {
+    mocks.extractNextJSData.mockReset();
+    mocks.loggerWarn.mockReset();
+  });
+
+  it('constructs the album URL and returns validated album metadata', async () => {
+    mocks.extractNextJSData.mockResolvedValueOnce(validAlbumData);
+
+    const result = await fetchBeatportAlbumPayload(
+      domainUrl,
+      validTrackData.release,
+    );
+
+    expect(result).toEqual({
+      albumUrl: expectedAlbumUrl,
+      albumData: validAlbumData,
+    });
+
+    expect(mocks.extractNextJSData).toHaveBeenCalledOnce();
+    expect(mocks.extractNextJSData).toHaveBeenCalledWith(expectedAlbumUrl);
+
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('returns undefined without making a request when release information is missing', async () => {
+    const result = await fetchBeatportAlbumPayload(
+      domainUrl,
+      undefined,
+    );
+
+    expect(result).toBeUndefined();
+
+    expect(mocks.extractNextJSData).not.toHaveBeenCalled();
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('logs a warning and returns undefined when the payload is unavailable', async () => {
+    mocks.extractNextJSData.mockResolvedValueOnce(undefined);
+
+    const result = await fetchBeatportAlbumPayload(
+      domainUrl,
+      validTrackData.release,
+    );
+
+    expect(result).toBeUndefined();
+
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(
+      'No Beatport album payload available',
+      {
+        albumUrl: expectedAlbumUrl.toString(),
+      },
+    );
+  });
+
+  it('logs validation errors and returns undefined for an invalid payload', async () => {
+    mocks.extractNextJSData.mockResolvedValueOnce(null);
+
+    const result = await fetchBeatportAlbumPayload(
+      domainUrl,
+      validTrackData.release,
+    );
+
+    expect(result).toBeUndefined();
+
+    const logContext = getLoggedWarningContext(
+      'Cannot validate raw Beatport album payload',
+    );
+
+    expect(logContext.albumUrl).toBe(expectedAlbumUrl.toString());
+
+    expect(getFirstLoggedIssue(logContext)).toMatchObject({
+      code: 'invalid_type',
+      path: '',
+    });
+  });
+
+  it('propagates TypeError from Next.js data extraction', async () => {
+    const extractionError = new TypeError(
+      'Malformed Next.js payload.',
+    );
+
+    mocks.extractNextJSData.mockRejectedValueOnce(extractionError);
+
+    await expect(
+      fetchBeatportAlbumPayload(
+        domainUrl,
+        validTrackData.release,
+      ),
+    ).rejects.toBe(extractionError);
+
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('propagates TypeError when the album URL cannot be constructed', async () => {
+    await expect(
+      fetchBeatportAlbumPayload(
+        'not-a-valid-url',
+        validTrackData.release,
+      ),
+    ).rejects.toBeInstanceOf(TypeError);
+
+    expect(mocks.extractNextJSData).not.toHaveBeenCalled();
     expect(mocks.loggerWarn).not.toHaveBeenCalled();
   });
 });
