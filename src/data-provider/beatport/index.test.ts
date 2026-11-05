@@ -1,23 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DataProvider } from '../index.js';
-
-import { BeatportDataProvider } from './index.js';
-
-import {
-  getFirstLoggedIssue,
-  getLoggedWarningContext,
-} from './test-utils.js';
-
-import { BeatportArtistType } from './types.js';
-
-import * as beatportMappers from './types.mapper.js';
-
 import type {
   AlbumInfo,
   PublisherInfo,
   TrackInfo,
 } from '#shared-types';
+
+import { DataProvider } from '../index.js';
+
+import { BeatportDataProvider } from './index.js';
+import {
+  getFirstLoggedIssue,
+  getLoggedWarningContext,
+} from './test-utils.js';
+import { BeatportArtistType } from './types.js';
+import * as beatportMappers from './types.mapper.js';
 
 import type {
   BeatportDataProviderOptions,
@@ -75,6 +72,8 @@ vi.mock('./types.mapper.js', async (importOriginal) => {
   };
 });
 
+// Search candidate fixtures
+
 const inputKeywords = ['Adam', 'Beyer'];
 
 const defaultSearchUrl = new URL(
@@ -129,6 +128,8 @@ const expectedTrackInfo = {
     durationMs: 184376,
   },
 };
+
+// Detailed track fixtures
 
 const domainUrl = 'https://www.beatport.com';
 
@@ -287,767 +288,791 @@ describe('BeatportDataProvider', () => {
     expect(provider).toBeInstanceOf(DataProvider);
   });
 
-  it('uses default configuration when searching for track candidates', async () => {
-    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([]);
+  describe('findTrackCandidates', () => {
+    // Configuration
 
-    const provider = new BeatportDataProvider();
+    it('uses default configuration when searching for track candidates', async () => {
+      mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([]);
 
-    const result = await provider.findTrackCandidates(inputKeywords);
+      const provider = new BeatportDataProvider();
 
-    expect(result).toEqual([]);
+      const result = await provider.findTrackCandidates(inputKeywords);
 
-    expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledOnce();
-    expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledWith(
-      defaultSearchUrl,
-      'q',
-      defaultSearchParameters,
-      inputKeywords,
-    );
-  });
+      expect(result).toEqual([]);
 
-  it('uses caller-supplied configuration overrides', async () => {
-    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([]);
+      expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledOnce();
+      expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledWith(
+        defaultSearchUrl,
+        'q',
+        defaultSearchParameters,
+        inputKeywords,
+      );
+    });
 
-    const searchParameters = {
-      order: 'relevance',
-    };
+    it('uses caller-supplied configuration overrides', async () => {
+      mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([]);
 
-    const options: Partial<BeatportDataProviderOptions> = {
-      domainUrl: 'https://catalog.example.com',
-      trackSearchPath: '/api/v2/tracks',
-      trackSearchQueryParameter: 'query',
-      trackSearchParameters: searchParameters,
-    };
+      const searchParameters = {
+        order: 'relevance',
+      };
 
-    const provider = new BeatportDataProvider(options);
+      const options: Partial<BeatportDataProviderOptions> = {
+        domainUrl: 'https://catalog.example.com',
+        trackSearchPath: '/api/v2/tracks',
+        trackSearchQueryParameter: 'query',
+        trackSearchParameters: searchParameters,
+      };
 
-    const result = await provider.findTrackCandidates(inputKeywords);
+      const provider = new BeatportDataProvider(options);
 
-    expect(result).toEqual([]);
+      const result = await provider.findTrackCandidates(inputKeywords);
 
-    expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledOnce();
-    expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledWith(
-      new URL('https://catalog.example.com/api/v2/tracks'),
-      'query',
-      searchParameters,
-      inputKeywords,
-    );
-  });
+      expect(result).toEqual([]);
 
-  it('preserves default configuration for options not overridden by the caller', async () => {
-    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([]);
+      expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledOnce();
+      expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledWith(
+        new URL('https://catalog.example.com/api/v2/tracks'),
+        'query',
+        searchParameters,
+        inputKeywords,
+      );
+    });
 
-    const options: Partial<BeatportDataProviderOptions> = {
-      trackSearchQueryParameter: 'term',
-    };
+    it('preserves default configuration for options not overridden by the caller', async () => {
+      mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([]);
 
-    const provider = new BeatportDataProvider(options);
+      const options: Partial<BeatportDataProviderOptions> = {
+        trackSearchQueryParameter: 'term',
+      };
 
-    const result = await provider.findTrackCandidates(inputKeywords);
+      const provider = new BeatportDataProvider(options);
 
-    expect(result).toEqual([]);
+      const result = await provider.findTrackCandidates(inputKeywords);
 
-    expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledOnce();
-    expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledWith(
-      defaultSearchUrl,
-      'term',
-      defaultSearchParameters,
-      inputKeywords,
-    );
-  });
+      expect(result).toEqual([]);
 
-  it('maps valid Beatport search results to canonical track candidates', async () => {
-    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
-      validSearchResultTrack,
-    ]);
+      expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledOnce();
+      expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledWith(
+        defaultSearchUrl,
+        'term',
+        defaultSearchParameters,
+        inputKeywords,
+      );
+    });
 
-    const provider = new BeatportDataProvider();
+    it('uses the configured domain URL when mapping track candidates', async () => {
+      const customDomainUrl = 'https://catalog.example.com/';
 
-    const result = await provider.findTrackCandidates(inputKeywords);
+      mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
+        validSearchResultTrack,
+      ]);
 
-    expect(result).toEqual([expectedTrackInfo]);
+      const provider = new BeatportDataProvider({
+        domainUrl: customDomainUrl,
+      });
 
-    expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledOnce();
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
+      const result = await provider.findTrackCandidates(inputKeywords);
 
-  it('returns undefined when the search payload is unavailable', async () => {
-    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce(undefined);
-
-    const provider = new BeatportDataProvider();
-
-    const result = await provider.findTrackCandidates(inputKeywords);
-
-    expect(result).toBeUndefined();
-
-    expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledOnce();
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('skips candidates with missing identification fields or track duration', async () => {
-    const trackWithoutTitle: BeatportSearchResultTrackInfo = {
-      ...validSearchResultTrack,
-      track_id: 123457,
-      track_name: '',
-    };
-
-    const trackWithoutPrimaryArtist: BeatportSearchResultTrackInfo = {
-      ...validSearchResultTrack,
-      artists: [
+      expect(result).toEqual([
         {
-          artist_id: 102,
-          artist_name: 'Guest Remixer',
-          artist_type_name: BeatportArtistType.Remixer,
+          ...expectedTrackInfo,
+          url: new URL(
+            'https://catalog.example.com/track/example-track/123456',
+          ),
         },
-      ],
-      track_id: 123458,
-      track_name: 'Track Without Primary Artist',
-    };
+      ]);
 
-    const trackWithoutDuration: BeatportSearchResultTrackInfo = {
-      ...validSearchResultTrack,
-      track_id: 123459,
-      track_name: 'Track Without Duration',
-    };
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
+    });
 
-    delete trackWithoutDuration.length;
+    // Successful results
 
-    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
-      trackWithoutTitle,
-      trackWithoutPrimaryArtist,
-      trackWithoutDuration,
-      validSearchResultTrack,
-    ]);
+    it('maps valid Beatport search results to canonical track candidates', async () => {
+      mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
+        validSearchResultTrack,
+      ]);
 
-    const provider = new BeatportDataProvider();
+      const provider = new BeatportDataProvider();
 
-    const result = await provider.findTrackCandidates(inputKeywords);
+      const result = await provider.findTrackCandidates(inputKeywords);
 
-    expect(result).toEqual([expectedTrackInfo]);
+      expect(result).toEqual([expectedTrackInfo]);
 
-    expect(mocks.loggerWarn).toHaveBeenCalledTimes(3);
+      expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledOnce();
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
+    });
 
-    expect(mocks.loggerWarn).toHaveBeenNthCalledWith(
-      1,
-      'Skipping Beatport search candidate due to missing identification fields',
-      {
-        trackId: 123457,
-        trackName: '',
-        identificationStatus: {
-          hasTitle: false,
-          hasArtists: true,
+    // Missing or incomplete results
+
+    it('returns undefined when the search payload is unavailable', async () => {
+      mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce(undefined);
+
+      const provider = new BeatportDataProvider();
+
+      const result = await provider.findTrackCandidates(inputKeywords);
+
+      expect(result).toBeUndefined();
+
+      expect(mocks.fetchBeatportSearchTrackPayload).toHaveBeenCalledOnce();
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('skips candidates with missing identification fields or track duration', async () => {
+      const trackWithoutTitle: BeatportSearchResultTrackInfo = {
+        ...validSearchResultTrack,
+        track_id: 123457,
+        track_name: '',
+      };
+
+      const trackWithoutPrimaryArtist: BeatportSearchResultTrackInfo = {
+        ...validSearchResultTrack,
+        artists: [
+          {
+            artist_id: 102,
+            artist_name: 'Guest Remixer',
+            artist_type_name: BeatportArtistType.Remixer,
+          },
+        ],
+        track_id: 123458,
+        track_name: 'Track Without Primary Artist',
+      };
+
+      const trackWithoutDuration: BeatportSearchResultTrackInfo = {
+        ...validSearchResultTrack,
+        track_id: 123459,
+        track_name: 'Track Without Duration',
+      };
+
+      delete trackWithoutDuration.length;
+
+      mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
+        trackWithoutTitle,
+        trackWithoutPrimaryArtist,
+        trackWithoutDuration,
+        validSearchResultTrack,
+      ]);
+
+      const provider = new BeatportDataProvider();
+
+      const result = await provider.findTrackCandidates(inputKeywords);
+
+      expect(result).toEqual([expectedTrackInfo]);
+
+      expect(mocks.loggerWarn).toHaveBeenCalledTimes(3);
+
+      expect(mocks.loggerWarn).toHaveBeenNthCalledWith(
+        1,
+        'Skipping Beatport search candidate due to missing identification fields',
+        {
+          trackId: 123457,
+          trackName: '',
+          identificationStatus: {
+            hasTitle: false,
+            hasArtists: true,
+          },
         },
-      },
-    );
+      );
 
-    expect(mocks.loggerWarn).toHaveBeenNthCalledWith(
-      2,
-      'Skipping Beatport search candidate due to missing identification fields',
-      {
-        trackId: 123458,
-        trackName: 'Track Without Primary Artist',
-        identificationStatus: {
-          hasTitle: true,
-          hasArtists: false,
+      expect(mocks.loggerWarn).toHaveBeenNthCalledWith(
+        2,
+        'Skipping Beatport search candidate due to missing identification fields',
+        {
+          trackId: 123458,
+          trackName: 'Track Without Primary Artist',
+          identificationStatus: {
+            hasTitle: true,
+            hasArtists: false,
+          },
         },
-      },
-    );
+      );
 
-    expect(mocks.loggerWarn).toHaveBeenNthCalledWith(
-      3,
-      'Skipping Beatport search candidate due to missing identification fields',
-      {
-        trackId: 123459,
-        trackName: 'Track Without Duration',
-        identificationStatus: {
-          hasTitle: true,
-          hasArtists: true,
+      expect(mocks.loggerWarn).toHaveBeenNthCalledWith(
+        3,
+        'Skipping Beatport search candidate due to missing identification fields',
+        {
+          trackId: 123459,
+          trackName: 'Track Without Duration',
+          identificationStatus: {
+            hasTitle: true,
+            hasArtists: true,
+          },
         },
-      },
-    );
-  });
-
-  it('propagates TypeError when the configured search URL is invalid', async () => {
-    const provider = new BeatportDataProvider({
-      domainUrl: 'invalid-url',
+      );
     });
 
-    await expect(
-      provider.findTrackCandidates(inputKeywords),
-    ).rejects.toBeInstanceOf(TypeError);
+    it('logs a warning and skips search results that cannot be mapped', async () => {
+      mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
+        validSearchResultTrack,
+      ]);
 
-    expect(mocks.fetchBeatportSearchTrackPayload).not.toHaveBeenCalled();
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
+      vi.mocked(
+        beatportMappers.mapBeatportSearchResultTrackToTrackInfo,
+      ).mockReturnValueOnce(undefined);
 
-  it('propagates TypeError from search payload fetching', async () => {
-    const extractionError = new TypeError(
-      'Malformed Next.js payload.',
-    );
+      const provider = new BeatportDataProvider();
 
-    mocks.fetchBeatportSearchTrackPayload.mockRejectedValueOnce(
-      extractionError,
-    );
+      const result = await provider.findTrackCandidates(inputKeywords);
 
-    const provider = new BeatportDataProvider();
+      expect(result).toEqual([]);
 
-    await expect(
-      provider.findTrackCandidates(inputKeywords),
-    ).rejects.toBe(extractionError);
-
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('returns canonical track metadata with album and publisher information', async () => {
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
-
-    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
-      albumUrl: expectedAlbumUrl,
-      albumData: validDetailedAlbumData,
+      expect(mocks.loggerWarn).toHaveBeenCalledWith(
+        'Cannot map Beatport search result track to TrackInfo',
+        {
+          trackId: validSearchResultTrack.track_id,
+          trackName: validSearchResultTrack.track_name,
+        },
+      );
     });
 
-    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
-      publisherUrl: expectedPublisherUrl,
-      publisherData: validDetailedPublisherData,
+    // Validation
+
+    it('logs validation errors and skips candidates with invalid mapped TrackInfo', async () => {
+      const invalidTrackInfo: TrackInfo = {
+        title: 'Example Track',
+        artists: ['Adam Beyer', 'adam beyer'],
+      };
+
+      mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
+        validSearchResultTrack,
+      ]);
+
+      vi.mocked(
+        beatportMappers.mapBeatportSearchResultTrackToTrackInfo,
+      ).mockReturnValueOnce(invalidTrackInfo);
+
+      const provider = new BeatportDataProvider();
+
+      const result = await provider.findTrackCandidates(inputKeywords);
+
+      expect(result).toEqual([]);
+
+      const logContext = getLoggedWarningContext(
+        mocks.loggerWarn.mock.calls,
+        'Cannot validate mapped TrackInfo from Beatport search result',
+      );
+
+      expect(logContext.trackId).toBe(validSearchResultTrack.track_id);
+      expect(logContext.trackName).toBe(validSearchResultTrack.track_name);
+
+      expect(getFirstLoggedIssue(logContext)).toMatchObject({
+        code: 'custom',
+        path: 'artists',
+      });
     });
 
-    const provider = new BeatportDataProvider();
+    // Errors
 
-    const result = await provider.getTrackInfo(trackUrl);
+    it('propagates TypeError when the configured search URL is invalid', async () => {
+      const provider = new BeatportDataProvider({
+        domainUrl: 'invalid-url',
+      });
 
-    expect(result).toEqual(expectedDetailedTrackInfo);
+      await expect(
+        provider.findTrackCandidates(inputKeywords),
+      ).rejects.toBeInstanceOf(TypeError);
 
-    expect(mocks.fetchBeatportTrackPayload).toHaveBeenCalledOnce();
-    expect(mocks.fetchBeatportTrackPayload).toHaveBeenCalledWith(trackUrl);
-
-    expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledOnce();
-    expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledWith(
-      domainUrl,
-      validDetailedTrackData.release,
-    );
-
-    expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledOnce();
-    expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledWith(
-      domainUrl,
-      validDetailedTrackData.label,
-    );
-
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('returns undefined when the main track payload is unavailable', async () => {
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(undefined);
-
-    const provider = new BeatportDataProvider();
-
-    const result = await provider.getTrackInfo(trackUrl);
-
-    expect(result).toBeUndefined();
-
-    expect(mocks.fetchBeatportTrackPayload).toHaveBeenCalledOnce();
-    expect(mocks.fetchBeatportAlbumPayload).not.toHaveBeenCalled();
-    expect(mocks.fetchBeatportPublisherPayload).not.toHaveBeenCalled();
-
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('returns track metadata when album information is unavailable', async () => {
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
-
-    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce(undefined);
-
-    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
-      publisherUrl: expectedPublisherUrl,
-      publisherData: validDetailedPublisherData,
+      expect(mocks.fetchBeatportSearchTrackPayload).not.toHaveBeenCalled();
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
     });
 
-    const provider = new BeatportDataProvider();
+    it('propagates TypeError from search payload fetching', async () => {
+      const extractionError = new TypeError(
+        'Malformed Next.js payload.',
+      );
 
-    const result = await provider.getTrackInfo(trackUrl);
+      mocks.fetchBeatportSearchTrackPayload.mockRejectedValueOnce(
+        extractionError,
+      );
 
-    expect(result).toMatchObject({
-      url: trackUrl,
-      title: 'Example Track (Extended Mix)',
-      publisher: expectedDetailedTrackInfo.publisher,
-    });
+      const provider = new BeatportDataProvider();
 
-    expect(result).not.toHaveProperty('album');
+      await expect(
+        provider.findTrackCandidates(inputKeywords),
+      ).rejects.toBe(extractionError);
 
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('returns track metadata when publisher information is unavailable', async () => {
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
-
-    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
-      albumUrl: expectedAlbumUrl,
-      albumData: validDetailedAlbumData,
-    });
-
-    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce(undefined);
-
-    const provider = new BeatportDataProvider();
-
-    const result = await provider.getTrackInfo(trackUrl);
-
-    expect(result).toMatchObject({
-      url: trackUrl,
-      title: 'Example Track (Extended Mix)',
-      album: expectedDetailedTrackInfo.album,
-    });
-
-    expect(result).not.toHaveProperty('publisher');
-
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('omits album and publisher metadata when their mapped values cannot be normalized', async () => {
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
-
-    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
-      albumUrl: expectedAlbumUrl,
-      albumData: {
-        ...validDetailedAlbumData,
-        name: '   ',
-      },
-    });
-
-    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
-      publisherUrl: expectedPublisherUrl,
-      publisherData: {
-        ...validDetailedPublisherData,
-        name: '   ',
-      },
-    });
-
-    const provider = new BeatportDataProvider();
-
-    const result = await provider.getTrackInfo(trackUrl);
-
-    expect(result).toMatchObject({
-      url: trackUrl,
-      title: 'Example Track (Extended Mix)',
-      details: {
-        durationMs: 184376,
-      },
-    });
-
-    expect(result).not.toHaveProperty('album');
-    expect(result).not.toHaveProperty('publisher');
-
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('propagates TypeError from main track payload fetching', async () => {
-    const extractionError = new TypeError(
-      'Malformed Next.js payload.',
-    );
-
-    mocks.fetchBeatportTrackPayload.mockRejectedValueOnce(extractionError);
-
-    const provider = new BeatportDataProvider();
-
-    await expect(
-      provider.getTrackInfo(trackUrl),
-    ).rejects.toBe(extractionError);
-
-    expect(mocks.fetchBeatportAlbumPayload).not.toHaveBeenCalled();
-    expect(mocks.fetchBeatportPublisherPayload).not.toHaveBeenCalled();
-
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('propagates TypeError from album metadata fetching', async () => {
-    const extractionError = new TypeError(
-      'Malformed album payload.',
-    );
-
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
-
-    mocks.fetchBeatportAlbumPayload.mockRejectedValueOnce(extractionError);
-
-    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
-      publisherUrl: expectedPublisherUrl,
-      publisherData: validDetailedPublisherData,
-    });
-
-    const provider = new BeatportDataProvider();
-
-    await expect(
-      provider.getTrackInfo(trackUrl),
-    ).rejects.toBe(extractionError);
-
-    expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledOnce();
-    expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledOnce();
-
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('propagates TypeError from publisher metadata fetching', async () => {
-    const extractionError = new TypeError(
-      'Malformed publisher payload.',
-    );
-
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
-
-    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
-      albumUrl: expectedAlbumUrl,
-      albumData: validDetailedAlbumData,
-    });
-
-    mocks.fetchBeatportPublisherPayload.mockRejectedValueOnce(extractionError);
-
-    const provider = new BeatportDataProvider();
-
-    await expect(
-      provider.getTrackInfo(trackUrl),
-    ).rejects.toBe(extractionError);
-
-    expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledOnce();
-    expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledOnce();
-
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('fetches album and publisher metadata concurrently', async () => {
-    let resolveAlbumPayload!: (
-      value: BeatportAlbumPayloadResult | undefined,
-    ) => void;
-
-    let resolvePublisherPayload!: (
-      value: BeatportPublisherPayloadResult | undefined,
-    ) => void;
-
-    const albumPayloadPromise = new Promise<
-      BeatportAlbumPayloadResult | undefined
-    >((resolve) => {
-      resolveAlbumPayload = resolve;
-    });
-
-    const publisherPayloadPromise = new Promise<
-      BeatportPublisherPayloadResult | undefined
-    >((resolve) => {
-      resolvePublisherPayload = resolve;
-    });
-
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
-
-    mocks.fetchBeatportAlbumPayload.mockReturnValueOnce(
-      albumPayloadPromise,
-    );
-
-    mocks.fetchBeatportPublisherPayload.mockReturnValueOnce(
-      publisherPayloadPromise,
-    );
-
-    const provider = new BeatportDataProvider();
-
-    const resultPromise = provider.getTrackInfo(trackUrl);
-
-    await Promise.resolve();
-
-    expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledOnce();
-    expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledOnce();
-
-    resolveAlbumPayload({
-      albumUrl: expectedAlbumUrl,
-      albumData: validDetailedAlbumData,
-    });
-
-    resolvePublisherPayload({
-      publisherUrl: expectedPublisherUrl,
-      publisherData: validDetailedPublisherData,
-    });
-
-    await expect(resultPromise).resolves.toEqual(expectedDetailedTrackInfo);
-
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('uses the configured domain URL when fetching album and publisher metadata', async () => {
-    const customDomainUrl = 'https://catalog.example.com';
-
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
-
-    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
-      albumUrl: expectedAlbumUrl,
-      albumData: validDetailedAlbumData,
-    });
-
-    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
-      publisherUrl: expectedPublisherUrl,
-      publisherData: validDetailedPublisherData,
-    });
-
-    const provider = new BeatportDataProvider({
-      domainUrl: customDomainUrl,
-    });
-
-    const result = await provider.getTrackInfo(trackUrl);
-
-    expect(result).toEqual(expectedDetailedTrackInfo);
-
-    expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledWith(
-      customDomainUrl,
-      validDetailedTrackData.release,
-    );
-
-    expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledWith(
-      customDomainUrl,
-      validDetailedTrackData.label,
-    );
-
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('uses the configured domain URL when mapping track candidates', async () => {
-    const customDomainUrl = 'https://catalog.example.com/';
-
-    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
-      validSearchResultTrack,
-    ]);
-
-    const provider = new BeatportDataProvider({
-      domainUrl: customDomainUrl,
-    });
-
-    const result = await provider.findTrackCandidates(inputKeywords);
-
-    expect(result).toEqual([
-      {
-        ...expectedTrackInfo,
-        url: new URL(
-          'https://catalog.example.com/track/example-track/123456',
-        ),
-      },
-    ]);
-
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
-
-  it('logs a warning and skips search results that cannot be mapped', async () => {
-    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
-      validSearchResultTrack,
-    ]);
-
-    vi.mocked(
-      beatportMappers.mapBeatportSearchResultTrackToTrackInfo,
-    ).mockReturnValueOnce(undefined);
-
-    const provider = new BeatportDataProvider();
-
-    const result = await provider.findTrackCandidates(inputKeywords);
-
-    expect(result).toEqual([]);
-
-    expect(mocks.loggerWarn).toHaveBeenCalledWith(
-      'Cannot map Beatport search result track to TrackInfo',
-      {
-        trackId: validSearchResultTrack.track_id,
-        trackName: validSearchResultTrack.track_name,
-      },
-    );
-  });
-
-  it('logs validation errors and skips candidates with invalid mapped TrackInfo', async () => {
-    const invalidTrackInfo: TrackInfo = {
-      title: 'Example Track',
-      artists: ['Adam Beyer', 'adam beyer'],
-    };
-
-    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
-      validSearchResultTrack,
-    ]);
-
-    vi.mocked(
-      beatportMappers.mapBeatportSearchResultTrackToTrackInfo,
-    ).mockReturnValueOnce(invalidTrackInfo);
-
-    const provider = new BeatportDataProvider();
-
-    const result = await provider.findTrackCandidates(inputKeywords);
-
-    expect(result).toEqual([]);
-
-    const logContext = getLoggedWarningContext(
-      mocks.loggerWarn.mock.calls,
-      'Cannot validate mapped TrackInfo from Beatport search result',
-    );
-
-    expect(logContext.trackId).toBe(validSearchResultTrack.track_id);
-    expect(logContext.trackName).toBe(validSearchResultTrack.track_name);
-
-    expect(getFirstLoggedIssue(logContext)).toMatchObject({
-      code: 'custom',
-      path: 'artists',
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
     });
   });
 
-  it('returns undefined when the full track data cannot be mapped', async () => {
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
+  describe('getTrackInfo', () => {
+    // Successful results
 
-    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce(undefined);
-    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce(undefined);
+    it('returns canonical track metadata with album and publisher information', async () => {
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
 
-    vi.mocked(
-      beatportMappers.mapBeatportTrackToTrackInfo,
-    ).mockReturnValueOnce(undefined);
+      mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
+        albumUrl: expectedAlbumUrl,
+        albumData: validDetailedAlbumData,
+      });
 
-    const provider = new BeatportDataProvider();
+      mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
+        publisherUrl: expectedPublisherUrl,
+        publisherData: validDetailedPublisherData,
+      });
 
-    const result = await provider.getTrackInfo(trackUrl);
+      const provider = new BeatportDataProvider();
 
-    expect(result).toBeUndefined();
+      const result = await provider.getTrackInfo(trackUrl);
 
-    expect(mocks.loggerWarn).not.toHaveBeenCalled();
-  });
+      expect(result).toEqual(expectedDetailedTrackInfo);
 
-  it('logs validation errors and returns undefined for invalid mapped track metadata', async () => {
-    const invalidTrackInfo: TrackInfo = {
-      title: 'Example Track',
-      artists: ['Primary Artist', 'primary artist'],
-    };
+      expect(mocks.fetchBeatportTrackPayload).toHaveBeenCalledOnce();
+      expect(mocks.fetchBeatportTrackPayload).toHaveBeenCalledWith(trackUrl);
 
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
+      expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledOnce();
+      expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledWith(
+        domainUrl,
+        validDetailedTrackData.release,
+      );
 
-    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce(undefined);
-    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce(undefined);
+      expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledOnce();
+      expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledWith(
+        domainUrl,
+        validDetailedTrackData.label,
+      );
 
-    vi.mocked(
-      beatportMappers.mapBeatportTrackToTrackInfo,
-    ).mockReturnValueOnce(invalidTrackInfo);
-
-    const provider = new BeatportDataProvider();
-
-    const result = await provider.getTrackInfo(trackUrl);
-
-    expect(result).toBeUndefined();
-
-    const logContext = getLoggedWarningContext(
-      mocks.loggerWarn.mock.calls,
-      'Cannot validate normalized TrackInfo extracted from Beatport API',
-    );
-
-    expect(logContext.trackUrl).toBe(trackUrl.toString());
-
-    expect(getFirstLoggedIssue(logContext)).toMatchObject({
-      code: 'custom',
-      path: 'artists',
-    });
-  });
-
-  it('logs validation errors and omits invalid mapped album metadata', async () => {
-    const invalidAlbumInfo: AlbumInfo = {
-      title: 'Example Album',
-      artists: ['Primary Artist', 'primary artist'],
-    };
-
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
-
-    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
-      albumUrl: expectedAlbumUrl,
-      albumData: validDetailedAlbumData,
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
     });
 
-    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce(undefined);
+    // Missing or incomplete metadata
 
-    vi.mocked(
-      beatportMappers.mapBeatportAlbumToAlbumInfo,
-    ).mockReturnValueOnce(invalidAlbumInfo);
+    it('returns undefined when the main track payload is unavailable', async () => {
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(undefined);
 
-    const provider = new BeatportDataProvider();
+      const provider = new BeatportDataProvider();
 
-    const result = await provider.getTrackInfo(trackUrl);
+      const result = await provider.getTrackInfo(trackUrl);
 
-    expect(result).toMatchObject({
-      url: trackUrl,
-      title: 'Example Track (Extended Mix)',
+      expect(result).toBeUndefined();
+
+      expect(mocks.fetchBeatportTrackPayload).toHaveBeenCalledOnce();
+      expect(mocks.fetchBeatportAlbumPayload).not.toHaveBeenCalled();
+      expect(mocks.fetchBeatportPublisherPayload).not.toHaveBeenCalled();
+
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
     });
 
-    expect(result).not.toHaveProperty('album');
+    it('returns track metadata when album information is unavailable', async () => {
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
 
-    const logContext = getLoggedWarningContext(
-      mocks.loggerWarn.mock.calls,
-      'Cannot validate normalized AlbumInfo extracted from Beatport API',
-    );
+      mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce(undefined);
 
-    expect(logContext.albumUrl).toBe(expectedAlbumUrl.toString());
+      mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
+        publisherUrl: expectedPublisherUrl,
+        publisherData: validDetailedPublisherData,
+      });
 
-    expect(getFirstLoggedIssue(logContext)).toMatchObject({
-      code: 'custom',
-      path: 'artists',
-    });
-  });
+      const provider = new BeatportDataProvider();
 
-  it('logs validation errors and omits invalid mapped publisher metadata', async () => {
-    const invalidPublisherInfo: PublisherInfo = {
-      name: '',
-    };
+      const result = await provider.getTrackInfo(trackUrl);
 
-    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
-      validDetailedTrackData,
-    );
+      expect(result).toMatchObject({
+        url: trackUrl,
+        title: 'Example Track (Extended Mix)',
+        publisher: expectedDetailedTrackInfo.publisher,
+      });
 
-    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
-      albumUrl: expectedAlbumUrl,
-      albumData: validDetailedAlbumData,
+      expect(result).not.toHaveProperty('album');
+
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
     });
 
-    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
-      publisherUrl: expectedPublisherUrl,
-      publisherData: validDetailedPublisherData,
+    it('returns track metadata when publisher information is unavailable', async () => {
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
+
+      mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
+        albumUrl: expectedAlbumUrl,
+        albumData: validDetailedAlbumData,
+      });
+
+      mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce(undefined);
+
+      const provider = new BeatportDataProvider();
+
+      const result = await provider.getTrackInfo(trackUrl);
+
+      expect(result).toMatchObject({
+        url: trackUrl,
+        title: 'Example Track (Extended Mix)',
+        album: expectedDetailedTrackInfo.album,
+      });
+
+      expect(result).not.toHaveProperty('publisher');
+
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
     });
 
-    vi.mocked(
-      beatportMappers.mapBeatportPublisherToPublisherInfo,
-    ).mockReturnValueOnce(invalidPublisherInfo);
+    it('omits album and publisher metadata when their mapped values cannot be normalized', async () => {
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
 
-    const provider = new BeatportDataProvider();
+      mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
+        albumUrl: expectedAlbumUrl,
+        albumData: {
+          ...validDetailedAlbumData,
+          name: '   ',
+        },
+      });
 
-    const result = await provider.getTrackInfo(trackUrl);
+      mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
+        publisherUrl: expectedPublisherUrl,
+        publisherData: {
+          ...validDetailedPublisherData,
+          name: '   ',
+        },
+      });
 
-    expect(result).toMatchObject({
-      url: trackUrl,
-      title: 'Example Track (Extended Mix)',
-      album: expectedDetailedTrackInfo.album,
+      const provider = new BeatportDataProvider();
+
+      const result = await provider.getTrackInfo(trackUrl);
+
+      expect(result).toMatchObject({
+        url: trackUrl,
+        title: 'Example Track (Extended Mix)',
+        details: {
+          durationMs: 184376,
+        },
+      });
+
+      expect(result).not.toHaveProperty('album');
+      expect(result).not.toHaveProperty('publisher');
+
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
     });
 
-    expect(result).not.toHaveProperty('publisher');
+    it('returns undefined when the full track data cannot be mapped', async () => {
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
 
-    const logContext = getLoggedWarningContext(
-      mocks.loggerWarn.mock.calls,
-      'Cannot validate normalized PublisherInfo extracted from Beatport API',
-    );
+      mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce(undefined);
+      mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce(undefined);
 
-    expect(logContext.publisherUrl).toBe(
-      expectedPublisherUrl.toString(),
-    );
+      vi.mocked(
+        beatportMappers.mapBeatportTrackToTrackInfo,
+      ).mockReturnValueOnce(undefined);
 
-    expect(getFirstLoggedIssue(logContext)).toMatchObject({
-      code: 'too_small',
-      path: 'name',
+      const provider = new BeatportDataProvider();
+
+      const result = await provider.getTrackInfo(trackUrl);
+
+      expect(result).toBeUndefined();
+
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    // Validation
+
+    it('logs validation errors and returns undefined for invalid mapped track metadata', async () => {
+      const invalidTrackInfo: TrackInfo = {
+        title: 'Example Track',
+        artists: ['Primary Artist', 'primary artist'],
+      };
+
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
+
+      mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce(undefined);
+      mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce(undefined);
+
+      vi.mocked(
+        beatportMappers.mapBeatportTrackToTrackInfo,
+      ).mockReturnValueOnce(invalidTrackInfo);
+
+      const provider = new BeatportDataProvider();
+
+      const result = await provider.getTrackInfo(trackUrl);
+
+      expect(result).toBeUndefined();
+
+      const logContext = getLoggedWarningContext(
+        mocks.loggerWarn.mock.calls,
+        'Cannot validate normalized TrackInfo extracted from Beatport API',
+      );
+
+      expect(logContext.trackUrl).toBe(trackUrl.toString());
+
+      expect(getFirstLoggedIssue(logContext)).toMatchObject({
+        code: 'custom',
+        path: 'artists',
+      });
+    });
+
+    it('logs validation errors and omits invalid mapped album metadata', async () => {
+      const invalidAlbumInfo: AlbumInfo = {
+        title: 'Example Album',
+        artists: ['Primary Artist', 'primary artist'],
+      };
+
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
+
+      mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
+        albumUrl: expectedAlbumUrl,
+        albumData: validDetailedAlbumData,
+      });
+
+      mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce(undefined);
+
+      vi.mocked(
+        beatportMappers.mapBeatportAlbumToAlbumInfo,
+      ).mockReturnValueOnce(invalidAlbumInfo);
+
+      const provider = new BeatportDataProvider();
+
+      const result = await provider.getTrackInfo(trackUrl);
+
+      expect(result).toMatchObject({
+        url: trackUrl,
+        title: 'Example Track (Extended Mix)',
+      });
+
+      expect(result).not.toHaveProperty('album');
+
+      const logContext = getLoggedWarningContext(
+        mocks.loggerWarn.mock.calls,
+        'Cannot validate normalized AlbumInfo extracted from Beatport API',
+      );
+
+      expect(logContext.albumUrl).toBe(expectedAlbumUrl.toString());
+
+      expect(getFirstLoggedIssue(logContext)).toMatchObject({
+        code: 'custom',
+        path: 'artists',
+      });
+    });
+
+    it('logs validation errors and omits invalid mapped publisher metadata', async () => {
+      const invalidPublisherInfo: PublisherInfo = {
+        name: '',
+      };
+
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
+
+      mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
+        albumUrl: expectedAlbumUrl,
+        albumData: validDetailedAlbumData,
+      });
+
+      mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
+        publisherUrl: expectedPublisherUrl,
+        publisherData: validDetailedPublisherData,
+      });
+
+      vi.mocked(
+        beatportMappers.mapBeatportPublisherToPublisherInfo,
+      ).mockReturnValueOnce(invalidPublisherInfo);
+
+      const provider = new BeatportDataProvider();
+
+      const result = await provider.getTrackInfo(trackUrl);
+
+      expect(result).toMatchObject({
+        url: trackUrl,
+        title: 'Example Track (Extended Mix)',
+        album: expectedDetailedTrackInfo.album,
+      });
+
+      expect(result).not.toHaveProperty('publisher');
+
+      const logContext = getLoggedWarningContext(
+        mocks.loggerWarn.mock.calls,
+        'Cannot validate normalized PublisherInfo extracted from Beatport API',
+      );
+
+      expect(logContext.publisherUrl).toBe(
+        expectedPublisherUrl.toString(),
+      );
+
+      expect(getFirstLoggedIssue(logContext)).toMatchObject({
+        code: 'too_small',
+        path: 'name',
+      });
+    });
+
+    // Integration
+
+    it('fetches album and publisher metadata concurrently', async () => {
+      let resolveAlbumPayload!: (
+        value: BeatportAlbumPayloadResult | undefined,
+      ) => void;
+
+      let resolvePublisherPayload!: (
+        value: BeatportPublisherPayloadResult | undefined,
+      ) => void;
+
+      const albumPayloadPromise = new Promise<
+        BeatportAlbumPayloadResult | undefined
+      >((resolve) => {
+        resolveAlbumPayload = resolve;
+      });
+
+      const publisherPayloadPromise = new Promise<
+        BeatportPublisherPayloadResult | undefined
+      >((resolve) => {
+        resolvePublisherPayload = resolve;
+      });
+
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
+
+      mocks.fetchBeatportAlbumPayload.mockReturnValueOnce(
+        albumPayloadPromise,
+      );
+
+      mocks.fetchBeatportPublisherPayload.mockReturnValueOnce(
+        publisherPayloadPromise,
+      );
+
+      const provider = new BeatportDataProvider();
+
+      const resultPromise = provider.getTrackInfo(trackUrl);
+
+      await Promise.resolve();
+
+      expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledOnce();
+      expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledOnce();
+
+      resolveAlbumPayload({
+        albumUrl: expectedAlbumUrl,
+        albumData: validDetailedAlbumData,
+      });
+
+      resolvePublisherPayload({
+        publisherUrl: expectedPublisherUrl,
+        publisherData: validDetailedPublisherData,
+      });
+
+      await expect(resultPromise).resolves.toEqual(expectedDetailedTrackInfo);
+
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('uses the configured domain URL when fetching album and publisher metadata', async () => {
+      const customDomainUrl = 'https://catalog.example.com';
+
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
+
+      mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
+        albumUrl: expectedAlbumUrl,
+        albumData: validDetailedAlbumData,
+      });
+
+      mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
+        publisherUrl: expectedPublisherUrl,
+        publisherData: validDetailedPublisherData,
+      });
+
+      const provider = new BeatportDataProvider({
+        domainUrl: customDomainUrl,
+      });
+
+      const result = await provider.getTrackInfo(trackUrl);
+
+      expect(result).toEqual(expectedDetailedTrackInfo);
+
+      expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledWith(
+        customDomainUrl,
+        validDetailedTrackData.release,
+      );
+
+      expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledWith(
+        customDomainUrl,
+        validDetailedTrackData.label,
+      );
+
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    // Errors
+
+    it('propagates TypeError from main track payload fetching', async () => {
+      const extractionError = new TypeError(
+        'Malformed Next.js payload.',
+      );
+
+      mocks.fetchBeatportTrackPayload.mockRejectedValueOnce(extractionError);
+
+      const provider = new BeatportDataProvider();
+
+      await expect(
+        provider.getTrackInfo(trackUrl),
+      ).rejects.toBe(extractionError);
+
+      expect(mocks.fetchBeatportAlbumPayload).not.toHaveBeenCalled();
+      expect(mocks.fetchBeatportPublisherPayload).not.toHaveBeenCalled();
+
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('propagates TypeError from album metadata fetching', async () => {
+      const extractionError = new TypeError(
+        'Malformed album payload.',
+      );
+
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
+
+      mocks.fetchBeatportAlbumPayload.mockRejectedValueOnce(extractionError);
+
+      mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
+        publisherUrl: expectedPublisherUrl,
+        publisherData: validDetailedPublisherData,
+      });
+
+      const provider = new BeatportDataProvider();
+
+      await expect(
+        provider.getTrackInfo(trackUrl),
+      ).rejects.toBe(extractionError);
+
+      expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledOnce();
+      expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledOnce();
+
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('propagates TypeError from publisher metadata fetching', async () => {
+      const extractionError = new TypeError(
+        'Malformed publisher payload.',
+      );
+
+      mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+        validDetailedTrackData,
+      );
+
+      mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
+        albumUrl: expectedAlbumUrl,
+        albumData: validDetailedAlbumData,
+      });
+
+      mocks.fetchBeatportPublisherPayload.mockRejectedValueOnce(extractionError);
+
+      const provider = new BeatportDataProvider();
+
+      await expect(
+        provider.getTrackInfo(trackUrl),
+      ).rejects.toBe(extractionError);
+
+      expect(mocks.fetchBeatportAlbumPayload).toHaveBeenCalledOnce();
+      expect(mocks.fetchBeatportPublisherPayload).toHaveBeenCalledOnce();
+
+      expect(mocks.loggerWarn).not.toHaveBeenCalled();
     });
   });
 });
