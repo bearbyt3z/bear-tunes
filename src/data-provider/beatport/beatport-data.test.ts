@@ -7,6 +7,11 @@ import {
   fetchBeatportTrackPayload,
 } from './beatport-data.js';
 
+import {
+  getFirstLoggedIssue,
+  getLoggedWarningContext,
+} from './test-utils.js';
+
 import { BeatportArtistType } from './types.js';
 
 import type {
@@ -174,48 +179,6 @@ const expectedPublisherUrl = new URL(
   'https://www.beatport.com/label/example-label/401',
 );
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object'
-    && value !== null
-    && !Array.isArray(value);
-}
-
-function getLoggedWarningContext(
-  expectedMessage: string,
-): Record<string, unknown> {
-  expect(mocks.loggerWarn).toHaveBeenCalledOnce();
-
-  const warningCall = mocks.loggerWarn.mock.calls[0];
-
-  if (warningCall === undefined) {
-    throw new Error('Expected logger.warn to be called.');
-  }
-
-  const [message, context] = warningCall;
-
-  expect(message).toBe(expectedMessage);
-
-  return context;
-}
-
-function getFirstLoggedIssue(
-  context: Record<string, unknown>,
-): Record<string, unknown> {
-  const issues: unknown = context.issues;
-
-  if (!Array.isArray(issues)) {
-    throw new Error('Expected logger context to contain an issues array.');
-  }
-
-  const firstIssue: unknown = issues[0];
-
-  if (!isRecord(firstIssue)) {
-    throw new Error('Expected the first validation issue to be an object.');
-  }
-
-  return firstIssue;
-}
-
 describe('fetchBeatportSearchTrackPayload', () => {
   beforeEach(() => {
     mocks.extractNextJSData.mockReset();
@@ -312,6 +275,7 @@ describe('fetchBeatportSearchTrackPayload', () => {
       expect(result).toBeUndefined();
 
       const logContext = getLoggedWarningContext(
+        mocks.loggerWarn.mock.calls,
         'Cannot validate raw Beatport search results payload',
       );
 
@@ -340,6 +304,7 @@ describe('fetchBeatportSearchTrackPayload', () => {
     expect(result).toBeUndefined();
 
     const logContext = getLoggedWarningContext(
+      mocks.loggerWarn.mock.calls,
       'Cannot validate raw Beatport search results payload',
     );
 
@@ -414,6 +379,7 @@ describe('fetchBeatportTrackPayload', () => {
     expect(result).toBeUndefined();
 
     const logContext = getLoggedWarningContext(
+      mocks.loggerWarn.mock.calls,
       'Cannot validate raw Beatport track payload',
     );
 
@@ -506,6 +472,7 @@ describe('fetchBeatportAlbumPayload', () => {
     expect(result).toBeUndefined();
 
     const logContext = getLoggedWarningContext(
+      mocks.loggerWarn.mock.calls,
       'Cannot validate raw Beatport album payload',
     );
 
@@ -636,6 +603,7 @@ describe('fetchBeatportPublisherPayload', () => {
     expect(result).toBeUndefined();
 
     const logContext = getLoggedWarningContext(
+      mocks.loggerWarn.mock.calls,
       'Cannot validate raw Beatport publisher payload',
     );
 

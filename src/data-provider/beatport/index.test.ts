@@ -4,7 +4,20 @@ import { DataProvider } from '../index.js';
 
 import { BeatportDataProvider } from './index.js';
 
+import {
+  getFirstLoggedIssue,
+  getLoggedWarningContext,
+} from './test-utils.js';
+
 import { BeatportArtistType } from './types.js';
+
+import * as beatportMappers from './types.mapper.js';
+
+import type {
+  AlbumInfo,
+  PublisherInfo,
+  TrackInfo,
+} from '#shared-types';
 
 import type {
   BeatportDataProviderOptions,
@@ -41,6 +54,26 @@ vi.mock('#logger', () => ({
     warn: mocks.loggerWarn,
   },
 }));
+
+vi.mock('./types.mapper.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./types.mapper.js')>();
+
+  return {
+    ...actual,
+    mapBeatportAlbumToAlbumInfo: vi.fn(
+      actual.mapBeatportAlbumToAlbumInfo,
+    ),
+    mapBeatportPublisherToPublisherInfo: vi.fn(
+      actual.mapBeatportPublisherToPublisherInfo,
+    ),
+    mapBeatportSearchResultTrackToTrackInfo: vi.fn(
+      actual.mapBeatportSearchResultTrackToTrackInfo,
+    ),
+    mapBeatportTrackToTrackInfo: vi.fn(
+      actual.mapBeatportTrackToTrackInfo,
+    ),
+  };
+});
 
 const inputKeywords = ['Adam', 'Beyer'];
 
@@ -230,6 +263,22 @@ describe('BeatportDataProvider', () => {
     mocks.fetchBeatportSearchTrackPayload.mockReset();
     mocks.fetchBeatportTrackPayload.mockReset();
     mocks.loggerWarn.mockReset();
+
+    vi.mocked(
+      beatportMappers.mapBeatportAlbumToAlbumInfo,
+    ).mockClear();
+
+    vi.mocked(
+      beatportMappers.mapBeatportPublisherToPublisherInfo,
+    ).mockClear();
+
+    vi.mocked(
+      beatportMappers.mapBeatportSearchResultTrackToTrackInfo,
+    ).mockClear();
+
+    vi.mocked(
+      beatportMappers.mapBeatportTrackToTrackInfo,
+    ).mockClear();
   });
 
   it('extends the shared DataProvider base class', () => {
@@ -790,5 +839,215 @@ describe('BeatportDataProvider', () => {
     ]);
 
     expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('logs a warning and skips search results that cannot be mapped', async () => {
+    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
+      validSearchResultTrack,
+    ]);
+
+    vi.mocked(
+      beatportMappers.mapBeatportSearchResultTrackToTrackInfo,
+    ).mockReturnValueOnce(undefined);
+
+    const provider = new BeatportDataProvider();
+
+    const result = await provider.findTrackCandidates(inputKeywords);
+
+    expect(result).toEqual([]);
+
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(
+      'Cannot map Beatport search result track to TrackInfo',
+      {
+        trackId: validSearchResultTrack.track_id,
+        trackName: validSearchResultTrack.track_name,
+      },
+    );
+  });
+
+  it('logs validation errors and skips candidates with invalid mapped TrackInfo', async () => {
+    const invalidTrackInfo: TrackInfo = {
+      title: 'Example Track',
+      artists: ['Adam Beyer', 'adam beyer'],
+    };
+
+    mocks.fetchBeatportSearchTrackPayload.mockResolvedValueOnce([
+      validSearchResultTrack,
+    ]);
+
+    vi.mocked(
+      beatportMappers.mapBeatportSearchResultTrackToTrackInfo,
+    ).mockReturnValueOnce(invalidTrackInfo);
+
+    const provider = new BeatportDataProvider();
+
+    const result = await provider.findTrackCandidates(inputKeywords);
+
+    expect(result).toEqual([]);
+
+    const logContext = getLoggedWarningContext(
+      mocks.loggerWarn.mock.calls,
+      'Cannot validate mapped TrackInfo from Beatport search result',
+    );
+
+    expect(logContext.trackId).toBe(validSearchResultTrack.track_id);
+    expect(logContext.trackName).toBe(validSearchResultTrack.track_name);
+
+    expect(getFirstLoggedIssue(logContext)).toMatchObject({
+      code: 'custom',
+      path: 'artists',
+    });
+  });
+
+  it('returns undefined when the full track data cannot be mapped', async () => {
+    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+      validDetailedTrackData,
+    );
+
+    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce(undefined);
+    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce(undefined);
+
+    vi.mocked(
+      beatportMappers.mapBeatportTrackToTrackInfo,
+    ).mockReturnValueOnce(undefined);
+
+    const provider = new BeatportDataProvider();
+
+    const result = await provider.getTrackInfo(trackUrl);
+
+    expect(result).toBeUndefined();
+
+    expect(mocks.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('logs validation errors and returns undefined for invalid mapped track metadata', async () => {
+    const invalidTrackInfo: TrackInfo = {
+      title: 'Example Track',
+      artists: ['Primary Artist', 'primary artist'],
+    };
+
+    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+      validDetailedTrackData,
+    );
+
+    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce(undefined);
+    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce(undefined);
+
+    vi.mocked(
+      beatportMappers.mapBeatportTrackToTrackInfo,
+    ).mockReturnValueOnce(invalidTrackInfo);
+
+    const provider = new BeatportDataProvider();
+
+    const result = await provider.getTrackInfo(trackUrl);
+
+    expect(result).toBeUndefined();
+
+    const logContext = getLoggedWarningContext(
+      mocks.loggerWarn.mock.calls,
+      'Cannot validate normalized TrackInfo extracted from Beatport API',
+    );
+
+    expect(logContext.trackUrl).toBe(trackUrl.toString());
+
+    expect(getFirstLoggedIssue(logContext)).toMatchObject({
+      code: 'custom',
+      path: 'artists',
+    });
+  });
+
+  it('logs validation errors and omits invalid mapped album metadata', async () => {
+    const invalidAlbumInfo: AlbumInfo = {
+      title: 'Example Album',
+      artists: ['Primary Artist', 'primary artist'],
+    };
+
+    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+      validDetailedTrackData,
+    );
+
+    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
+      albumUrl: expectedAlbumUrl,
+      albumData: validDetailedAlbumData,
+    });
+
+    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce(undefined);
+
+    vi.mocked(
+      beatportMappers.mapBeatportAlbumToAlbumInfo,
+    ).mockReturnValueOnce(invalidAlbumInfo);
+
+    const provider = new BeatportDataProvider();
+
+    const result = await provider.getTrackInfo(trackUrl);
+
+    expect(result).toMatchObject({
+      url: trackUrl,
+      title: 'Example Track (Extended Mix)',
+    });
+
+    expect(result).not.toHaveProperty('album');
+
+    const logContext = getLoggedWarningContext(
+      mocks.loggerWarn.mock.calls,
+      'Cannot validate normalized AlbumInfo extracted from Beatport API',
+    );
+
+    expect(logContext.albumUrl).toBe(expectedAlbumUrl.toString());
+
+    expect(getFirstLoggedIssue(logContext)).toMatchObject({
+      code: 'custom',
+      path: 'artists',
+    });
+  });
+
+  it('logs validation errors and omits invalid mapped publisher metadata', async () => {
+    const invalidPublisherInfo: PublisherInfo = {
+      name: '',
+    };
+
+    mocks.fetchBeatportTrackPayload.mockResolvedValueOnce(
+      validDetailedTrackData,
+    );
+
+    mocks.fetchBeatportAlbumPayload.mockResolvedValueOnce({
+      albumUrl: expectedAlbumUrl,
+      albumData: validDetailedAlbumData,
+    });
+
+    mocks.fetchBeatportPublisherPayload.mockResolvedValueOnce({
+      publisherUrl: expectedPublisherUrl,
+      publisherData: validDetailedPublisherData,
+    });
+
+    vi.mocked(
+      beatportMappers.mapBeatportPublisherToPublisherInfo,
+    ).mockReturnValueOnce(invalidPublisherInfo);
+
+    const provider = new BeatportDataProvider();
+
+    const result = await provider.getTrackInfo(trackUrl);
+
+    expect(result).toMatchObject({
+      url: trackUrl,
+      title: 'Example Track (Extended Mix)',
+      album: expectedDetailedTrackInfo.album,
+    });
+
+    expect(result).not.toHaveProperty('publisher');
+
+    const logContext = getLoggedWarningContext(
+      mocks.loggerWarn.mock.calls,
+      'Cannot validate normalized PublisherInfo extracted from Beatport API',
+    );
+
+    expect(logContext.publisherUrl).toBe(
+      expectedPublisherUrl.toString(),
+    );
+
+    expect(getFirstLoggedIssue(logContext)).toMatchObject({
+      code: 'too_small',
+      path: 'name',
+    });
   });
 });
