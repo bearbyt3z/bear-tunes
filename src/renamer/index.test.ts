@@ -50,6 +50,41 @@ function expectRenameFailure(
   expect(result.error).toBeInstanceOf(Error);
 }
 
+type SkipTest = (message?: string) => void;
+
+function createSymlinkOrSkip(
+  targetPath: string,
+  symlinkPath: string,
+  type: 'dir' | 'file',
+  skip: SkipTest,
+): void {
+  const symlinkType =
+    process.platform === 'win32' && type === 'dir' ? 'junction' : type;
+
+  try {
+    fs.symlinkSync(targetPath, symlinkPath, symlinkType);
+  } catch (error: unknown) {
+    const errorCode =
+      error instanceof Error &&
+        'code' in error &&
+        typeof error.code === 'string'
+        ? error.code
+        : undefined;
+    const isWindowsSymlinkPermissionError =
+      process.platform === 'win32' &&
+      errorCode !== undefined &&
+      ['EACCES', 'EPERM', 'ENOTSUP'].includes(errorCode);
+
+    if (isWindowsSymlinkPermissionError) {
+      skip(
+        `Symbolic link creation is not permitted in this Windows environment (${errorCode}).`,
+      );
+    }
+
+    throw error;
+  }
+}
+
 describe('BearTunesRenamer', () => {
   beforeEach(() => {
     temporaryDirectory = fs.mkdtempSync(
@@ -563,6 +598,248 @@ describe('BearTunesRenamer', () => {
         BearTunesRenamerFailureCode.UnsafeTargetDirectoryPath,
       );
       expect(fs.existsSync(trackPath)).toBe(true);
+    });
+  });
+
+  describe('input file validation', () => {
+    it('returns InputFileAccessError when the source file does not exist', () => {
+      const trackPath = path.join(sourceDirectory, 'missing-track.mp3');
+      const renamer = new BearTunesRenamer();
+
+      const result = renamer.rename(trackPath, validTrackInfo);
+
+      expectRenameFailure(
+        result,
+        BearTunesRenamerFailureCode.InputFileAccessError,
+      );
+      expect(fs.existsSync(trackPath)).toBe(false);
+    });
+
+    it('returns InvalidInputFile when the source path points to a directory', () => {
+      const renamer = new BearTunesRenamer();
+
+      const result = renamer.rename(sourceDirectory, validTrackInfo);
+
+      expectRenameFailure(
+        result,
+        BearTunesRenamerFailureCode.InvalidInputFile,
+      );
+      expect(fs.statSync(sourceDirectory).isDirectory()).toBe(true);
+    });
+
+    it('rejects a symbolic link to a regular source file', ({ skip }) => {
+      const sourceTrackPath = createSourceTrackFile('actual-track.mp3');
+      const trackPath = path.join(sourceDirectory, 'linked-track.mp3');
+      const renamer = new BearTunesRenamer();
+
+      createSymlinkOrSkip(sourceTrackPath, trackPath, 'file', skip);
+
+      const result = renamer.rename(trackPath, validTrackInfo);
+
+      expectRenameFailure(
+        result,
+        BearTunesRenamerFailureCode.InvalidInputFile,
+      );
+      expect(fs.lstatSync(trackPath).isSymbolicLink()).toBe(true);
+      expect(fs.readFileSync(sourceTrackPath, 'utf8')).toBe(sourceFileContent);
+    });
+  });
+
+  describe('target base directory validation', () => {
+    it('returns TargetDirectoryAccessError when the target base directory does not exist', () => {
+      const trackPath = createSourceTrackFile();
+      const targetBaseDirectory = path.join(temporaryDirectory, 'missing-target');
+      const renamer = new BearTunesRenamer();
+
+      const result = renamer.rename(
+        trackPath,
+        validTrackInfo,
+        targetBaseDirectory,
+      );
+
+      expectRenameFailure(
+        result,
+        BearTunesRenamerFailureCode.TargetDirectoryAccessError,
+      );
+      expect(fs.existsSync(trackPath)).toBe(true);
+      expect(fs.existsSync(targetBaseDirectory)).toBe(false);
+    });
+
+    it('returns InvalidTargetDirectory when the target base path points to a file', () => {
+      const trackPath = createSourceTrackFile();
+      const targetBaseDirectory = path.join(temporaryDirectory, 'target-file');
+      const renamer = new BearTunesRenamer();
+
+      fs.writeFileSync(targetBaseDirectory, 'Not a directory');
+
+      const result = renamer.rename(
+        trackPath,
+        validTrackInfo,
+        targetBaseDirectory,
+      );
+
+      expectRenameFailure(
+        result,
+        BearTunesRenamerFailureCode.InvalidTargetDirectory,
+      );
+      expect(fs.existsSync(trackPath)).toBe(true);
+      expect(fs.readFileSync(targetBaseDirectory, 'utf8')).toBe('Not a directory');
+    });
+
+    it('returns InvalidTargetDirectory when the target base path is a symbolic link to a file', ({ skip }) => {
+      const trackPath = createSourceTrackFile();
+      const targetFilePath = path.join(temporaryDirectory, 'target-file');
+      const targetBaseDirectory = path.join(temporaryDirectory, 'target-link');
+      const renamer = new BearTunesRenamer();
+
+      fs.writeFileSync(targetFilePath, 'Not a directory');
+      createSymlinkOrSkip(targetFilePath, targetBaseDirectory, 'file', skip);
+
+      const result = renamer.rename(
+        trackPath,
+        validTrackInfo,
+        targetBaseDirectory,
+      );
+
+      expectRenameFailure(
+        result,
+        BearTunesRenamerFailureCode.InvalidTargetDirectory,
+      );
+      expect(fs.existsSync(trackPath)).toBe(true);
+      expect(fs.readFileSync(targetFilePath, 'utf8')).toBe('Not a directory');
+    });
+
+    it('returns TargetDirectoryAccessError when the target base path is a broken symbolic link', ({ skip }) => {
+      const trackPath = createSourceTrackFile();
+      const missingTargetPath = path.join(temporaryDirectory, 'missing-directory');
+      const targetBaseDirectory = path.join(temporaryDirectory, 'broken-link');
+      const renamer = new BearTunesRenamer();
+
+      createSymlinkOrSkip(missingTargetPath, targetBaseDirectory, 'dir', skip);
+
+      const result = renamer.rename(
+        trackPath,
+        validTrackInfo,
+        targetBaseDirectory,
+      );
+
+      expectRenameFailure(
+        result,
+        BearTunesRenamerFailureCode.TargetDirectoryAccessError,
+      );
+      expect(fs.lstatSync(targetBaseDirectory).isSymbolicLink()).toBe(true);
+      expect(fs.existsSync(trackPath)).toBe(true);
+    });
+
+    it('accepts a target base path that is a symbolic link to a directory', ({ skip }) => {
+      const trackPath = createSourceTrackFile();
+      const actualTargetBaseDirectory = path.join(temporaryDirectory, 'organized');
+      const targetBaseDirectory = path.join(temporaryDirectory, 'organized-link');
+      const targetPath = path.join(
+        targetBaseDirectory,
+        'House',
+        'Example Artist',
+        'Example Artist - Example Track.mp3',
+      );
+      const actualTargetPath = path.join(
+        actualTargetBaseDirectory,
+        'House',
+        'Example Artist',
+        'Example Artist - Example Track.mp3',
+      );
+      const renamer = new BearTunesRenamer();
+
+      fs.mkdirSync(actualTargetBaseDirectory);
+      createSymlinkOrSkip(
+        actualTargetBaseDirectory,
+        targetBaseDirectory,
+        'dir',
+        skip,
+      );
+
+      const result = renamer.rename(
+        trackPath,
+        validTrackInfo,
+        targetBaseDirectory,
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        targetPath,
+      });
+      expect(fs.lstatSync(targetBaseDirectory).isSymbolicLink()).toBe(true);
+      expect(fs.readFileSync(targetPath, 'utf8')).toBe(sourceFileContent);
+      expect(fs.readFileSync(actualTargetPath, 'utf8')).toBe(sourceFileContent);
+      expect(fs.existsSync(trackPath)).toBe(false);
+    });
+  });
+
+  describe('target directory creation', () => {
+    it('returns TargetDirectoryAccessError when a target directory cannot be created because a file occupies its path', () => {
+      const trackPath = createSourceTrackFile();
+      const targetBaseDirectory = path.join(temporaryDirectory, 'organized');
+      const conflictingDirectoryPath = path.join(targetBaseDirectory, 'House');
+      const renamer = new BearTunesRenamer({
+        directoryPattern: '%genre%',
+      });
+
+      fs.mkdirSync(targetBaseDirectory);
+      fs.writeFileSync(conflictingDirectoryPath, 'Not a directory');
+
+      const result = renamer.rename(
+        trackPath,
+        validTrackInfo,
+        targetBaseDirectory,
+      );
+
+      expectRenameFailure(
+        result,
+        BearTunesRenamerFailureCode.TargetDirectoryAccessError,
+      );
+      expect(fs.readFileSync(conflictingDirectoryPath, 'utf8')).toBe('Not a directory');
+      expect(fs.existsSync(trackPath)).toBe(true);
+    });
+
+    it('follows a symbolic link when the generated target directory is a symbolic link', ({ skip }) => {
+      const trackPath = createSourceTrackFile();
+      const targetBaseDirectory = path.join(temporaryDirectory, 'organized');
+      const actualTargetDirectory = path.join(temporaryDirectory, 'external');
+      const generatedTargetDirectory = path.join(targetBaseDirectory, 'House');
+      const targetPath = path.join(
+        generatedTargetDirectory,
+        'Example Artist - Example Track.mp3',
+      );
+      const actualTargetPath = path.join(
+        actualTargetDirectory,
+        'Example Artist - Example Track.mp3',
+      );
+      const renamer = new BearTunesRenamer({
+        directoryPattern: '%genre%',
+      });
+
+      fs.mkdirSync(targetBaseDirectory);
+      fs.mkdirSync(actualTargetDirectory);
+      createSymlinkOrSkip(
+        actualTargetDirectory,
+        generatedTargetDirectory,
+        'dir',
+        skip,
+      );
+
+      const result = renamer.rename(
+        trackPath,
+        validTrackInfo,
+        targetBaseDirectory,
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        targetPath,
+      });
+      expect(fs.lstatSync(generatedTargetDirectory).isSymbolicLink()).toBe(true);
+      expect(fs.readFileSync(targetPath, 'utf8')).toBe(sourceFileContent);
+      expect(fs.readFileSync(actualTargetPath, 'utf8')).toBe(sourceFileContent);
+      expect(fs.existsSync(trackPath)).toBe(false);
     });
   });
 });
