@@ -35,6 +35,12 @@ export enum BearTunesRenamerFailureCode {
 
   /** Renaming or moving the track file failed. */
   RenameOperationFailed = 311,
+
+  /**
+   * The directory pattern generated a path outside the target directory base
+   * or contained an unsafe directory segment.
+   */
+  UnsafeTargetDirectoryPath = 312,
 }
 
 /**
