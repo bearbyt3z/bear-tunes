@@ -3,9 +3,12 @@ import * as path from 'node:path';
 /**
  * Normalizes trailing path separators to a single platform-specific separator.
  *
- * The function replaces one or more trailing forward or backward slashes with
- * a single `path.sep`, making the path safe to use as a normalized directory
- * base before further `path.join()` composition.
+ * Replaces one or more trailing forward or backward slashes with a single
+ * `path.sep`. Internal path separators and relative path components are
+ * preserved.
+ *
+ * This function only normalizes trailing separators. It does not resolve
+ * relative path components or validate the path against the filesystem.
  *
  * @param filePath - Path whose trailing separators should be normalized.
  * @returns The input path with trailing separators normalized to one `path.sep`.
