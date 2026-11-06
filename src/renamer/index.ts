@@ -270,22 +270,25 @@ export class BearTunesRenamer {
    * Asserts that the target directory base path is accessible and points to a directory.
    *
    * This helper acts as a fail-fast guard for target directory resolution
-   * preconditions. It aborts the current rename preparation flow by throwing
-   * {@link RenamerGuardError} when the target directory base path cannot be
-   * accessed or does not point to a directory.
+   * preconditions. It follows symbolic links when checking the target directory
+   * base path and aborts the current rename preparation flow by throwing
+   * {@link RenamerGuardError} when the path cannot be accessed or its target
+   * does not point to a directory.
    *
    * If the method returns normally, the caller may continue target directory
    * resolution assuming that the base directory precondition has been satisfied.
    *
    * @param targetDirectoryBasePath - Base directory path to assert.
-   * @throws {RenamerGuardError} When the path is inaccessible or does not point
-   * to a directory.
+   * @throws {RenamerGuardError} When the path is inaccessible or its target does
+   * not point to a directory.
    */
-  private assertValidTargetDirectoryBasePath(targetDirectoryBasePath: string): void {
+  private assertValidTargetDirectoryBasePath(
+    targetDirectoryBasePath: string,
+  ): void {
     let targetDirectoryBasePathStats: fs.Stats;
 
     try {
-      targetDirectoryBasePathStats = fs.lstatSync(targetDirectoryBasePath);
+      targetDirectoryBasePathStats = fs.statSync(targetDirectoryBasePath);
     } catch (error) {
       throw new RenamerGuardError(
         BearTunesRenamerFailureCode.TargetDirectoryAccessError,
