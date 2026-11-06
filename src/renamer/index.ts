@@ -500,12 +500,17 @@ export class BearTunesRenamer {
    * Builds the target file name for a rename operation.
    *
    * The method replaces placeholders in the configured filename pattern using
-   * track metadata, preserves the original file extension, and sanitizes the
-   * resulting file name so it can be safely used in the filesystem.
+   * track metadata and appends the original file extension.
+   *
+   * Cross-platform path-forbidden characters in the resulting file name are
+   * replaced with hyphens. This is a lightweight character replacement mechanism
+   * and does not guarantee that the resulting file name is valid on every
+   * filesystem.
    *
    * @param trackPath - Path to the source track file.
    * @param trackInfo - Track metadata used to replace filename placeholders.
-   * @returns The sanitized target file name including the original extension.
+   * @returns The target file name including the original file extension, with
+   * path-forbidden characters replaced.
    * @throws {RenamerGuardError} When replacing filename placeholders fails.
    */
   private buildTargetFilename(
