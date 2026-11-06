@@ -116,9 +116,15 @@ export class BearTunesRenamer {
    * Nested traversal is supported only through object properties;
    * array elements cannot be addressed through placeholder segments.
    *
+   * An undefined or null intermediate property is treated as a missing
+   * TrackInfo value and returned as `undefined` for the caller to handle.
+   * References to unsupported properties and attempts to traverse arrays
+   * are rejected.
+   *
    * @param placeholderPath - Dot-separated placeholder path without `%` markers.
    * @param trackInfo - Track metadata providing values for the placeholder.
-   * @returns The resolved TrackInfo value for the placeholder path.
+   * @returns The resolved TrackInfo value, or `undefined` when an intermediate
+   * property is missing.
    * @throws {RenamerGuardError} When the placeholder path is empty or
    * references an unsupported TrackInfo property.
    */
@@ -139,16 +145,15 @@ export class BearTunesRenamer {
     let current: unknown = trackInfo;
 
     for (const segment of segments) {
-      if (Array.isArray(current)) {
-        throw new RenamerGuardError(
-          BearTunesRenamerFailureCode.UnsupportedRenamePatternPlaceholder,
-          new TypeError(
-            `${this.name}: Unsupported rename pattern placeholder: %${placeholderPath}%`,
-          ),
-        );
+      if (current === undefined || current === null) {
+        return undefined;
       }
 
-      if (!isObjectRecord(current) || !Object.hasOwn(current, segment)) {
+      if (
+        Array.isArray(current) ||
+        !isObjectRecord(current) ||
+        !Object.hasOwn(current, segment)
+      ) {
         throw new RenamerGuardError(
           BearTunesRenamerFailureCode.UnsupportedRenamePatternPlaceholder,
           new TypeError(
@@ -166,26 +171,47 @@ export class BearTunesRenamer {
   /**
    * Replaces placeholders used in a rename pattern with TrackInfo values.
    *
-   * The method replaces placeholders such as `%title%`, `%artists%`,
-   * or `%album.title%` with values read from the provided track metadata.
+   * Placeholders use percent delimiters and support direct property references
+   * such as `%title%` as well as dot-separated paths to nested properties
+   * such as `%album.title%`.
+   *
+   * Each placeholder must contain one or more non-empty word-character
+   * segments separated by single dots. Property names are case-sensitive.
+   * Malformed placeholders, including unmatched percent signs, are rejected.
+   * Literal percent signs are not supported.
+   *
    * Array values are joined with commas. String values are returned as-is.
-   * Number, boolean, and bigint values are converted to strings. Whole-object
-   * values are rejected because placeholders must resolve to a direct
-   * replacement value.
+   * Number, boolean, and bigint values are converted to strings.
+   * Whole-object values are rejected because placeholders must resolve
+   * to a direct replacement value.
    *
    * @param pattern - Pattern containing TrackInfo-based placeholders.
    * @param trackInfo - Track metadata providing values for placeholders.
    * @returns The pattern with all supported placeholders replaced by resolved
    * TrackInfo values.
-   * @throws {RenamerGuardError} When the pattern contains an unsupported
-   * placeholder, when a required TrackInfo value is missing, when a
-   * placeholder resolves to a whole object value, or when it resolves
+   * @throws {RenamerGuardError} When the pattern contains a malformed or
+   * unsupported placeholder, when a required TrackInfo value is missing,
+   * when a placeholder resolves to a whole object value, or when it resolves
    * to an unsupported runtime value.
    */
-  private static replacePatternPlaceholders(pattern: string, trackInfo: TrackInfo): string {
-    return pattern.replace(/%(?:\w+\.)*\w+%/ig, (match) => {
-      const placeholderPath = match.slice(1, -1);
-      const value = BearTunesRenamer.resolvePlaceholderValue(placeholderPath, trackInfo);
+  private static replacePatternPlaceholders(
+    pattern: string,
+    trackInfo: TrackInfo,
+  ): string {
+    return pattern.replace(/%([^%]*)%|%/g, (match, placeholderPath: string | undefined) => {
+      if (
+        placeholderPath === undefined ||
+        !/^\w+(?:\.\w+)*$/.test(placeholderPath)
+      ) {
+        throw new RenamerGuardError(
+          BearTunesRenamerFailureCode.UnsupportedRenamePatternPlaceholder,
+          new TypeError(
+            `${this.name}: Unsupported rename pattern placeholder: ${match}`,
+          ),
+        );
+      }
+
+      const value = this.resolvePlaceholderValue(placeholderPath, trackInfo);
 
       if (value === undefined) {
         throw new RenamerGuardError(
