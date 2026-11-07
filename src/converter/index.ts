@@ -492,37 +492,43 @@ export class BearTunesConverter {
    *
    * The method validates the input file, resolves the output file path, and
    * authorizes writing to that path according to `forceOverwriteOutputFile`.
-   * An existing output file is rejected unless forced overwrite is enabled.
+   * An existing regular output file is rejected unless forced overwrite is
+   * enabled. Symbolic links resolving to directories are accepted as output
+   * directories or parent directories, while symbolic links used as output
+   * file paths are rejected.
    *
-   * After the output path is authorized, the method runs the `flac` encoder with
-   * overwrite support, allowing it to create the output file or replace an
-   * authorized existing output file. The encoder outcome is mapped to a
-   * converter result. On successful conversion, the source AIFF file may also
-   * be deleted when requested.
+   * After the output path is authorized, the method runs the `flac` encoder.
+   * The `--force` argument is passed only when `forceOverwriteOutputFile` is
+   * enabled, allowing the encoder to replace an authorized existing output file.
+   * The encoder outcome is mapped to a converter result. On successful
+   * conversion, the source AIFF file may also be deleted when requested.
    *
    * Input file validation and output path resolution are performed internally
-   * by fail-fast guard helpers. Any resulting {@link ConverterGuardError} is
-   * caught within this method and mapped back to a
-   * {@link BearTunesConverterFailureResult}, so callers continue to interact
-   * with a result-based public API. Any other unexpected preparation error is
-   * normalized and mapped to `UnexpectedPreparationError`.
+   * by fail-fast guard helpers. Symbolic links supplied as the input file itself
+   * are not accepted. Any resulting {@link ConverterGuardError} is caught within
+   * this method and mapped back to a {@link BearTunesConverterFailureResult},
+   * so callers continue to interact with a result-based public API. Any other
+   * unexpected preparation error is normalized and mapped to
+   * `UnexpectedPreparationError`.
    *
    * Encoder execution is delegated to {@link executeCommandSync}. A
    * {@link CommandExecutionStartError} raised by that helper is mapped to
    * `EncoderProcessStartFailed`, while a {@link CommandExecutionFailedError} is
    * translated into either `EncoderProcessSignaled` or `EncoderProcessFailed`.
-   * Any other unexpected execution error is normalized and mapped to
-   * `UnexpectedSingleCommandExecutionError`, while preserving captured encoder
-   * standard output and standard error when available in the returned failure
-   * result.
+   * Captured encoder standard output and standard error are included in these
+   * process failure results when available. Any other unexpected execution
+   * error is normalized and mapped to
+   * `UnexpectedSingleCommandExecutionError`.
    *
    * @param aiffFilePath - Path to the source AIFF file to convert.
    * @param outputPath - Optional existing output directory or target FLAC file
-   * path. An existing target file may be replaced only when
-   * `forceOverwriteOutputFile` is enabled. A nonexistent target file path must
-   * have an existing parent directory.
-   * @param deleteAiffAfterConversion - Whether the source AIFF file should be
-   * deleted after a successful conversion.
+   * path. Symbolic links resolving to directories are accepted when used as
+   * output directories or parent directories. An existing target file must be
+   * a regular file and may be replaced only when `forceOverwriteOutputFile` is
+   * enabled. A nonexistent target file path must have an existing parent directory.
+   * @param deleteAiffAfterConversion - Whether to attempt deleting the source
+   * AIFF file after successful conversion. Deletion failures are logged as
+   * warnings and do not change the conversion result.
    * @returns A converter result describing whether the conversion succeeded or
    * why it failed.
    */
@@ -625,25 +631,31 @@ export class BearTunesConverter {
    *
    * The method validates the input file, resolves the output file path, and
    * authorizes writing to that path according to `forceOverwriteOutputFile`.
-   * An existing output file is rejected unless forced overwrite is enabled.
+   * An existing regular output file is rejected unless forced overwrite is
+   * enabled. Symbolic links resolving to directories are accepted as output
+   * directories or parent directories, while symbolic links used as output
+   * file paths are rejected.
    *
-   * After the output path is authorized, the method optionally prepares tag
-   * transfer arguments and runs a `flac` to `lame` conversion pipeline. The
-   * LAME encoder creates the output file or replaces an authorized existing
-   * output file. The pipeline outcome is mapped to a converter result. On
-   * successful conversion, the source FLAC file may also be deleted when
-   * requested. Any temporary files created while preparing tag transfer are
-   * removed before the method finishes.
+   * After the output path is authorized, the method builds the LAME encoder
+   * arguments and optionally prepares tag transfer arguments before running
+   * a `flac` to `lame` conversion pipeline. The LAME encoder writes the output
+   * to the resolved path, replacing an authorized existing regular output file
+   * when forced overwrite is enabled. The pipeline outcome is mapped to a
+   * converter result. On successful conversion, the source FLAC file may also
+   * be deleted when requested. Temporary files returned by successful
+   * tag-transfer preparation are passed to cleanup after pipeline execution.
+   * Cleanup failures are logged as warnings and do not change the conversion
+   * result.
    *
    * Input file validation and output path resolution are performed internally
-   * by fail-fast guard helpers. Any resulting {@link ConverterGuardError} is
-   * caught within this method and mapped to a
-   * {@link BearTunesConverterFailureResult}, so callers continue to interact
-   * with a result-based public API. Any other unexpected preparation error is
-   * normalized and mapped to `UnexpectedPreparationError`.
+   * by fail-fast guard helpers. Symbolic links supplied as the input file itself
+   * are not accepted. Any resulting {@link ConverterGuardError} is caught within
+   * this method and mapped back to a {@link BearTunesConverterFailureResult},
+   * so callers continue to interact with a result-based public API. Any other
+   * unexpected preparation error is normalized and mapped to
+   * `UnexpectedPreparationError`.
    *
-   * Tag transfer preparation failures are mapped to
-   * `TagTransferPreparationFailed`.
+   * Tag transfer preparation failures are mapped to `TagTransferPreparationFailed`.
    *
    * Pipeline execution is delegated to {@link executeCommandPipeline}. A
    * {@link CommandPipelineInfrastructureError} raised by that helper is mapped
@@ -654,11 +666,13 @@ export class BearTunesConverter {
    *
    * @param flacFilePath - Path to the source FLAC file to convert.
    * @param outputPath - Optional existing output directory or target MP3 file
-   * path. An existing target file may be replaced only when
-   * `forceOverwriteOutputFile` is enabled. A nonexistent target file path must
-   * have an existing parent directory.
-   * @param deleteFlacAfterConversion - Whether the source FLAC file should be
-   * deleted after a successful conversion.
+   * path. Symbolic links resolving to directories are accepted when used as
+   * output directories or parent directories. An existing target file must be
+   * a regular file and may be replaced only when `forceOverwriteOutputFile` is
+   * enabled. A nonexistent target file path must have an existing parent directory.
+   * @param deleteFlacAfterConversion - Whether to attempt deleting the source
+   * FLAC file after successful conversion. Deletion failures are logged as
+   * warnings and do not change the conversion result.
    * @returns A promise resolved with a converter result describing whether the
    * conversion succeeded or why it failed.
    */
@@ -668,6 +682,7 @@ export class BearTunesConverter {
     deleteFlacAfterConversion = false,
   ): Promise<BearTunesConverterResult> {
     let resolvedOutputPath: string;
+    let lameArguments: string[];
 
     try {
       this.assertValidInputFilePath(
@@ -685,6 +700,12 @@ export class BearTunesConverter {
       );
 
       this.assertOutputFileCanBeCreated(resolvedOutputPath);
+
+      lameArguments = this.buildLameArguments();
+
+      if (this.options.verbose) {
+        logger.info(`Using LAME options: ${lameArguments.join(' ')}`);
+      }
     } catch (error) {
       if (error instanceof ConverterGuardError) {
         return BearTunesConverter.createFailureResult(
@@ -697,13 +718,6 @@ export class BearTunesConverter {
         BearTunesConverterFailureCode.UnexpectedPreparationError,
         normalizeUnknownError(error),
       );
-    }
-
-    const lameArguments = this.buildLameArguments();
-    const lameOptionsJoined = lameArguments.join(' ');
-
-    if (this.options.verbose) {
-      logger.info(`Using LAME options: ${lameOptionsJoined}`);
     }
 
     let lameTagArguments: string[] = [];
