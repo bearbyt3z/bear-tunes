@@ -512,7 +512,8 @@ export class BearTunesConverter {
       const flacArguments = [
         '--verify',
         '-8',
-        '--force', // output-path authorization is enforced by assertOutputFileCanBeCreated()
+        // Pass --force only when output file overwriting is explicitly enabled.
+        ...(this.options.forceOverwriteOutputFile ? ['--force'] : []),
         '--output-name',
         resolvedOutputPath,
         aiffFilePath,
