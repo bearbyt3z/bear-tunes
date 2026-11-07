@@ -17,24 +17,24 @@ interface MockCommandOutput {
   stderr: Buffer | undefined;
   status: number;
   signal: NodeJS.Signals | null;
-};
+}
 
 interface MockPipelineCommand {
   commandName: string;
   args: readonly string[];
-};
+}
 
 interface MockPipelineCaptureOptions {
   firstStdout?: boolean;
   firstStderr?: boolean;
   secondStdout?: boolean;
   secondStderr?: boolean;
-};
+}
 
 interface MockPipelineResult {
   first: MockCommandOutput;
   second: MockCommandOutput;
-};
+}
 
 const commandMocks = vi.hoisted(() => ({
   executeCommandSync: vi.fn<
@@ -133,13 +133,36 @@ describe('BearTunesConverter', () => {
       expect(commandMocks.executeCommandSync).toHaveBeenCalledWith('flac', [
         '--verify',
         '-8',
-        '--force',
         '--output-name',
         outputFilePath,
         inputFilePath,
       ]);
       expect(commandMocks.executeCommandPipeline).not.toHaveBeenCalled();
       expect(fs.readFileSync(inputFilePath, 'utf8')).toBe(sourceFileContent);
+    });
+
+    it('passes the force argument when output file overwriting is enabled', () => {
+      const inputFilePath = createSourceAudioFile('overwrite-track.aiff');
+      const outputFilePath = path.join(sourceDirectory, 'overwrite-track.flac');
+      const converter = new BearTunesConverter({
+        forceOverwriteOutputFile: true,
+      });
+
+      const result = converter.aiffToFlac(inputFilePath);
+
+      expect(result).toMatchObject({
+        ok: true,
+        outputPath: outputFilePath,
+      });
+
+      expect(commandMocks.executeCommandSync).toHaveBeenCalledWith('flac', [
+        '--verify',
+        '-8',
+        '--force',
+        '--output-name',
+        outputFilePath,
+        inputFilePath,
+      ]);
     });
   });
 
