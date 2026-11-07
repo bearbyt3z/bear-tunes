@@ -2,8 +2,9 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import logger from '#logger';
 import type { TrackInfo } from '#shared-types';
 
 import {
@@ -66,8 +67,8 @@ function createSymlinkOrSkip(
   } catch (error: unknown) {
     const errorCode =
       error instanceof Error &&
-        'code' in error &&
-        typeof error.code === 'string'
+      'code' in error &&
+      typeof error.code === 'string'
         ? error.code
         : undefined;
     const isWindowsSymlinkPermissionError =
@@ -96,6 +97,8 @@ describe('BearTunesRenamer', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
+
     if (temporaryDirectory.length > 0) {
       fs.rmSync(temporaryDirectory, { recursive: true, force: true });
     }
@@ -840,6 +843,152 @@ describe('BearTunesRenamer', () => {
       expect(fs.readFileSync(targetPath, 'utf8')).toBe(sourceFileContent);
       expect(fs.readFileSync(actualTargetPath, 'utf8')).toBe(sourceFileContent);
       expect(fs.existsSync(trackPath)).toBe(false);
+    });
+  });
+
+  describe('target file overwrite behavior', () => {
+    it('returns TargetFileAlreadyExists when the target file exists and overwrite is disabled', () => {
+      const trackPath = createSourceTrackFile();
+      const targetPath = path.join(
+        sourceDirectory,
+        'Example Artist - Example Track.mp3',
+      );
+      const existingTargetContent = 'Existing target file content';
+      const renamer = new BearTunesRenamer();
+
+      fs.writeFileSync(targetPath, existingTargetContent);
+
+      const result = renamer.rename(trackPath, validTrackInfo);
+
+      expectRenameFailure(
+        result,
+        BearTunesRenamerFailureCode.TargetFileAlreadyExists,
+      );
+      expect(fs.readFileSync(trackPath, 'utf8')).toBe(sourceFileContent);
+      expect(fs.readFileSync(targetPath, 'utf8')).toBe(existingTargetContent);
+    });
+
+    it('replaces an existing target file when overwrite is enabled', () => {
+      const trackPath = createSourceTrackFile();
+      const targetPath = path.join(
+        sourceDirectory,
+        'Example Artist - Example Track.mp3',
+      );
+      const existingTargetContent = 'Existing target file content';
+      const renamer = new BearTunesRenamer({
+        forceOverwriteTargetFile: true,
+      });
+
+      fs.writeFileSync(targetPath, existingTargetContent);
+
+      const result = renamer.rename(trackPath, validTrackInfo);
+
+      expect(result).toEqual({
+        ok: true,
+        targetPath,
+      });
+      expect(fs.readFileSync(targetPath, 'utf8')).toBe(sourceFileContent);
+      expect(fs.existsSync(trackPath)).toBe(false);
+    });
+
+    it('returns RenameOperationFailed when overwrite is enabled but the target path is a directory', () => {
+      const trackPath = createSourceTrackFile();
+      const targetPath = path.join(
+        sourceDirectory,
+        'Example Artist - Example Track.mp3',
+      );
+      const renamer = new BearTunesRenamer({
+        forceOverwriteTargetFile: true,
+      });
+
+      fs.mkdirSync(targetPath);
+
+      const result = renamer.rename(trackPath, validTrackInfo);
+
+      expectRenameFailure(
+        result,
+        BearTunesRenamerFailureCode.RenameOperationFailed,
+      );
+      expect(fs.readFileSync(trackPath, 'utf8')).toBe(sourceFileContent);
+      expect(fs.statSync(targetPath).isDirectory()).toBe(true);
+    });
+  });
+
+  describe('idempotent rename behavior', () => {
+    it('returns success and logs when the source file already has the target name', () => {
+      const targetPath = createSourceTrackFile(
+        'Example Artist - Example Track.mp3',
+      );
+      const loggerInfoSpy = vi
+        .spyOn(logger, 'info')
+        .mockImplementation(() => logger);
+      const renamer = new BearTunesRenamer({
+        verbose: true,
+      });
+
+      const result = renamer.rename(targetPath, validTrackInfo);
+
+      expect(result).toEqual({
+        ok: true,
+        targetPath,
+      });
+      expect(fs.readFileSync(targetPath, 'utf8')).toBe(sourceFileContent);
+      expect(fs.existsSync(targetPath)).toBe(true);
+      expect(loggerInfoSpy).toHaveBeenCalledTimes(1);
+      expect(loggerInfoSpy).toHaveBeenCalledWith(
+        `Track file already has the target name: ${targetPath}`,
+      );
+    });
+  });
+
+  describe('verbose logging', () => {
+    it('logs the target path after a successful rename when verbose mode is enabled', () => {
+      const trackPath = createSourceTrackFile();
+      const targetPath = path.join(
+        sourceDirectory,
+        'Example Artist - Example Track.mp3',
+      );
+      const loggerInfoSpy = vi
+        .spyOn(logger, 'info')
+        .mockImplementation(() => logger);
+      const renamer = new BearTunesRenamer({
+        verbose: true,
+      });
+
+      const result = renamer.rename(trackPath, validTrackInfo);
+
+      expect(result).toEqual({
+        ok: true,
+        targetPath,
+      });
+      expect(loggerInfoSpy).toHaveBeenCalledTimes(1);
+      expect(fs.readFileSync(targetPath, 'utf8')).toBe(sourceFileContent);
+      expect(fs.existsSync(trackPath)).toBe(false);
+      expect(loggerInfoSpy).toHaveBeenCalledWith(
+        `Track file moved to: "${targetPath}"`,
+      );
+    });
+
+    it('does not emit info logs after a successful rename when verbose mode is disabled', () => {
+      const trackPath = createSourceTrackFile();
+      const targetPath = path.join(
+        sourceDirectory,
+        'Example Artist - Example Track.mp3',
+      );
+      const loggerInfoSpy = vi
+        .spyOn(logger, 'info')
+        .mockImplementation(() => logger);
+      const renamer = new BearTunesRenamer();
+
+      const result = renamer.rename(trackPath, validTrackInfo);
+
+      expect(result).toEqual({
+        ok: true,
+        targetPath,
+      });
+      expect(fs.readFileSync(targetPath, 'utf8')).toBe(sourceFileContent);
+      expect(fs.existsSync(trackPath)).toBe(false);
+      expect(loggerInfoSpy).not.toHaveBeenCalled();
     });
   });
 });
