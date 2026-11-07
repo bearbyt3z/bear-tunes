@@ -397,6 +397,25 @@ describe('BearTunesRenamer', () => {
     });
   });
 
+  it('returns UnexpectedPreparationError when reading track metadata throws unexpectedly', () => {
+    const trackPath = createSourceTrackFile();
+    const trackInfo: TrackInfo = {
+      ...validTrackInfo,
+      get title(): string {
+        throw new Error('Unexpected metadata access failure.');
+      },
+    };
+    const renamer = new BearTunesRenamer();
+
+    const result = renamer.rename(trackPath, trackInfo);
+
+    expectRenameFailure(
+      result,
+      BearTunesRenamerFailureCode.UnexpectedPreparationError,
+    );
+    expect(fs.readFileSync(trackPath, 'utf8')).toBe(sourceFileContent);
+  });
+
   describe('filename sanitization', () => {
     it('replaces path-forbidden characters in the generated filename and preserves the source extension', () => {
       const trackPath = createSourceTrackFile('source-track.flac');
@@ -843,6 +862,27 @@ describe('BearTunesRenamer', () => {
       expect(fs.readFileSync(targetPath, 'utf8')).toBe(sourceFileContent);
       expect(fs.readFileSync(actualTargetPath, 'utf8')).toBe(sourceFileContent);
       expect(fs.existsSync(trackPath)).toBe(false);
+    });
+  });
+
+  describe('target file path validation', () => {
+    it('returns TargetDirectoryAccessError when the target path cannot be inspected', () => {
+      const trackPath = createSourceTrackFile();
+      const trackInfo: TrackInfo = {
+        ...validTrackInfo,
+        title: 'Example\0Track',
+      };
+      const renamer = new BearTunesRenamer({
+        filenamePattern: '%title%',
+      });
+
+      const result = renamer.rename(trackPath, trackInfo);
+
+      expectRenameFailure(
+        result,
+        BearTunesRenamerFailureCode.TargetDirectoryAccessError,
+      );
+      expect(fs.readFileSync(trackPath, 'utf8')).toBe(sourceFileContent);
     });
   });
 
