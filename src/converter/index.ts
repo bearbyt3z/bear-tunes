@@ -142,18 +142,22 @@ export class BearTunesConverter {
   /**
    * Asserts that conversion may write to the resolved output file path.
    *
-   * A nonexistent output file may always be created. An existing output file may
-   * be replaced only when {@link BearTunesConverterOptions.forceOverwriteOutputFile}
-   * is enabled. If this method returns normally, the caller may invoke an
-   * encoder with overwrite support for `outputFilePath`.
+   * A nonexistent output file may always be created. An existing regular file
+   * may be replaced only when {@link BearTunesConverterOptions.forceOverwriteOutputFile}
+   * is enabled.
+   *
+   * Existing paths that do not point directly to regular files, including
+   * symbolic links, are rejected regardless of the overwrite option.
    *
    * @param outputFilePath - Resolved path to which conversion will write.
-   * @throws {ConverterGuardError} When the output file already exists and
-   * forced overwrite is disabled, or when its existence cannot be determined.
+   * @throws {ConverterGuardError} When the output path is inaccessible, exists
+   * but does not point to a regular file, or an existing file cannot be overwritten.
    */
   private assertOutputFileCanBeCreated(outputFilePath: string): void {
+    let outputFileStats: fs.Stats;
+
     try {
-      fs.lstatSync(outputFilePath);
+      outputFileStats = fs.lstatSync(outputFilePath);
     } catch (error: unknown) {
       if (isErrorWithStringCode(error) && error.code === 'ENOENT') {
         return;
@@ -164,6 +168,15 @@ export class BearTunesConverter {
         new Error(
           `${this.constructor.name}: Cannot access output path ${outputFilePath}`,
           { cause: normalizeUnknownError(error) },
+        ),
+      );
+    }
+
+    if (!outputFileStats.isFile()) {
+      throw new ConverterGuardError(
+        BearTunesConverterFailureCode.InvalidOutputPath,
+        new TypeError(
+          `${this.constructor.name}: Output path ${outputFilePath} does not point to a regular file`,
         ),
       );
     }
@@ -185,11 +198,15 @@ export class BearTunesConverter {
    * from `inputFilePath` by replacing the input extension with
    * `outputExtension`.
    *
-   * If `outputPath` points to an existing directory, the method appends the
-   * converted input file name to that directory. If it points to an existing
-   * file, the method validates that the path uses the expected output
-   * extension. If it does not exist, the method treats it as a target file
-   * path and verifies that its parent directory exists and is a directory.
+   * If `outputPath` points to an existing directory or a symbolic link
+   * resolving to a directory, the method appends the converted input file name.
+   * If it points to an existing regular file, the method validates that the
+   * path uses the expected output extension. Symbolic links resolving to files
+   * are not accepted as output file paths.
+   *
+   * If it does not exist, the method treats it as a target file path and
+   * verifies that its parent directory exists and is a directory. Symbolic
+   * links resolving to directories are accepted as parent directories.
    *
    * This helper acts as a fail-fast guard for output path preconditions.
    * It returns the resolved output file path when resolution succeeds and
@@ -218,10 +235,10 @@ export class BearTunesConverter {
       return inputFilePath.replace(inputExtensionPattern, outputExtension);
     }
 
-    let outputPathStats: fs.Stats;
+    let outputPathEntryStats: fs.Stats;
 
     try {
-      outputPathStats = fs.lstatSync(outputPath);
+      outputPathEntryStats = fs.lstatSync(outputPath);
     } catch (error: unknown) {
       if (isErrorWithStringCode(error) && error.code === 'ENOENT') {
         if (!outputPath.match(expectedOutputExtensionPattern)) {
@@ -237,7 +254,7 @@ export class BearTunesConverter {
         let outputDirectoryStats: fs.Stats;
 
         try {
-          outputDirectoryStats = fs.lstatSync(outputDirectoryPath);
+          outputDirectoryStats = fs.statSync(outputDirectoryPath);
         } catch (directoryError) {
           throw new ConverterGuardError(
             BearTunesConverterFailureCode.OutputPathAccessError,
@@ -267,6 +284,41 @@ export class BearTunesConverter {
           { cause: normalizeUnknownError(error) },
         ),
       );
+    }
+
+    let outputPathStats = outputPathEntryStats;
+
+    if (outputPathEntryStats.isSymbolicLink()) {
+      try {
+        outputPathStats = fs.statSync(outputPath);
+      } catch (error) {
+        if (isErrorWithStringCode(error) && error.code === 'ENOENT') {
+          throw new ConverterGuardError(
+            BearTunesConverterFailureCode.InvalidOutputPath,
+            new TypeError(
+              `${this.constructor.name}: Output path ${outputPath} is a broken symbolic link`,
+              { cause: normalizeUnknownError(error) },
+            ),
+          );
+        }
+
+        throw new ConverterGuardError(
+          BearTunesConverterFailureCode.OutputPathAccessError,
+          new Error(
+            `${this.constructor.name}: Cannot access symbolic link target at ${outputPath}`,
+            { cause: normalizeUnknownError(error) },
+          ),
+        );
+      }
+
+      if (!outputPathStats.isDirectory()) {
+        throw new ConverterGuardError(
+          BearTunesConverterFailureCode.InvalidOutputPath,
+          new TypeError(
+            `${this.constructor.name}: Output path ${outputPath} is a symbolic link but does not point to a directory`,
+          ),
+        );
+      }
     }
 
     if (outputPathStats.isDirectory()) {
@@ -310,6 +362,9 @@ export class BearTunesConverter {
    *
    * If the method returns normally, the caller may continue conversion assuming
    * that the input file precondition has been satisfied.
+   *
+   * Symbolic links supplied as the input file itself are not accepted.
+   * Symbolic links in parent directory components are followed by the filesystem.
    *
    * @param inputFilePath - Path to the source file to validate.
    * @param expectedExtensionPattern - Pattern matching the required input file extension.
