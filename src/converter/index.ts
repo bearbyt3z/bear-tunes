@@ -639,13 +639,13 @@ export class BearTunesConverter {
    * After the output path is authorized, the method builds the LAME encoder
    * arguments and optionally prepares tag transfer arguments before running
    * a `flac` to `lame` conversion pipeline. The LAME encoder writes the output
-   * to the resolved path, replacing an authorized existing regular output file
-   * when forced overwrite is enabled. The pipeline outcome is mapped to a
-   * converter result. On successful conversion, the source FLAC file may also
-   * be deleted when requested. Temporary files returned by successful
-   * tag-transfer preparation are passed to cleanup after pipeline execution.
-   * Cleanup failures are logged as warnings and do not change the conversion
-   * result.
+   * directly to the resolved path. An existing regular output file is accepted
+   * for replacement only when `forceOverwriteOutputFile` is enabled. The pipeline
+   * outcome is mapped to a converter result. On successful conversion, the source
+   * FLAC file may also be deleted when requested. Temporary files returned by
+   * successful tag-transfer preparation are passed to cleanup after pipeline
+   * execution. Cleanup failures are logged as warnings and do not change the
+   * conversion result.
    *
    * Input file validation and output path resolution are performed internally
    * by fail-fast guard helpers. Symbolic links supplied as the input file itself
