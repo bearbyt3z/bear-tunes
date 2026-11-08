@@ -4,6 +4,7 @@ import * as path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import logger from '#logger';
 import { BearTunesTagger } from '#tagger';
 import {
   CommandExecutionFailedError,
@@ -1256,6 +1257,104 @@ describe('BearTunesConverter', () => {
       expect(fs.existsSync(firstTemporaryFilePath)).toBe(false);
       expect(fs.existsSync(secondTemporaryFilePath)).toBe(false);
       expect(fs.existsSync(inputFilePath)).toBe(true);
+    });
+
+    it('does not prepare tag transfer when tag transfer is disabled', async () => {
+      const inputFilePath = createSourceAudioFile('no-tag-transfer-track.flac');
+      const converter = new BearTunesConverter({
+        transferTagEntries: false,
+      });
+      const prepareTagTransferSpy = vi.spyOn(
+        BearTunesTagger.prototype,
+        'prepareMp3TagTransferFromFlac',
+      );
+
+      const result = await converter.flacToMp3(inputFilePath);
+
+      expect(result).toMatchObject({
+        ok: true,
+        outputPath: path.join(sourceDirectory, 'no-tag-transfer-track.mp3'),
+      });
+      expect(prepareTagTransferSpy).not.toHaveBeenCalled();
+      expect(commandMocks.executeCommandPipeline).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('LAME encoder configuration', () => {
+    it('applies custom CBR bitrate, channel mode, quality and ReplayGain options', async () => {
+      const inputFilePath = createSourceAudioFile('custom-cbr-track.flac');
+      const outputFilePath = path.join(
+        sourceDirectory,
+        'custom-cbr-track.mp3',
+      );
+      const converter = new BearTunesConverter({
+        mp3BitrateMode: Mp3BitrateMode.CBR,
+        mp3BitrateKbps: 256,
+        mp3ChannelMode: Mp3ChannelMode.Mono,
+        lameQuality: LameQuality.Q5,
+        replayGainMode: ReplayGainMode.Fast,
+      });
+
+      const result = await converter.flacToMp3(inputFilePath);
+
+      expect(result).toMatchObject({
+        ok: true,
+        outputPath: outputFilePath,
+      });
+      expect(commandMocks.executeCommandPipeline).toHaveBeenCalledWith(
+        {
+          commandName: 'flac',
+          args: ['--decode', '--stdout', inputFilePath],
+        },
+        {
+          commandName: 'lame',
+          args: [
+            Mp3BitrateMode.CBR,
+            '-b256',
+            '-m',
+            Mp3ChannelMode.Mono,
+            LameQuality.Q5,
+            ReplayGainMode.Fast,
+            '-',
+            outputFilePath,
+          ],
+        },
+        {
+          firstStdout: false,
+          firstStderr: true,
+          secondStdout: true,
+          secondStderr: true,
+        },
+      );
+    });
+  });
+
+  describe('verbose logging', () => {
+    it('logs the LAME options when verbose logging is enabled', async () => {
+      const inputFilePath = createSourceAudioFile('verbose-track.flac');
+      const converter = new BearTunesConverter({
+        verbose: true,
+      });
+      const loggerInfoSpy = vi.spyOn(logger, 'info').mockReturnValue(logger);
+
+      const result = await converter.flacToMp3(inputFilePath);
+
+      expect(result.ok).toBe(true);
+      expect(loggerInfoSpy).toHaveBeenCalledOnce();
+      expect(loggerInfoSpy).toHaveBeenCalledWith(
+        'Using LAME options: --cbr -b320 -m j -q1 --replaygain-accurate',
+      );
+    });
+
+    it('does not log the LAME options when verbose logging is disabled', async () => {
+      const inputFilePath = createSourceAudioFile('quiet-track.flac');
+      const converter = new BearTunesConverter();
+      const loggerInfoSpy = vi.spyOn(logger, 'info').mockReturnValue(logger);
+
+      const result = await converter.flacToMp3(inputFilePath);
+
+      expect(result.ok).toBe(true);
+      expect(loggerInfoSpy).not.toHaveBeenCalled();
     });
   });
 });
