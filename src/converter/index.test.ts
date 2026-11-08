@@ -4,6 +4,7 @@ import * as path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { BearTunesTagger } from '#tagger';
 import {
   CommandExecutionFailedError,
   CommandExecutionStartError,
@@ -173,6 +174,8 @@ describe('BearTunesConverter', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
+
     if (temporaryDirectory.length > 0) {
       fs.rmSync(temporaryDirectory, { recursive: true, force: true });
     }
@@ -1067,6 +1070,192 @@ describe('BearTunesConverter', () => {
         expect(fs.existsSync(inputFilePath)).toBe(true);
         expect(commandMocks.executeCommandPipeline).toHaveBeenCalledOnce();
       });
+    });
+  });
+
+  describe('source file cleanup', () => {
+    it('deletes the source AIFF file after successful conversion when requested', () => {
+      const inputFilePath = createSourceAudioFile('delete-source-track.aiff');
+      const outputFilePath = path.join(
+        sourceDirectory,
+        'delete-source-track.flac',
+      );
+      const converter = new BearTunesConverter();
+
+      const result = converter.aiffToFlac(inputFilePath, undefined, true);
+
+      expect(result).toMatchObject({
+        ok: true,
+        outputPath: outputFilePath,
+      });
+      expect(fs.existsSync(inputFilePath)).toBe(false);
+      expect(commandMocks.executeCommandSync).toHaveBeenCalledOnce();
+    });
+
+    it('deletes the source FLAC file after successful conversion when requested', async () => {
+      const inputFilePath = createSourceAudioFile('delete-source-track.flac');
+      const outputFilePath = path.join(
+        sourceDirectory,
+        'delete-source-track.mp3',
+      );
+      const converter = new BearTunesConverter();
+
+      const result = await converter.flacToMp3(inputFilePath, undefined, true);
+
+      expect(result).toMatchObject({
+        ok: true,
+        outputPath: outputFilePath,
+      });
+      expect(fs.existsSync(inputFilePath)).toBe(false);
+      expect(commandMocks.executeCommandPipeline).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('FLAC tag transfer', () => {
+    it('passes prepared tag arguments to LAME and removes temporary files after successful conversion', async () => {
+      const inputFilePath = createSourceAudioFile('tag-transfer-track.flac');
+      const outputFilePath = path.join(
+        sourceDirectory,
+        'tag-transfer-track.mp3',
+      );
+      const temporaryTagFilePath = path.join(
+        temporaryDirectory,
+        'temporary-cover.jpg',
+      );
+      const tagTransferOptions = [
+        '--add-id3v2',
+        '--tt',
+        'Transferred track title',
+        '--ta',
+        'Transferred artist',
+      ];
+      const converter = new BearTunesConverter({
+        transferTagEntries: true,
+      });
+
+      fs.writeFileSync(temporaryTagFilePath, 'Temporary artwork content');
+
+      const prepareTagTransferSpy = vi
+        .spyOn(BearTunesTagger.prototype, 'prepareMp3TagTransferFromFlac')
+        .mockReturnValue({
+          lameTagOptions: tagTransferOptions,
+          temporaryFiles: [temporaryTagFilePath],
+        });
+
+      const result = await converter.flacToMp3(inputFilePath);
+
+      expect(result).toMatchObject({
+        ok: true,
+        outputPath: outputFilePath,
+      });
+      expect(prepareTagTransferSpy).toHaveBeenCalledOnce();
+      expect(prepareTagTransferSpy).toHaveBeenCalledWith(inputFilePath);
+      expect(commandMocks.executeCommandPipeline).toHaveBeenCalledWith(
+        {
+          commandName: 'flac',
+          args: ['--decode', '--stdout', inputFilePath],
+        },
+        {
+          commandName: 'lame',
+          args: [
+            Mp3BitrateMode.CBR,
+            '-b320',
+            '-m',
+            Mp3ChannelMode.JointStereo,
+            LameQuality.Q1,
+            ReplayGainMode.Accurate,
+            ...tagTransferOptions,
+            '-',
+            outputFilePath,
+          ],
+        },
+        {
+          firstStdout: false,
+          firstStderr: true,
+          secondStdout: true,
+          secondStderr: true,
+        },
+      );
+      expect(fs.existsSync(temporaryTagFilePath)).toBe(false);
+      expect(fs.existsSync(inputFilePath)).toBe(true);
+    });
+
+    it('returns TagTransferPreparationFailed when tag transfer preparation throws an error', async () => {
+      const inputFilePath = createSourceAudioFile('tag-preparation-failure.flac');
+      const converter = new BearTunesConverter({
+        transferTagEntries: true,
+      });
+      const preparationError = new Error(
+        'Could not prepare FLAC tag transfer',
+      );
+
+      const prepareTagTransferSpy = vi
+        .spyOn(BearTunesTagger.prototype, 'prepareMp3TagTransferFromFlac')
+        .mockImplementation(() => {
+          throw preparationError;
+        });
+
+      const result = await converter.flacToMp3(inputFilePath, undefined, true);
+
+      const failure = expectConverterFailure(
+        result,
+        BearTunesConverterFailureCode.TagTransferPreparationFailed,
+      );
+
+      expect(failure.error.message).toBe(preparationError.message);
+      expect(prepareTagTransferSpy).toHaveBeenCalledOnce();
+      expect(prepareTagTransferSpy).toHaveBeenCalledWith(inputFilePath);
+      expect(commandMocks.executeCommandPipeline).not.toHaveBeenCalled();
+      expect(fs.existsSync(inputFilePath)).toBe(true);
+    });
+
+    it('removes all temporary tag transfer files when pipeline execution fails', async () => {
+      const inputFilePath = createSourceAudioFile('tag-cleanup-failure.flac');
+      const firstTemporaryFilePath = path.join(
+        temporaryDirectory,
+        'temporary-cover.jpg',
+      );
+      const secondTemporaryFilePath = path.join(
+        temporaryDirectory,
+        'temporary-artwork.png',
+      );
+      const converter = new BearTunesConverter({
+        transferTagEntries: true,
+      });
+      const pipelineError = new SecondPipelineCommandFailedError(
+        'LAME encoder failed',
+        'lame',
+        1,
+        null,
+        'LAME encoder failure details',
+      );
+
+      fs.writeFileSync(firstTemporaryFilePath, 'Temporary cover content');
+      fs.writeFileSync(secondTemporaryFilePath, 'Temporary artwork content');
+
+      const prepareTagTransferSpy = vi
+        .spyOn(BearTunesTagger.prototype, 'prepareMp3TagTransferFromFlac')
+        .mockReturnValue({
+          lameTagOptions: ['--add-id3v2'],
+          temporaryFiles: [
+            firstTemporaryFilePath,
+            secondTemporaryFilePath,
+          ],
+        });
+
+      commandMocks.executeCommandPipeline.mockRejectedValue(pipelineError);
+
+      const result = await converter.flacToMp3(inputFilePath, undefined, true);
+
+      expectConverterFailure(
+        result,
+        BearTunesConverterFailureCode.LameEncodeProcessFailed,
+      );
+      expect(prepareTagTransferSpy).toHaveBeenCalledOnce();
+      expect(commandMocks.executeCommandPipeline).toHaveBeenCalledOnce();
+      expect(fs.existsSync(firstTemporaryFilePath)).toBe(false);
+      expect(fs.existsSync(secondTemporaryFilePath)).toBe(false);
+      expect(fs.existsSync(inputFilePath)).toBe(true);
     });
   });
 });
