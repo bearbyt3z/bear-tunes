@@ -5,6 +5,14 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  CommandExecutionFailedError,
+  CommandExecutionStartError,
+  CommandPipelineInfrastructureError,
+  FirstPipelineCommandFailedError,
+  SecondPipelineCommandFailedError,
+} from '#tools';
+
+import {
   BearTunesConverter,
   BearTunesConverterFailureCode,
   LameQuality,
@@ -13,7 +21,10 @@ import {
   ReplayGainMode,
 } from './index.js';
 
-import type { BearTunesConverterResult } from './index.js';
+import type {
+  BearTunesConverterFailureResult,
+  BearTunesConverterResult,
+} from './index.js';
 
 interface MockCommandOutput {
   stdout: Buffer | undefined;
@@ -80,7 +91,7 @@ function createSourceAudioFile(filename: string): string {
 function expectConverterFailure(
   result: BearTunesConverterResult,
   failureCode: BearTunesConverterFailureCode,
-): void {
+): BearTunesConverterFailureResult {
   expect(result.ok).toBe(false);
 
   if (result.ok) {
@@ -89,6 +100,8 @@ function expectConverterFailure(
 
   expect(result.failureCode).toBe(failureCode);
   expect(result.error).toBeInstanceOf(Error);
+
+  return result;
 }
 
 function createSymlinkOrSkip(
@@ -835,6 +848,225 @@ describe('BearTunesConverter', () => {
       );
       expect(fs.readFileSync(actualOutputFilePath, 'utf8')).toBe('Existing FLAC output');
       expect(commandMocks.executeCommandSync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('process execution errors', () => {
+    describe('aiffToFlac', () => {
+      it('returns EncoderProcessStartFailed when the FLAC encoder cannot be started', () => {
+        const inputFilePath = createSourceAudioFile('start-failure-track.aiff');
+        const converter = new BearTunesConverter();
+        const commandError = new CommandExecutionStartError(
+          'flac',
+          new Error('spawn flac ENOENT'),
+        );
+
+        commandMocks.executeCommandSync.mockImplementation(() => {
+          throw commandError;
+        });
+
+        const result = converter.aiffToFlac(inputFilePath, undefined, true);
+
+        const failure = expectConverterFailure(
+          result,
+          BearTunesConverterFailureCode.EncoderProcessStartFailed,
+        );
+
+        expect(failure.error).toBe(commandError);
+        expect(failure.encoderStdout).toBeUndefined();
+        expect(failure.encoderStderr).toBeUndefined();
+        expect(fs.existsSync(inputFilePath)).toBe(true);
+        expect(commandMocks.executeCommandSync).toHaveBeenCalledOnce();
+        expect(commandMocks.executeCommandPipeline).not.toHaveBeenCalled();
+      });
+
+      it('returns EncoderProcessFailed when the FLAC encoder exits with a non-zero status', () => {
+        const inputFilePath = createSourceAudioFile('exit-failure-track.aiff');
+        const converter = new BearTunesConverter();
+        const commandStdout = Buffer.from('FLAC encoder stdout before failure');
+        const commandStderr = Buffer.from('FLAC encoder failure details');
+        const commandError = new CommandExecutionFailedError(
+          'FLAC encoder failed',
+          'flac',
+          2,
+          null,
+          commandStdout,
+          commandStderr,
+        );
+
+        commandMocks.executeCommandSync.mockImplementation(() => {
+          throw commandError;
+        });
+
+        const result = converter.aiffToFlac(inputFilePath, undefined, true);
+
+        const failure = expectConverterFailure(
+          result,
+          BearTunesConverterFailureCode.EncoderProcessFailed,
+        );
+
+        expect(failure.error.message).toBe(
+          'Encoder process failed with exit code: 2',
+        );
+        expect(failure.encoderStdout).toBe(commandStdout.toString());
+        expect(failure.encoderStderr).toBe(commandStderr.toString());
+        expect(fs.existsSync(inputFilePath)).toBe(true);
+        expect(commandMocks.executeCommandSync).toHaveBeenCalledOnce();
+      });
+
+      it('returns EncoderProcessSignaled when the FLAC encoder is terminated by a signal', () => {
+        const inputFilePath = createSourceAudioFile('signaled-track.aiff');
+        const converter = new BearTunesConverter();
+        const commandStdout = Buffer.from('FLAC encoder stdout before termination');
+        const commandStderr = Buffer.from('FLAC encoder termination details');
+        const commandError = new CommandExecutionFailedError(
+          'FLAC encoder terminated',
+          'flac',
+          null,
+          'SIGTERM',
+          commandStdout,
+          commandStderr,
+        );
+
+        commandMocks.executeCommandSync.mockImplementation(() => {
+          throw commandError;
+        });
+
+        const result = converter.aiffToFlac(inputFilePath, undefined, true);
+
+        const failure = expectConverterFailure(
+          result,
+          BearTunesConverterFailureCode.EncoderProcessSignaled,
+        );
+
+        expect(failure.error.message).toBe(
+          'Encoder process terminated by signal: SIGTERM',
+        );
+        expect(failure.encoderStdout).toBe(commandStdout.toString());
+        expect(failure.encoderStderr).toBe(commandStderr.toString());
+        expect(fs.existsSync(inputFilePath)).toBe(true);
+        expect(commandMocks.executeCommandSync).toHaveBeenCalledOnce();
+      });
+
+      it('returns UnexpectedSingleCommandExecutionError when command execution throws an unexpected error', () => {
+        const inputFilePath = createSourceAudioFile('unexpected-error-track.aiff');
+        const converter = new BearTunesConverter();
+        const unexpectedError = new Error('Unexpected command execution error');
+
+        commandMocks.executeCommandSync.mockImplementation(() => {
+          throw unexpectedError;
+        });
+
+        const result = converter.aiffToFlac(inputFilePath, undefined, true);
+
+        const failure = expectConverterFailure(
+          result,
+          BearTunesConverterFailureCode.UnexpectedSingleCommandExecutionError,
+        );
+
+        expect(failure.error).toBe(unexpectedError);
+        expect(fs.existsSync(inputFilePath)).toBe(true);
+        expect(commandMocks.executeCommandSync).toHaveBeenCalledOnce();
+      });
+    });
+
+    describe('flacToMp3', () => {
+      it('returns FlacDecodeProcessFailed when the FLAC decoder exits unsuccessfully', async () => {
+        const inputFilePath = createSourceAudioFile('decoder-failure-track.flac');
+        const converter = new BearTunesConverter();
+        const commandError = new FirstPipelineCommandFailedError(
+          'FLAC decoder failed',
+          'flac',
+          1,
+          null,
+          'FLAC decoder failure details',
+        );
+
+        commandMocks.executeCommandPipeline.mockRejectedValue(commandError);
+
+        const result = await converter.flacToMp3(inputFilePath, undefined, true);
+
+        const failure = expectConverterFailure(
+          result,
+          BearTunesConverterFailureCode.FlacDecodeProcessFailed,
+        );
+
+        expect(failure.error).toBe(commandError);
+        expect(failure.error).toBeInstanceOf(FirstPipelineCommandFailedError);
+        expect(fs.existsSync(inputFilePath)).toBe(true);
+        expect(commandMocks.executeCommandPipeline).toHaveBeenCalledOnce();
+        expect(commandMocks.executeCommandSync).not.toHaveBeenCalled();
+      });
+
+      it('returns LameEncodeProcessFailed when the LAME encoder exits unsuccessfully', async () => {
+        const inputFilePath = createSourceAudioFile('encoder-failure-track.flac');
+        const converter = new BearTunesConverter();
+        const commandError = new SecondPipelineCommandFailedError(
+          'LAME encoder failed',
+          'lame',
+          1,
+          null,
+          'LAME encoder failure details',
+        );
+
+        commandMocks.executeCommandPipeline.mockRejectedValue(commandError);
+
+        const result = await converter.flacToMp3(inputFilePath, undefined, true);
+
+        const failure = expectConverterFailure(
+          result,
+          BearTunesConverterFailureCode.LameEncodeProcessFailed,
+        );
+
+        expect(failure.error).toBe(commandError);
+        expect(failure.error).toBeInstanceOf(SecondPipelineCommandFailedError);
+        expect(fs.existsSync(inputFilePath)).toBe(true);
+        expect(commandMocks.executeCommandPipeline).toHaveBeenCalledOnce();
+      });
+
+      it('returns ConversionPipelineInfrastructureFailed when pipeline execution encounters an infrastructure error', async () => {
+        const inputFilePath = createSourceAudioFile('pipeline-failure-track.flac');
+        const converter = new BearTunesConverter();
+        const commandError = new CommandPipelineInfrastructureError(
+          'Failed to start command pipeline child processes.',
+          new Error('Process creation failed'),
+        );
+
+        commandMocks.executeCommandPipeline.mockRejectedValue(commandError);
+
+        const result = await converter.flacToMp3(inputFilePath, undefined, true);
+
+        const failure = expectConverterFailure(
+          result,
+          BearTunesConverterFailureCode.ConversionPipelineInfrastructureFailed,
+        );
+
+        expect(failure.error).toBe(commandError);
+        expect(failure.error).toBeInstanceOf(
+          CommandPipelineInfrastructureError,
+        );
+        expect(fs.existsSync(inputFilePath)).toBe(true);
+        expect(commandMocks.executeCommandPipeline).toHaveBeenCalledOnce();
+      });
+
+      it('returns UnexpectedPipelineExecutionError when pipeline execution throws an unexpected error', async () => {
+        const inputFilePath = createSourceAudioFile('unexpected-pipeline-track.flac');
+        const converter = new BearTunesConverter();
+        const unexpectedError = new Error('Unexpected pipeline execution error');
+
+        commandMocks.executeCommandPipeline.mockRejectedValue(unexpectedError);
+
+        const result = await converter.flacToMp3(inputFilePath, undefined, true);
+
+        const failure = expectConverterFailure(
+          result,
+          BearTunesConverterFailureCode.UnexpectedPipelineExecutionError,
+        );
+
+        expect(failure.error).toBe(unexpectedError);
+        expect(fs.existsSync(inputFilePath)).toBe(true);
+        expect(commandMocks.executeCommandPipeline).toHaveBeenCalledOnce();
+      });
     });
   });
 });
