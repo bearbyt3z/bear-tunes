@@ -236,6 +236,27 @@ describe('BearTunesConverter', () => {
       expect(fs.readFileSync(inputFilePath, 'utf8')).toBe(sourceFileContent);
     });
 
+    it('converts an AIFF file with the .aif extension to FLAC', () => {
+      const inputFilePath = createSourceAudioFile('legacy-track.aif');
+      const outputFilePath = path.join(sourceDirectory, 'legacy-track.flac');
+      const converter = new BearTunesConverter();
+
+      const result = converter.aiffToFlac(inputFilePath);
+
+      expect(result).toMatchObject({
+        ok: true,
+        outputPath: outputFilePath,
+      });
+      expect(commandMocks.executeCommandSync).toHaveBeenCalledWith('flac', [
+        '--verify',
+        '-8',
+        '--output-name',
+        outputFilePath,
+        inputFilePath,
+      ]);
+      expect(fs.readFileSync(inputFilePath, 'utf8')).toBe(sourceFileContent);
+    });
+
     it('passes the force argument when output file overwriting is enabled', () => {
       const inputFilePath = createSourceAudioFile('overwrite-track.aiff');
       const outputFilePath = path.join(sourceDirectory, 'overwrite-track.flac');
@@ -467,6 +488,53 @@ describe('BearTunesConverter', () => {
       expect(commandMocks.executeCommandPipeline).not.toHaveBeenCalled();
     });
 
+    it('returns InvalidInputFile when the FLAC input file has an unsupported extension', async () => {
+      const inputFilePath = createSourceAudioFile('unsupported-track.wav');
+      const converter = new BearTunesConverter();
+
+      const result = await converter.flacToMp3(inputFilePath);
+
+      expectConverterFailure(
+        result,
+        BearTunesConverterFailureCode.InvalidInputFile,
+      );
+      expect(fs.readFileSync(inputFilePath, 'utf8')).toBe(sourceFileContent);
+      expect(commandMocks.executeCommandPipeline).not.toHaveBeenCalled();
+    });
+
+    it('returns InvalidInputFile when the FLAC input path points to a directory', async () => {
+      const converter = new BearTunesConverter();
+
+      const result = await converter.flacToMp3(sourceDirectory);
+
+      expectConverterFailure(
+        result,
+        BearTunesConverterFailureCode.InvalidInputFile,
+      );
+      expect(fs.statSync(sourceDirectory).isDirectory()).toBe(true);
+      expect(commandMocks.executeCommandPipeline).not.toHaveBeenCalled();
+    });
+
+    it('rejects a symbolic link used as the FLAC input file', async ({ skip }) => {
+      const actualInputFilePath = createSourceAudioFile('actual-track.flac');
+      const inputFilePath = path.join(sourceDirectory, 'linked-track.flac');
+      const converter = new BearTunesConverter();
+
+      createSymlinkOrSkip(actualInputFilePath, inputFilePath, 'file', skip);
+
+      const result = await converter.flacToMp3(inputFilePath);
+
+      expectConverterFailure(
+        result,
+        BearTunesConverterFailureCode.InvalidInputFile,
+      );
+      expect(fs.lstatSync(inputFilePath).isSymbolicLink()).toBe(true);
+      expect(fs.readFileSync(actualInputFilePath, 'utf8')).toBe(
+        sourceFileContent,
+      );
+      expect(commandMocks.executeCommandPipeline).not.toHaveBeenCalled();
+    });
+
     it('follows symbolic links in parent directory components of the AIFF input path', ({ skip }) => {
       const actualInputDirectory = path.join(temporaryDirectory, 'actual-source');
       const linkedInputDirectory = path.join(temporaryDirectory, 'linked-source');
@@ -594,6 +662,91 @@ describe('BearTunesConverter', () => {
       );
       expect(fs.existsSync(path.dirname(outputFilePath))).toBe(false);
       expect(commandMocks.executeCommandSync).not.toHaveBeenCalled();
+    });
+
+    it('uses an existing output directory for the converted FLAC file', async () => {
+      const inputFilePath = createSourceAudioFile('directory-output-track.flac');
+      const outputDirectoryPath = path.join(temporaryDirectory, 'mp3-output');
+      const outputFilePath = path.join(
+        outputDirectoryPath,
+        'directory-output-track.mp3',
+      );
+      const converter = new BearTunesConverter();
+
+      fs.mkdirSync(outputDirectoryPath);
+
+      const result = await converter.flacToMp3(
+        inputFilePath,
+        outputDirectoryPath,
+      );
+
+      expect(result).toMatchObject({
+        ok: true,
+        outputPath: outputFilePath,
+      });
+      expect(commandMocks.executeCommandPipeline).toHaveBeenCalledWith(
+        {
+          commandName: 'flac',
+          args: ['--decode', '--stdout', inputFilePath],
+        },
+        {
+          commandName: 'lame',
+          args: [
+            Mp3BitrateMode.CBR,
+            '-b320',
+            '-m',
+            Mp3ChannelMode.JointStereo,
+            LameQuality.Q1,
+            ReplayGainMode.Accurate,
+            '-',
+            outputFilePath,
+          ],
+        },
+        {
+          firstStdout: false,
+          firstStderr: true,
+          secondStdout: true,
+          secondStderr: true,
+        },
+      );
+    });
+
+    it('accepts a non-existing MP3 output file path with the expected extension', async () => {
+      const inputFilePath = createSourceAudioFile('explicit-output-track.flac');
+      const outputFilePath = path.join(sourceDirectory, 'custom-output.mp3');
+      const converter = new BearTunesConverter();
+
+      const result = await converter.flacToMp3(inputFilePath, outputFilePath);
+
+      expect(result).toMatchObject({
+        ok: true,
+        outputPath: outputFilePath,
+      });
+      expect(commandMocks.executeCommandPipeline).toHaveBeenCalledWith(
+        {
+          commandName: 'flac',
+          args: ['--decode', '--stdout', inputFilePath],
+        },
+        {
+          commandName: 'lame',
+          args: [
+            Mp3BitrateMode.CBR,
+            '-b320',
+            '-m',
+            Mp3ChannelMode.JointStereo,
+            LameQuality.Q1,
+            ReplayGainMode.Accurate,
+            '-',
+            outputFilePath,
+          ],
+        },
+        {
+          firstStdout: false,
+          firstStderr: true,
+          secondStdout: true,
+          secondStderr: true,
+        },
+      );
     });
   });
 
@@ -970,6 +1123,40 @@ describe('BearTunesConverter', () => {
 
         expect(failure.error.message).toBe(
           'Encoder process terminated by signal: SIGTERM',
+        );
+        expect(failure.encoderStdout).toBe(commandStdout.toString());
+        expect(failure.encoderStderr).toBe(commandStderr.toString());
+        expect(fs.existsSync(inputFilePath)).toBe(true);
+        expect(commandMocks.executeCommandSync).toHaveBeenCalledOnce();
+      });
+
+      it('returns EncoderProcessSignaled when the FLAC encoder exits without a status or signal', () => {
+        const inputFilePath = createSourceAudioFile('unknown-termination-track.aiff');
+        const converter = new BearTunesConverter();
+        const commandStdout = Buffer.from('FLAC encoder stdout');
+        const commandStderr = Buffer.from('FLAC encoder stderr');
+        const commandError = new CommandExecutionFailedError(
+          'FLAC encoder terminated without exit information',
+          'flac',
+          null,
+          null,
+          commandStdout,
+          commandStderr,
+        );
+
+        commandMocks.executeCommandSync.mockImplementation(() => {
+          throw commandError;
+        });
+
+        const result = converter.aiffToFlac(inputFilePath, undefined, true);
+
+        const failure = expectConverterFailure(
+          result,
+          BearTunesConverterFailureCode.EncoderProcessSignaled,
+        );
+
+        expect(failure.error.message).toBe(
+          'Encoder process terminated by signal: signal is null',
         );
         expect(failure.encoderStdout).toBe(commandStdout.toString());
         expect(failure.encoderStderr).toBe(commandStderr.toString());
