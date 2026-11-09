@@ -106,6 +106,31 @@ function expectConverterFailure(
   return result;
 }
 
+function expectLoggerWarningWithErrorCode(
+  warningContext: unknown,
+  expectedCode: string,
+): void {
+  if (
+    typeof warningContext !== 'object' ||
+    warningContext === null ||
+    !('error' in warningContext)
+  ) {
+    throw new Error('Expected logger warning context to contain an error.');
+  }
+
+  const warningError = warningContext.error;
+
+  if (
+    typeof warningError !== 'object' ||
+    warningError === null ||
+    !('code' in warningError)
+  ) {
+    throw new Error('Expected logger warning error to contain an error code.');
+  }
+
+  expect(warningError.code).toBe(expectedCode);
+}
+
 function createSymlinkOrSkip(
   targetPath: string,
   symlinkPath: string,
@@ -1110,6 +1135,112 @@ describe('BearTunesConverter', () => {
       expect(fs.existsSync(inputFilePath)).toBe(false);
       expect(commandMocks.executeCommandPipeline).toHaveBeenCalledOnce();
     });
+
+    it('logs a warning when the AIFF source file cannot be deleted after conversion', () => {
+      const inputFilePath = createSourceAudioFile('cleanup-warning-track.aiff');
+      const movedSourceFilePath = path.join(
+        temporaryDirectory,
+        'moved-cleanup-warning-track.aiff',
+      );
+      const outputFilePath = path.join(
+        sourceDirectory,
+        'cleanup-warning-track.flac',
+      );
+      const converter = new BearTunesConverter();
+      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockReturnValue(logger);
+
+      commandMocks.executeCommandSync.mockImplementation(() => {
+        fs.renameSync(inputFilePath, movedSourceFilePath);
+
+        return {
+          stdout: Buffer.from('FLAC encoder stdout'),
+          stderr: Buffer.from('FLAC encoder stderr'),
+          status: 0,
+          signal: null,
+        };
+      });
+
+      const result = converter.aiffToFlac(inputFilePath, undefined, true);
+
+      expect(result).toEqual({
+        ok: true,
+        outputPath: outputFilePath,
+        encoderStdout: 'FLAC encoder stdout',
+        encoderStderr: 'FLAC encoder stderr',
+      });
+      expect(fs.existsSync(inputFilePath)).toBe(false);
+      expect(fs.readFileSync(movedSourceFilePath, 'utf8')).toBe(
+        sourceFileContent,
+      );
+      expect(loggerWarnSpy).toHaveBeenCalledOnce();
+
+      const warningCall: unknown[] = Array.from(
+        loggerWarnSpy.mock.calls[0] ?? [],
+      );
+
+      expect(warningCall[0]).toBe(
+        `${converter.constructor.name}: Failed to delete source file: ${inputFilePath}`,
+      );
+      expectLoggerWarningWithErrorCode(warningCall[1], 'ENOENT');
+    });
+
+    it('logs a warning when the FLAC source file cannot be deleted after conversion', async () => {
+      const inputFilePath = createSourceAudioFile('cleanup-warning-track.flac');
+      const movedSourceFilePath = path.join(
+        temporaryDirectory,
+        'moved-cleanup-warning-track.flac',
+      );
+      const outputFilePath = path.join(
+        sourceDirectory,
+        'cleanup-warning-track.mp3',
+      );
+      const converter = new BearTunesConverter();
+      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockReturnValue(logger);
+
+      const pipelineResult: MockPipelineResult = {
+        first: {
+          stdout: undefined,
+          stderr: Buffer.from('FLAC decoder stderr'),
+          status: 0,
+          signal: null,
+        },
+        second: {
+          stdout: Buffer.from('LAME encoder stdout'),
+          stderr: Buffer.from('LAME encoder stderr'),
+          status: 0,
+          signal: null,
+        },
+      };
+
+      commandMocks.executeCommandPipeline.mockImplementation(() => {
+        fs.renameSync(inputFilePath, movedSourceFilePath);
+
+        return Promise.resolve(pipelineResult);
+      });
+
+      const result = await converter.flacToMp3(inputFilePath, undefined, true);
+
+      expect(result).toEqual({
+        ok: true,
+        outputPath: outputFilePath,
+        encoderStdout: 'LAME encoder stdout',
+        encoderStderr: 'LAME encoder stderr',
+      });
+      expect(fs.existsSync(inputFilePath)).toBe(false);
+      expect(fs.readFileSync(movedSourceFilePath, 'utf8')).toBe(
+        sourceFileContent,
+      );
+      expect(loggerWarnSpy).toHaveBeenCalledOnce();
+
+      const warningCall: unknown[] = Array.from(
+        loggerWarnSpy.mock.calls[0] ?? [],
+      );
+
+      expect(warningCall[0]).toBe(
+        `${converter.constructor.name}: Failed to delete source file: ${inputFilePath}`,
+      );
+      expectLoggerWarningWithErrorCode(warningCall[1], 'ENOENT');
+    });
   });
 
   describe('FLAC tag transfer', () => {
@@ -1277,6 +1408,91 @@ describe('BearTunesConverter', () => {
       });
       expect(prepareTagTransferSpy).not.toHaveBeenCalled();
       expect(commandMocks.executeCommandPipeline).toHaveBeenCalledOnce();
+    });
+
+    it('logs a warning and continues cleaning up remaining temporary files when one file cannot be deleted', async () => {
+      const inputFilePath = createSourceAudioFile('temporary-cleanup-warning.flac');
+      const firstTemporaryFilePath = path.join(
+        temporaryDirectory,
+        'temporary-cover.jpg',
+      );
+      const movedTemporaryFilePath = path.join(
+        temporaryDirectory,
+        'moved-temporary-cover.jpg',
+      );
+      const secondTemporaryFilePath = path.join(
+        temporaryDirectory,
+        'temporary-artwork.png',
+      );
+      const firstTemporaryFileContent = 'Temporary cover content';
+      const secondTemporaryFileContent = 'Temporary artwork content';
+      const converter = new BearTunesConverter({
+        transferTagEntries: true,
+      });
+      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockReturnValue(logger);
+
+      fs.writeFileSync(firstTemporaryFilePath, firstTemporaryFileContent);
+      fs.writeFileSync(secondTemporaryFilePath, secondTemporaryFileContent);
+
+      const prepareTagTransferSpy = vi
+        .spyOn(BearTunesTagger.prototype, 'prepareMp3TagTransferFromFlac')
+        .mockReturnValue({
+          lameTagOptions: ['--add-id3v2'],
+          temporaryFiles: [
+            firstTemporaryFilePath,
+            secondTemporaryFilePath,
+          ],
+        });
+
+      commandMocks.executeCommandPipeline.mockImplementation(() => {
+        fs.renameSync(firstTemporaryFilePath, movedTemporaryFilePath);
+
+        return Promise.resolve({
+          first: {
+            stdout: undefined,
+            stderr: Buffer.from('FLAC decoder stderr'),
+            status: 0,
+            signal: null,
+          },
+          second: {
+            stdout: Buffer.from('LAME encoder stdout'),
+            stderr: Buffer.from('LAME encoder stderr'),
+            status: 0,
+            signal: null,
+          },
+        });
+      });
+
+      const result = await converter.flacToMp3(inputFilePath);
+
+      expect(result).toMatchObject({
+        ok: true,
+        outputPath: path.join(
+          sourceDirectory,
+          'temporary-cleanup-warning.mp3',
+        ),
+      });
+      expect(prepareTagTransferSpy).toHaveBeenCalledOnce();
+      expect(commandMocks.executeCommandPipeline).toHaveBeenCalledOnce();
+
+      expect(fs.existsSync(firstTemporaryFilePath)).toBe(false);
+      expect(fs.readFileSync(movedTemporaryFilePath, 'utf8')).toBe(
+        firstTemporaryFileContent,
+      );
+      expect(fs.existsSync(secondTemporaryFilePath)).toBe(false);
+
+      expect(fs.existsSync(inputFilePath)).toBe(true);
+
+      expect(loggerWarnSpy).toHaveBeenCalledOnce();
+
+      const warningCall: unknown[] = Array.from(
+        loggerWarnSpy.mock.calls[0] ?? [],
+      );
+
+      expect(warningCall[0]).toBe(
+        `${converter.constructor.name}: Failed to delete temporary tag transfer file: ${firstTemporaryFilePath}`,
+      );
+      expectLoggerWarningWithErrorCode(warningCall[1], 'ENOENT');
     });
   });
 
