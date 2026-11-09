@@ -1,4 +1,5 @@
 import * as fs from 'node:fs';
+import * as net from 'node:net';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -612,6 +613,90 @@ describe('BearTunesConverter', () => {
       ]);
     });
 
+    it('accepts an existing output file path with the expected extension when overwriting is enabled', () => {
+      const inputFilePath = createSourceAudioFile('existing-explicit-output-track.aiff');
+      const outputFilePath = path.join(
+        sourceDirectory,
+        'custom-existing-output.flac',
+      );
+      const existingOutputContent = 'Existing FLAC output';
+      const convertedOutputContent = 'Converted FLAC output';
+      const converter = new BearTunesConverter({
+        forceOverwriteOutputFile: true,
+      });
+
+      fs.writeFileSync(outputFilePath, existingOutputContent);
+
+      commandMocks.executeCommandSync.mockImplementation(() => {
+        fs.writeFileSync(outputFilePath, convertedOutputContent);
+
+        return {
+          stdout: Buffer.from('FLAC encoder stdout'),
+          stderr: Buffer.from('FLAC encoder stderr'),
+          status: 0,
+          signal: null,
+        };
+      });
+
+      const result = converter.aiffToFlac(inputFilePath, outputFilePath);
+
+      expect(result).toMatchObject({
+        ok: true,
+        outputPath: outputFilePath,
+      });
+      expect(commandMocks.executeCommandSync).toHaveBeenCalledWith('flac', [
+        '--verify',
+        '-8',
+        '--force',
+        '--output-name',
+        outputFilePath,
+        inputFilePath,
+      ]);
+      expect(fs.readFileSync(outputFilePath, 'utf8')).toBe(
+        convertedOutputContent,
+      );
+    });
+
+    it('returns InvalidOutputPath when the output path points to a Unix domain socket', async ({ skip }) => {
+      if (process.platform === 'win32') {
+        skip('Unix domain sockets are not supported on Windows.');
+        return;
+      }
+
+      const inputFilePath = createSourceAudioFile('socket-output-track.aiff');
+      const socketPath = path.join(temporaryDirectory, 'output.sock');
+      const converter = new BearTunesConverter();
+      const server = net.createServer();
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          server.once('error', reject);
+          server.listen(socketPath, () => resolve());
+        });
+
+        const result = converter.aiffToFlac(inputFilePath, socketPath);
+
+        const failure = expectConverterFailure(
+          result,
+          BearTunesConverterFailureCode.InvalidOutputPath,
+        );
+
+        expect(failure.error.message).toBe(
+          `${converter.constructor.name}: Specified output path ${socketPath} is neither a file nor directory`,
+        );
+        expect(fs.lstatSync(socketPath).isSocket()).toBe(true);
+        expect(commandMocks.executeCommandSync).not.toHaveBeenCalled();
+      } finally {
+        if (server.listening) {
+          await new Promise<void>((resolve) => {
+            server.close(() => resolve());
+          });
+        }
+
+        fs.rmSync(socketPath, { force: true });
+      }
+    });
+
     it('returns InvalidOutputFileExtension when an existing output file has an unsupported extension', () => {
       const inputFilePath = createSourceAudioFile('invalid-output-track.aiff');
       const outputFilePath = path.join(sourceDirectory, 'custom-output.wav');
@@ -661,6 +746,37 @@ describe('BearTunesConverter', () => {
         BearTunesConverterFailureCode.OutputPathAccessError,
       );
       expect(fs.existsSync(path.dirname(outputFilePath))).toBe(false);
+      expect(commandMocks.executeCommandSync).not.toHaveBeenCalled();
+    });
+
+    it('returns OutputPathAccessError when the output path parent is a regular file', () => {
+      const inputFilePath = createSourceAudioFile('invalid-parent-track.aiff');
+      const outputParentFilePath = path.join(
+        temporaryDirectory,
+        'output-parent-file',
+      );
+      const outputFilePath = path.join(
+        outputParentFilePath,
+        'track.flac',
+      );
+      const outputParentFileContent = 'Output parent is a regular file';
+      const converter = new BearTunesConverter();
+
+      fs.writeFileSync(outputParentFilePath, outputParentFileContent);
+
+      const result = converter.aiffToFlac(inputFilePath, outputFilePath);
+
+      const failure = expectConverterFailure(
+        result,
+        BearTunesConverterFailureCode.OutputPathAccessError,
+      );
+
+      expect(failure.error.message).toBe(
+        `${converter.constructor.name}: Cannot access output path ${outputFilePath}`,
+      );
+      expect(fs.readFileSync(outputParentFilePath, 'utf8')).toBe(
+        outputParentFileContent,
+      );
       expect(commandMocks.executeCommandSync).not.toHaveBeenCalled();
     });
 
@@ -918,6 +1034,48 @@ describe('BearTunesConverter', () => {
       expect(fs.statSync(outputFilePath).isDirectory()).toBe(true);
       expect(commandMocks.executeCommandSync).not.toHaveBeenCalled();
     });
+
+    it('returns OutputPathAccessError when the resolved output file cannot be accessed', ({ skip }) => {
+      if (process.platform === 'win32' || process.getuid?.() === 0) {
+        skip(
+          'Changing directory permissions cannot reliably restrict access in this environment.',
+        );
+        return;
+      }
+
+      const inputFilePath = createSourceAudioFile('inaccessible-output-track.aiff');
+      const outputDirectoryPath = path.join(
+        temporaryDirectory,
+        'inaccessible-output',
+      );
+      const outputFilePath = path.join(
+        outputDirectoryPath,
+        'inaccessible-output-track.flac',
+      );
+      const converter = new BearTunesConverter();
+
+      fs.mkdirSync(outputDirectoryPath);
+      fs.chmodSync(outputDirectoryPath, 0o000);
+
+      try {
+        const result = converter.aiffToFlac(
+          inputFilePath,
+          outputDirectoryPath,
+        );
+
+        const failure = expectConverterFailure(
+          result,
+          BearTunesConverterFailureCode.OutputPathAccessError,
+        );
+
+        expect(failure.error.message).toBe(
+          `${converter.constructor.name}: Cannot access output path ${outputFilePath}`,
+        );
+        expect(commandMocks.executeCommandSync).not.toHaveBeenCalled();
+      } finally {
+        fs.chmodSync(outputDirectoryPath, 0o700);
+      }
+    });
   });
 
   describe('symbolic link handling', () => {
@@ -981,6 +1139,48 @@ describe('BearTunesConverter', () => {
       expectConverterFailure(
         result,
         BearTunesConverterFailureCode.InvalidOutputPath,
+      );
+      expect(fs.lstatSync(linkedOutputFilePath).isSymbolicLink()).toBe(true);
+      expect(commandMocks.executeCommandSync).not.toHaveBeenCalled();
+    });
+
+    it('returns OutputPathAccessError when a symbolic link target cannot be accessed', ({ skip }) => {
+      const inputFilePath = createSourceAudioFile('inaccessible-link-track.aiff');
+      const targetParentFilePath = path.join(
+        temporaryDirectory,
+        'symbolic-link-target-parent',
+      );
+      const symbolicLinkTargetPath = path.join(
+        targetParentFilePath,
+        'unreachable.flac',
+      );
+      const linkedOutputFilePath = path.join(
+        temporaryDirectory,
+        'inaccessible-output-link.flac',
+      );
+      const converter = new BearTunesConverter();
+
+      fs.writeFileSync(targetParentFilePath, 'Not a directory');
+
+      createSymlinkOrSkip(
+        symbolicLinkTargetPath,
+        linkedOutputFilePath,
+        'file',
+        skip,
+      );
+
+      const result = converter.aiffToFlac(
+        inputFilePath,
+        linkedOutputFilePath,
+      );
+
+      const failure = expectConverterFailure(
+        result,
+        BearTunesConverterFailureCode.OutputPathAccessError,
+      );
+
+      expect(failure.error.message).toBe(
+        `${converter.constructor.name}: Cannot access symbolic link target at ${linkedOutputFilePath}`,
       );
       expect(fs.lstatSync(linkedOutputFilePath).isSymbolicLink()).toBe(true);
       expect(commandMocks.executeCommandSync).not.toHaveBeenCalled();
@@ -1758,6 +1958,30 @@ describe('BearTunesConverter', () => {
 
       expect(result.ok).toBe(true);
       expect(loggerInfoSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns UnexpectedPreparationError when verbose logging throws an error', async () => {
+      const inputFilePath = createSourceAudioFile('verbose-error-track.flac');
+      const unexpectedError = new Error('Unexpected logger error');
+      const converter = new BearTunesConverter({
+        verbose: true,
+      });
+      const loggerInfoSpy = vi
+        .spyOn(logger, 'info')
+        .mockImplementation(() => {
+          throw unexpectedError;
+        });
+
+      const result = await converter.flacToMp3(inputFilePath);
+
+      const failure = expectConverterFailure(
+        result,
+        BearTunesConverterFailureCode.UnexpectedPreparationError,
+      );
+
+      expect(failure.error).toBe(unexpectedError);
+      expect(loggerInfoSpy).toHaveBeenCalledOnce();
+      expect(commandMocks.executeCommandPipeline).not.toHaveBeenCalled();
     });
   });
 });
