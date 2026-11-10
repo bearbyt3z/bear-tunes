@@ -160,24 +160,24 @@ export type BearTunesTaggerResult =
   | BearTunesTaggerFailureResult;
 
 /**
- * Configuration controlling metadata resolution and tag writing performed by
- * BearTunesTagger.
+ * Configuration options for metadata resolution, tag reading, and tag writing
+ * performed by BearTunesTagger.
  */
 export interface BearTunesTaggerOptions {
   /**
-   * Data provider used to search remote track candidates and resolve canonical
+   * Data provider used to search for remote track candidates and retrieve
    * metadata for selected tracks.
    */
   dataProvider: DataProvider;
 
   /**
-   * Path to the eyeD3 display-plugin pattern file used while reading MP3 tags.
+   * Path to the pattern file defining the metadata fields extracted from MP3 files.
    */
   eyeD3DisplayPluginPatternFile: string;
 
   /**
-   * Maximum accepted duration difference, in milliseconds, between local and
-   * remote track metadata before user confirmation is requested.
+   * Maximum accepted absolute duration difference, in milliseconds, between
+   * local and remote track metadata before user confirmation is requested.
    */
   lengthDifferenceAcceptedMs: number;
 
