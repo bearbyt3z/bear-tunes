@@ -736,8 +736,10 @@ export class BearTunesTagger {
       || displayPluginOutput.status !== 0
       || displayPluginOutput.stderr
     ) {
+      const stderrMessage = getFirstLine(displayPluginOutput.stderr);
+
       const readerErrorMessage = displayPluginOutput.error?.message
-        ?? getFirstLine(displayPluginOutput.stderr)
+        ?? (stderrMessage === '' ? undefined : stderrMessage)
         ?? `ID3 reader exited with status ${String(displayPluginOutput.status)}`;
 
       throw new TaggerGuardError(
@@ -985,8 +987,10 @@ export class BearTunesTagger {
       || metaflacResult.status !== 0
       || metaflacResult.stderr // TODO: Verify whether metaflac can write non-error warnings to stderr on success.
     ) {
+      const stderrMessage = getFirstLine(metaflacResult.stderr);
+
       const metaflacErrorMessage = metaflacResult.error?.message
-        ?? getFirstLine(metaflacResult.stderr)
+        ?? (stderrMessage === '' ? undefined : stderrMessage)
         ?? `metaflac exited with status ${String(metaflacResult.status)}`;
 
       throw new TaggerGuardError(
