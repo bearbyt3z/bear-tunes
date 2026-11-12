@@ -4,7 +4,14 @@ import * as path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PYTHON_EXECUTABLE } from '#config';
+import {
+  EYED3_EXECUTABLE,
+  PYTHON_EXECUTABLE,
+  USER_AGENT_CACHE_FILE,
+} from '#config';
+import logger from '#logger';
+
+import type { TrackInfo } from '#shared-types';
 import {
   BearTunesTagger,
   BearTunesTaggerFailureCode,
@@ -23,10 +30,36 @@ interface MockSpawnSyncResult {
   error?: Error;
 }
 
+interface MockCommandOutput {
+  stdout: Buffer | undefined;
+  stderr: Buffer | undefined;
+  status: number;
+  signal: NodeJS.Signals | null;
+}
+
+interface MockDownloadImageOptions {
+  outputFilePath?: string;
+  referer?: URL;
+}
+
 type SkipTest = (message?: string) => void;
 
 const childProcessMocks = vi.hoisted(() => ({
   spawnSync: vi.fn(),
+}));
+
+const taggerToolMocks = vi.hoisted(() => ({
+  executeCommandSync: vi.fn<
+    (commandName: string, args: readonly string[]) => MockCommandOutput
+  >(),
+  downloadImage: vi.fn<
+    (
+      imageUrl: URL,
+      userAgentCacheFile: string,
+      options?: MockDownloadImageOptions,
+    ) => Promise<string>
+  >(),
+  isSupportedArtworkFile: vi.fn<(imagePath: string) => Promise<boolean>>(),
 }));
 
 vi.mock('node:child_process', async (importOriginal) => {
@@ -35,6 +68,17 @@ vi.mock('node:child_process', async (importOriginal) => {
   return {
     ...actual,
     spawnSync: childProcessMocks.spawnSync,
+  };
+});
+
+vi.mock('#tools', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#tools')>();
+
+  return {
+    ...actual,
+    executeCommandSync: taggerToolMocks.executeCommandSync,
+    downloadImage: taggerToolMocks.downloadImage,
+    isSupportedArtworkFile: taggerToolMocks.isSupportedArtworkFile,
   };
 });
 
@@ -74,6 +118,59 @@ function createSpawnSyncResult(
     status: options.status !== undefined ? options.status : 0,
     ...(options.error ? { error: options.error } : {}),
   };
+}
+
+function createMockCommandOutput(stdout = 'command output'): MockCommandOutput {
+  return {
+    stdout: Buffer.from(stdout),
+    stderr: Buffer.from(''),
+    status: 0,
+    signal: null,
+  };
+}
+
+function createTrackInfo(overrides: Partial<TrackInfo> = {}): TrackInfo {
+  return {
+    artists: ['Artist One', 'Artist Two'],
+    title: 'Example Track',
+    released: new Date('2024-05-18'),
+    year: 2024,
+    genre: 'House',
+    subgenre: 'Deep House',
+    bpm: 124,
+    key: 'A Minor',
+    isrc: 'GBABC2400001',
+    url: new URL('https://example.com/tracks/example-track'),
+    album: {
+      title: 'Example Album',
+      artists: ['Album Artist'],
+      trackNumber: 3,
+      trackTotal: 12,
+      catalogNumber: 'CAT-001',
+    },
+    details: { durationMs: 245000 },
+    ...overrides,
+  };
+}
+
+function mockSuccessfulArtworkDownloads(): string[] {
+  const downloadedPaths: string[] = [];
+
+  taggerToolMocks.downloadImage.mockImplementation((imageUrl) => {
+    const extension = path.extname(imageUrl.pathname) || '.png';
+    const imagePath = path.join(
+      temporaryDirectory,
+      `downloaded-artwork-${downloadedPaths.length}${extension}`,
+    );
+
+    fs.writeFileSync(imagePath, 'Temporary artwork content');
+    downloadedPaths.push(imagePath);
+
+    return Promise.resolve(imagePath);
+  });
+  taggerToolMocks.isSupportedArtworkFile.mockResolvedValue(true);
+
+  return downloadedPaths;
 }
 
 function mockSpawnSyncResults(
@@ -198,9 +295,23 @@ describe('BearTunesTagger', () => {
     fs.mkdirSync(sourceDirectory);
 
     childProcessMocks.spawnSync.mockReset();
+
+    // Silence logger output while keeping logger calls available for assertions.
+    vi.spyOn(logger, 'debug').mockReturnValue(logger);
+    vi.spyOn(logger, 'info').mockReturnValue(logger);
+    vi.spyOn(logger, 'warn').mockReturnValue(logger);
+    vi.spyOn(logger, 'error').mockReturnValue(logger);
+
+    taggerToolMocks.executeCommandSync.mockReset();
+    taggerToolMocks.executeCommandSync.mockImplementation(() =>
+      createMockCommandOutput(),
+    );
+    taggerToolMocks.downloadImage.mockReset();
+    taggerToolMocks.isSupportedArtworkFile.mockReset();
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     if (temporaryDirectory.length > 0) {
       fs.rmSync(temporaryDirectory, { recursive: true, force: true });
     }
@@ -558,6 +669,419 @@ describe('BearTunesTagger', () => {
             expect(spawnSyncMock).toHaveBeenCalledTimes(2);
           },
         );
+      });
+    });
+  });
+
+  describe('saveTag', () => {
+    describe('input validation', () => {
+      it('returns InputFileAccessError when the input file does not exist', async () => {
+        const trackPath = path.join(sourceDirectory, 'missing-track.mp3');
+        const tagger = new BearTunesTagger();
+
+        const result = await tagger.saveTag(trackPath, createTrackInfo());
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.InputFileAccessError,
+        );
+        expect(taggerToolMocks.executeCommandSync).not.toHaveBeenCalled();
+        expect(taggerToolMocks.downloadImage).not.toHaveBeenCalled();
+      });
+
+      it('returns InputFileAccessError when the input path points to a directory', async () => {
+        const trackPath = path.join(sourceDirectory, 'audio-directory.mp3');
+        fs.mkdirSync(trackPath);
+        const tagger = new BearTunesTagger();
+
+        const result = await tagger.saveTag(trackPath, createTrackInfo());
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.InputFileAccessError,
+        );
+        expect(taggerToolMocks.executeCommandSync).not.toHaveBeenCalled();
+        expect(taggerToolMocks.downloadImage).not.toHaveBeenCalled();
+      });
+
+      const unsupportedFormatCases: [string, string][] = [
+        ['AIFF', 'example-track.aiff'],
+        ['unrecognized', 'example-track.bin'],
+      ];
+
+      it.each(unsupportedFormatCases)(
+        'returns UnsupportedAudioFileType for %s files',
+        async (_label, filename) => {
+          const trackPath = createSourceAudioFile(filename);
+          const tagger = new BearTunesTagger();
+
+          const result = await tagger.saveTag(trackPath, createTrackInfo());
+
+          expectTaggerFailure(
+            result,
+            BearTunesTaggerFailureCode.UnsupportedAudioFileType,
+          );
+          expect(taggerToolMocks.executeCommandSync).not.toHaveBeenCalled();
+          expect(taggerToolMocks.downloadImage).not.toHaveBeenCalled();
+        },
+      );
+    });
+
+    describe('MP3 files', () => {
+      describe('successful writing', () => {
+        it('writes ID3v2 and ID3v1 tags and returns the supplied track metadata', async () => {
+          const trackPath = createSourceAudioFile('example-track.mp3');
+          const trackInfo = createTrackInfo();
+          const tagger = new BearTunesTagger();
+
+          const result = await tagger.saveTag(trackPath, trackInfo);
+
+          expect(expectTaggerSuccess(result).trackInfo).toBe(trackInfo);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledTimes(3);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenNthCalledWith(
+            1,
+            EYED3_EXECUTABLE,
+            ['--v2', '--to-v2.4', '--remove-all-images', trackPath],
+          );
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenNthCalledWith(
+            2,
+            EYED3_EXECUTABLE,
+            expect.arrayContaining([
+              '--v2',
+              '--to-v2.4',
+              '--artist',
+              'Artist One, Artist Two',
+              '--text-frame',
+              'TIT2:Example Track',
+              '--text-frame',
+              'TALB:Example Album',
+              '--text-frame',
+              'TRCK:3/12',
+              trackPath,
+            ]),
+          );
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenNthCalledWith(
+            3,
+            EYED3_EXECUTABLE,
+            expect.arrayContaining([
+              '--v2',
+              '--to-v1.1',
+              '--artist',
+              'Artist One, Artist Two',
+              '--text-frame',
+              'TIT2:Example Track',
+              trackPath,
+            ]),
+          );
+        });
+
+        it('warns about missing basic identification data but still writes partial metadata', async () => {
+          const trackPath = createSourceAudioFile('partial-metadata-track.mp3');
+          const trackInfo: TrackInfo = { genre: 'House' };
+          const tagger = new BearTunesTagger();
+
+          const result = await tagger.saveTag(trackPath, trackInfo);
+
+          expect(expectTaggerSuccess(result).trackInfo).toBe(trackInfo);
+          expect(logger.warn).toHaveBeenCalledWith(
+            'Saving tag with missing basic identification data',
+            expect.objectContaining({ trackPath }),
+          );
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledTimes(3);
+        });
+
+        it('downloads, validates, embeds, and removes all available artwork files', async () => {
+          const trackPath = createSourceAudioFile('artwork-track.mp3');
+          const trackUrl = new URL('https://example.com/tracks/artwork-track');
+          const albumUrl = new URL('https://example.com/albums/example-album');
+          const publisherUrl = new URL('https://example.com/labels/example-label');
+          const publisherLogotypeUrl = new URL('https://images.example.com/label.png');
+          const albumArtworkUrl = new URL('https://images.example.com/cover.jpg');
+          const waveformUrl = new URL('https://images.example.com/waveform.png');
+          const trackInfo = createTrackInfo({
+            url: trackUrl,
+            album: {
+              title: 'Example Album',
+              artists: ['Album Artist'],
+              trackNumber: 3,
+              trackTotal: 12,
+              url: albumUrl,
+              artwork: albumArtworkUrl,
+            },
+            publisher: {
+              name: 'Example Label',
+              url: publisherUrl,
+              logotype: publisherLogotypeUrl,
+            },
+            waveform: waveformUrl,
+          });
+          const downloadedPaths = mockSuccessfulArtworkDownloads();
+          const tagger = new BearTunesTagger();
+
+          const result = await tagger.saveTag(trackPath, trackInfo);
+
+          expect(expectTaggerSuccess(result).trackInfo).toBe(trackInfo);
+          expect(taggerToolMocks.downloadImage).toHaveBeenCalledTimes(3);
+          expect(taggerToolMocks.downloadImage).toHaveBeenNthCalledWith(
+            1,
+            publisherLogotypeUrl,
+            USER_AGENT_CACHE_FILE,
+            { referer: publisherUrl },
+          );
+          expect(taggerToolMocks.downloadImage).toHaveBeenNthCalledWith(
+            2,
+            albumArtworkUrl,
+            USER_AGENT_CACHE_FILE,
+            { referer: albumUrl },
+          );
+          expect(taggerToolMocks.downloadImage).toHaveBeenNthCalledWith(
+            3,
+            waveformUrl,
+            USER_AGENT_CACHE_FILE,
+            { referer: trackUrl },
+          );
+          expect(taggerToolMocks.isSupportedArtworkFile).toHaveBeenCalledTimes(3);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledTimes(3);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenNthCalledWith(
+            2,
+            EYED3_EXECUTABLE,
+            expect.arrayContaining([
+              '--add-image',
+              `${downloadedPaths[1]}:FRONT_COVER:Front Cover`,
+              '--add-image',
+              `${downloadedPaths[2]}:BRIGHT_COLORED_FISH:Waveform`,
+              '--add-image',
+              `${downloadedPaths[0]}:PUBLISHER_LOGO:Publisher Logotype`,
+              trackPath,
+            ]),
+          );
+          expect(downloadedPaths).toHaveLength(3);
+          for (const artworkPath of downloadedPaths) {
+            expect(fs.existsSync(artworkPath)).toBe(false);
+          }
+        });
+      });
+
+      describe('writer execution errors', () => {
+        const writerFailureCases: [string, number][] = [
+          ['removing existing ID3v2 images', 1],
+          ['writing ID3v2 tags', 2],
+          ['writing ID3v1 tags', 3],
+        ];
+
+        it.each(writerFailureCases)(
+          'returns EyeD3TagWriteExecutionFailed when %s fails',
+          async (_scenario, failingCall) => {
+            const trackPath = createSourceAudioFile('writer-error-track.mp3');
+            const tagger = new BearTunesTagger();
+            const writeError = new Error('eyeD3 command failed');
+            let callCount = 0;
+
+            taggerToolMocks.executeCommandSync.mockImplementation(() => {
+              callCount += 1;
+              if (callCount === failingCall) {
+                throw writeError;
+              }
+              return createMockCommandOutput();
+            });
+
+            const result = await tagger.saveTag(trackPath, createTrackInfo());
+
+            const failure = expectTaggerFailure(
+              result,
+              BearTunesTaggerFailureCode.EyeD3TagWriteExecutionFailed,
+            );
+            expect(failure.error.message).toContain(
+              'Cannot save tag to MP3 file',
+            );
+            expect(failure.error.cause).toBe(writeError);
+            expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledTimes(
+              failingCall,
+            );
+          },
+        );
+      });
+
+      describe('artwork errors', () => {
+        it('returns ArtworkDownloadFailed when an artwork URL cannot be downloaded', async () => {
+          const trackPath = createSourceAudioFile('artwork-download-error.mp3');
+          const artworkUrl = new URL('https://images.example.com/cover.jpg');
+          const tagger = new BearTunesTagger();
+          taggerToolMocks.downloadImage.mockRejectedValue(
+            new Error('Image server unavailable'),
+          );
+
+          const result = await tagger.saveTag(
+            trackPath,
+            createTrackInfo({
+              album: { title: 'Example Album', artwork: artworkUrl },
+            }),
+          );
+
+          const failure = expectTaggerFailure(
+            result,
+            BearTunesTaggerFailureCode.ArtworkDownloadFailed,
+          );
+          expect(failure.error.message).toContain('album artwork');
+          expect(taggerToolMocks.executeCommandSync).not.toHaveBeenCalled();
+        });
+
+        it('returns ArtworkValidationFailed and removes the downloaded file when artwork is unsupported', async () => {
+          const trackPath = createSourceAudioFile('artwork-validation-error.mp3');
+          const artworkPath = path.join(temporaryDirectory, 'unsupported-cover.webp');
+          fs.writeFileSync(artworkPath, 'Unsupported artwork content');
+          const artworkUrl = new URL('https://images.example.com/cover.webp');
+          const tagger = new BearTunesTagger();
+          taggerToolMocks.downloadImage.mockResolvedValue(artworkPath);
+          taggerToolMocks.isSupportedArtworkFile.mockResolvedValue(false);
+
+          const result = await tagger.saveTag(
+            trackPath,
+            createTrackInfo({
+              album: { title: 'Example Album', artwork: artworkUrl },
+            }),
+          );
+
+          const failure = expectTaggerFailure(
+            result,
+            BearTunesTaggerFailureCode.ArtworkValidationFailed,
+          );
+          expect(failure.error.message).toContain(
+            'Unsupported front cover artwork',
+          );
+          expect(taggerToolMocks.executeCommandSync).not.toHaveBeenCalled();
+          expect(fs.existsSync(artworkPath)).toBe(false);
+        });
+
+        it('removes downloaded artwork when the subsequent tag-writing command fails', async () => {
+          const trackPath = createSourceAudioFile('artwork-write-error.mp3');
+          const artworkPath = path.join(temporaryDirectory, 'temporary-cover.jpg');
+          fs.writeFileSync(artworkPath, 'Temporary artwork content');
+          const artworkUrl = new URL('https://images.example.com/cover.jpg');
+          const tagger = new BearTunesTagger();
+          taggerToolMocks.downloadImage.mockResolvedValue(artworkPath);
+          taggerToolMocks.isSupportedArtworkFile.mockResolvedValue(true);
+          taggerToolMocks.executeCommandSync.mockImplementation(() => {
+            throw new Error('eyeD3 command failed');
+          });
+
+          const result = await tagger.saveTag(
+            trackPath,
+            createTrackInfo({
+              album: { title: 'Example Album', artwork: artworkUrl },
+            }),
+          );
+
+          expectTaggerFailure(
+            result,
+            BearTunesTaggerFailureCode.EyeD3TagWriteExecutionFailed,
+          );
+          expect(fs.existsSync(artworkPath)).toBe(false);
+        });
+      });
+    });
+
+    describe('FLAC files', () => {
+      describe('successful writing', () => {
+        it('writes the supplied metadata and returns the original TrackInfo', async () => {
+          const trackPath = createSourceAudioFile('example-track.flac');
+          const trackInfo = createTrackInfo();
+          const tagger = new BearTunesTagger();
+
+          const result = await tagger.saveTag(trackPath, trackInfo);
+
+          expect(expectTaggerSuccess(result).trackInfo).toBe(trackInfo);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledOnce();
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledWith(
+            'metaflac',
+            expect.arrayContaining([
+              '--preserve-modtime',
+              '--dont-use-padding',
+              '--remove-tag=ARTIST',
+              '--set-tag=ARTIST=Artist One, Artist Two',
+              '--remove-tag=TITLE',
+              '--set-tag=TITLE=Example Track',
+              '--remove-tag=ALBUM',
+              '--set-tag=ALBUM=Example Album',
+              '--remove-tag=TRACKNUMBER',
+              '--set-tag=TRACKNUMBER=3',
+              trackPath,
+            ]),
+          );
+        });
+
+        it('embeds FLAC front cover artwork and removes the downloaded file', async () => {
+          const trackPath = createSourceAudioFile('flac-artwork-track.flac');
+          const albumArtworkUrl = new URL('https://images.example.com/cover.png');
+          const albumUrl = new URL('https://example.com/albums/example-album');
+          const trackInfo = createTrackInfo({
+            album: {
+              title: 'Example Album',
+              url: albumUrl,
+              artwork: albumArtworkUrl,
+            },
+          });
+          const downloadedPaths = mockSuccessfulArtworkDownloads();
+          const tagger = new BearTunesTagger();
+
+          const result = await tagger.saveTag(trackPath, trackInfo);
+
+          expect(expectTaggerSuccess(result).trackInfo).toBe(trackInfo);
+          expect(taggerToolMocks.downloadImage).toHaveBeenCalledOnce();
+          expect(taggerToolMocks.downloadImage).toHaveBeenCalledWith(
+            albumArtworkUrl,
+            USER_AGENT_CACHE_FILE,
+            { referer: albumUrl },
+          );
+          expect(taggerToolMocks.isSupportedArtworkFile).toHaveBeenCalledOnce();
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledTimes(2);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenNthCalledWith(
+            1,
+            'metaflac',
+            expect.arrayContaining([
+              '--preserve-modtime',
+              '--dont-use-padding',
+              '--remove',
+              '--block-type=PICTURE,PADDING',
+              trackPath,
+            ]),
+          );
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenNthCalledWith(
+            2,
+            'metaflac',
+            expect.arrayContaining([
+              '--preserve-modtime',
+              '--dont-use-padding',
+              `--import-picture-from=3||Front Cover||${downloadedPaths[0]}`,
+              trackPath,
+            ]),
+          );
+          expect(downloadedPaths).toHaveLength(1);
+          expect(fs.existsSync(downloadedPaths[0])).toBe(false);
+        });
+      });
+
+      describe('writer execution errors', () => {
+        it('returns MetaflacTagWriteExecutionFailed when the writer command fails', async () => {
+          const trackPath = createSourceAudioFile('writer-error-track.flac');
+          const tagger = new BearTunesTagger();
+          const writeError = new Error('metaflac command failed');
+          taggerToolMocks.executeCommandSync.mockImplementation(() => {
+            throw writeError;
+          });
+
+          const result = await tagger.saveTag(trackPath, createTrackInfo());
+
+          const failure = expectTaggerFailure(
+            result,
+            BearTunesTaggerFailureCode.MetaflacTagWriteExecutionFailed,
+          );
+          expect(failure.error.message).toContain(
+            'Cannot save tag to FLAC file',
+          );
+          expect(failure.error.cause).toBe(writeError);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledOnce();
+        });
       });
     });
   });
