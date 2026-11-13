@@ -1639,4 +1639,87 @@ describe('BearTunesTagger', () => {
       });
     });
   });
+
+  describe('processTrack', () => {
+    describe('track resolution', () => {
+      it('returns the resolution failure without attempting to write tags', async () => {
+        const trackPath = createSourceAudioFile('resolution-error-track.mp3');
+        const tagger = new BearTunesTagger();
+        const resolutionFailure: BearTunesTaggerFailureResult = {
+          ok: false,
+          failureCode: BearTunesTaggerFailureCode.TrackMatchFailed,
+          error: new Error('Track matching failed'),
+        };
+        const resolveTrackInfoSpy = vi
+          .spyOn(tagger, 'resolveTrackInfo')
+          .mockResolvedValue(resolutionFailure);
+        const saveTagSpy = vi.spyOn(tagger, 'saveTag');
+
+        const result = await tagger.processTrack(trackPath);
+
+        expect(result).toBe(resolutionFailure);
+        expect(resolveTrackInfoSpy).toHaveBeenCalledOnce();
+        expect(resolveTrackInfoSpy).toHaveBeenCalledWith(trackPath);
+        expect(saveTagSpy).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('tag writing', () => {
+      it('passes resolved track metadata to saveTag and returns its result', async () => {
+        const trackPath = createSourceAudioFile('successful-track.mp3');
+        const trackInfo = createTrackInfo();
+        const tagger = new BearTunesTagger();
+        const resolutionSuccess: BearTunesTaggerSuccessResult = {
+          ok: true,
+          trackInfo,
+        };
+        const saveResult: BearTunesTaggerSuccessResult = {
+          ok: true,
+          trackInfo,
+        };
+        const resolveTrackInfoSpy = vi
+          .spyOn(tagger, 'resolveTrackInfo')
+          .mockResolvedValue(resolutionSuccess);
+        const saveTagSpy = vi
+          .spyOn(tagger, 'saveTag')
+          .mockResolvedValue(saveResult);
+
+        const result = await tagger.processTrack(trackPath);
+
+        expect(result).toBe(saveResult);
+        expect(resolveTrackInfoSpy).toHaveBeenCalledOnce();
+        expect(resolveTrackInfoSpy).toHaveBeenCalledWith(trackPath);
+        expect(saveTagSpy).toHaveBeenCalledOnce();
+        expect(saveTagSpy).toHaveBeenCalledWith(trackPath, trackInfo);
+      });
+
+      it('returns the tag writing failure when saving tags fails', async () => {
+        const trackPath = createSourceAudioFile('write-error-track.mp3');
+        const trackInfo = createTrackInfo();
+        const tagger = new BearTunesTagger();
+        const resolutionSuccess: BearTunesTaggerSuccessResult = {
+          ok: true,
+          trackInfo,
+        };
+        const saveFailure: BearTunesTaggerFailureResult = {
+          ok: false,
+          failureCode: BearTunesTaggerFailureCode.EyeD3TagWriteExecutionFailed,
+          error: new Error('MP3 tag writing failed'),
+        };
+        const resolveTrackInfoSpy = vi
+          .spyOn(tagger, 'resolveTrackInfo')
+          .mockResolvedValue(resolutionSuccess);
+        const saveTagSpy = vi
+          .spyOn(tagger, 'saveTag')
+          .mockResolvedValue(saveFailure);
+
+        const result = await tagger.processTrack(trackPath);
+
+        expect(result).toBe(saveFailure);
+        expect(resolveTrackInfoSpy).toHaveBeenCalledOnce();
+        expect(saveTagSpy).toHaveBeenCalledOnce();
+        expect(saveTagSpy).toHaveBeenCalledWith(trackPath, trackInfo);
+      });
+    });
+  });
 });
