@@ -1439,7 +1439,7 @@ describe('BearTunesTagger', () => {
 
         dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
         dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
-        taggerToolMocks.prompt.mockResolvedValue('yes');
+        taggerToolMocks.prompt.mockResolvedValue('y');
 
         const tagger = new BearTunesTagger({ dataProvider });
         mockSuccessfulMp3TagRead(createLocalTrackInfo());
@@ -1460,7 +1460,7 @@ describe('BearTunesTagger', () => {
         const dataProvider = createMockDataProvider();
 
         dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
-        taggerToolMocks.prompt.mockResolvedValue('no');
+        taggerToolMocks.prompt.mockResolvedValue('n');
 
         const tagger = new BearTunesTagger({ dataProvider });
         mockSuccessfulMp3TagRead(createLocalTrackInfo());
@@ -1520,7 +1520,7 @@ describe('BearTunesTagger', () => {
 
         dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
         dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
-        taggerToolMocks.prompt.mockResolvedValue('yes');
+        taggerToolMocks.prompt.mockResolvedValue('y');
 
         const tagger = new BearTunesTagger({ dataProvider });
         mockSuccessfulMp3TagRead(createLocalTrackInfo());
@@ -1553,7 +1553,7 @@ describe('BearTunesTagger', () => {
 
         dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
         dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
-        taggerToolMocks.prompt.mockResolvedValue('no');
+        taggerToolMocks.prompt.mockResolvedValue('n');
 
         const tagger = new BearTunesTagger({ dataProvider });
         mockSuccessfulMp3TagRead(createLocalTrackInfo());
@@ -1577,7 +1577,7 @@ describe('BearTunesTagger', () => {
 
         dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
         dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
-        taggerToolMocks.prompt.mockResolvedValue('skip');
+        taggerToolMocks.prompt.mockResolvedValue('s');
 
         const tagger = new BearTunesTagger({ dataProvider });
         mockSuccessfulMp3TagRead(createLocalTrackInfo());
