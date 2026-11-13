@@ -1310,13 +1310,14 @@ describe('BearTunesTagger', () => {
         expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
       });
 
-      it('ignores candidates without required matching metadata', async () => {
+      it('ignores candidates without duration metadata', async () => {
         const trackPath = createSourceAudioFile(
           'Artist One Example Track.mp3',
         );
         const incompleteCandidate: TrackInfo = {
           artists: ['Artist One'],
           title: 'Example Track',
+          url: new URL('https://example.com/tracks/example-track'),
         };
         const dataProvider = createMockDataProvider();
         dataProvider.findTrackCandidates.mockResolvedValue([
