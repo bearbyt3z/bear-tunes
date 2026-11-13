@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import {
   EYED3_EXECUTABLE,
@@ -19,6 +19,7 @@ import {
 
 import type {
   BearTunesTaggerFailureResult,
+  BearTunesTaggerOptions,
   BearTunesTaggerResult,
   BearTunesTaggerSuccessResult,
 } from './index.js';
@@ -42,6 +43,15 @@ interface MockDownloadImageOptions {
   referer?: URL;
 }
 
+interface MockDataProvider {
+  findTrackCandidates: Mock<
+    (inputKeywords: readonly string[]) => Promise<readonly TrackInfo[] | undefined>
+  >;
+  getTrackInfo: Mock<
+    (trackUrl: URL) => Promise<TrackInfo | undefined>
+  >;
+}
+
 type SkipTest = (message?: string) => void;
 
 const childProcessMocks = vi.hoisted(() => ({
@@ -60,6 +70,7 @@ const taggerToolMocks = vi.hoisted(() => ({
     ) => Promise<string>
   >(),
   isSupportedArtworkFile: vi.fn<(imagePath: string) => Promise<boolean>>(),
+  prompt: vi.fn<(question: string) => Promise<string>>(),
 }));
 
 vi.mock('node:child_process', async (importOriginal) => {
@@ -79,6 +90,7 @@ vi.mock('#tools', async (importOriginal) => {
     executeCommandSync: taggerToolMocks.executeCommandSync,
     downloadImage: taggerToolMocks.downloadImage,
     isSupportedArtworkFile: taggerToolMocks.isSupportedArtworkFile,
+    prompt: taggerToolMocks.prompt,
   };
 });
 
@@ -151,6 +163,36 @@ function createTrackInfo(overrides: Partial<TrackInfo> = {}): TrackInfo {
     details: { durationMs: 245000 },
     ...overrides,
   };
+}
+
+function createLocalTrackInfo(
+  overrides: Partial<TrackInfo> = {},
+): TrackInfo {
+  return {
+    artists: ['Artist One'],
+    title: 'Example Track',
+    details: { durationMs: 245_000 },
+    ...overrides,
+  };
+}
+
+function mockSuccessfulMp3TagRead(trackInfo: TrackInfo): void {
+  mockSpawnSyncResults(
+    createSpawnSyncResult(JSON.stringify(trackInfo)),
+  );
+}
+
+function createMockDataProvider(): MockDataProvider {
+  return {
+    findTrackCandidates: vi
+      .fn<
+        (inputKeywords: readonly string[]) => Promise<readonly TrackInfo[] | undefined>
+      >()
+      .mockResolvedValue([]),
+    getTrackInfo: vi
+      .fn<(trackUrl: URL) => Promise<TrackInfo | undefined>>()
+      .mockResolvedValue(undefined),
+  } satisfies BearTunesTaggerOptions['dataProvider'];
 }
 
 function mockSuccessfulArtworkDownloads(): string[] {
@@ -301,6 +343,7 @@ describe('BearTunesTagger', () => {
     vi.spyOn(logger, 'info').mockReturnValue(logger);
     vi.spyOn(logger, 'warn').mockReturnValue(logger);
     vi.spyOn(logger, 'error').mockReturnValue(logger);
+    vi.spyOn(logger, 'silly').mockReturnValue(logger);
 
     taggerToolMocks.executeCommandSync.mockReset();
     taggerToolMocks.executeCommandSync.mockImplementation(() =>
@@ -308,6 +351,8 @@ describe('BearTunesTagger', () => {
     );
     taggerToolMocks.downloadImage.mockReset();
     taggerToolMocks.isSupportedArtworkFile.mockReset();
+    taggerToolMocks.prompt.mockReset();
+    taggerToolMocks.prompt.mockResolvedValue('n');
   });
 
   afterEach(() => {
@@ -1082,6 +1127,514 @@ describe('BearTunesTagger', () => {
           expect(failure.error.cause).toBe(writeError);
           expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledOnce();
         });
+      });
+    });
+  });
+
+  describe('resolveTrackInfo', () => {
+    describe('input validation and local tag reading', () => {
+      it('returns InputFileAccessError when the input file does not exist', async () => {
+        const trackPath = path.join(sourceDirectory, 'missing-track.mp3');
+        const dataProvider = createMockDataProvider();
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.InputFileAccessError,
+        );
+        expect(childProcessMocks.spawnSync).not.toHaveBeenCalled();
+        expect(dataProvider.findTrackCandidates).not.toHaveBeenCalled();
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
+      });
+
+      it('returns the local tag reading failure without querying the data provider', async () => {
+        const trackPath = createSourceAudioFile('reader-error-track.mp3');
+        const dataProvider = createMockDataProvider();
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        mockSpawnSyncResults(
+          createSpawnSyncResult('', { status: 2 }),
+        );
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.ID3TagReadExecutionFailed,
+        );
+        expect(dataProvider.findTrackCandidates).not.toHaveBeenCalled();
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('sibling URL file', () => {
+      it('uses a valid sibling URL file instead of searching for candidates', async () => {
+        const trackPath = createSourceAudioFile('url-file-track.mp3');
+        const trackUrl = new URL('https://example.com/tracks/url-file-track');
+        const urlFilePath = path.join(
+          sourceDirectory,
+          'url-file-track.url',
+        );
+        const localTrackInfo = createLocalTrackInfo();
+        const remoteTrackInfo = createTrackInfo();
+        const dataProvider = createMockDataProvider();
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        fs.writeFileSync(urlFilePath, `[InternetShortcut]\nURL=${trackUrl.href}\n`);
+        mockSuccessfulMp3TagRead(localTrackInfo);
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(dataProvider.findTrackCandidates).not.toHaveBeenCalled();
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledOnce();
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledWith(trackUrl);
+        expect(taggerToolMocks.prompt).not.toHaveBeenCalled();
+      });
+
+      it('returns TrackUrlFileInvalid when the sibling URL file contains no valid URL', async () => {
+        const trackPath = createSourceAudioFile('invalid-url-track.mp3');
+        const urlFilePath = path.join(
+          sourceDirectory,
+          'invalid-url-track.url',
+        );
+        const dataProvider = createMockDataProvider();
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        fs.writeFileSync(urlFilePath, 'This file does not contain a valid URL.');
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TrackUrlFileInvalid,
+        );
+        expect(dataProvider.findTrackCandidates).not.toHaveBeenCalled();
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
+      });
+
+      it('returns TrackUrlFileReadFailed when the sibling URL file cannot be read', async () => {
+        const trackPath = createSourceAudioFile('unreadable-url-track.mp3');
+        const urlFilePath = path.join(
+          sourceDirectory,
+          'unreadable-url-track.url',
+        );
+        const dataProvider = createMockDataProvider();
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        // A directory at the URL file path causes readFile() to fail reliably.
+        fs.mkdirSync(urlFilePath);
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TrackUrlFileReadFailed,
+        );
+        expect(dataProvider.findTrackCandidates).not.toHaveBeenCalled();
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('data provider integration', () => {
+      it('searches candidates using filename keywords and retrieves metadata for the best match', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const localTrackInfo = createLocalTrackInfo();
+        const lessRelevantUrl = new URL(
+          'https://example.com/tracks/less-relevant',
+        );
+        const bestMatchUrl = new URL(
+          'https://example.com/tracks/best-match',
+        );
+        const lessRelevantCandidate = createTrackInfo({
+          artists: ['Unrelated Artist'],
+          title: 'Example',
+          url: lessRelevantUrl,
+        });
+        const bestMatchCandidate = createTrackInfo({
+          url: bestMatchUrl,
+        });
+        const remoteTrackInfo = createTrackInfo({
+          title: 'Canonical Track Title',
+        });
+        const dataProvider = createMockDataProvider();
+
+        dataProvider.findTrackCandidates.mockResolvedValue([
+          lessRelevantCandidate,
+          bestMatchCandidate,
+        ]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+
+        const tagger = new BearTunesTagger({ dataProvider });
+        mockSuccessfulMp3TagRead(localTrackInfo);
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(dataProvider.findTrackCandidates).toHaveBeenCalledOnce();
+        expect(dataProvider.findTrackCandidates).toHaveBeenCalledWith([
+          'Artist',
+          'One',
+          'Example',
+          'Track',
+        ]);
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledOnce();
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledWith(bestMatchUrl);
+        expect(taggerToolMocks.prompt).not.toHaveBeenCalled();
+      });
+
+      it('returns TrackMatchFailed when the provider returns no candidates', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const dataProvider = createMockDataProvider();
+        dataProvider.findTrackCandidates.mockResolvedValue(undefined);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TrackMatchFailed,
+        );
+        expect(dataProvider.findTrackCandidates).toHaveBeenCalledOnce();
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
+      });
+
+      it('ignores candidates without required matching metadata', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const incompleteCandidate: TrackInfo = {
+          artists: ['Artist One'],
+          title: 'Example Track',
+        };
+        const dataProvider = createMockDataProvider();
+        dataProvider.findTrackCandidates.mockResolvedValue([
+          incompleteCandidate,
+        ]);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TrackMatchFailed,
+        );
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
+      });
+
+      it('returns TrackMatchFailed when candidate search throws an error', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const providerError = new Error('Candidate search failed');
+        const dataProvider = createMockDataProvider();
+        dataProvider.findTrackCandidates.mockRejectedValue(providerError);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        const failure = expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TrackMatchFailed,
+        );
+        expect(failure.error.cause).toBe(providerError);
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
+      });
+
+      it('returns TrackDataFetchFailed when the selected candidate has no URL', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const candidateWithoutUrl = createTrackInfo({
+          url: undefined,
+        });
+        const dataProvider = createMockDataProvider();
+        dataProvider.findTrackCandidates.mockResolvedValue([
+          candidateWithoutUrl,
+        ]);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TrackDataFetchFailed,
+        );
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
+      });
+
+      it('returns TrackDataFetchFailed when the provider returns undefined metadata', async () => {
+        const trackPath = createSourceAudioFile('url-file-track.mp3');
+        const trackUrl = new URL('https://example.com/tracks/missing-metadata');
+        const urlFilePath = path.join(sourceDirectory, 'url-file-track.url');
+        const dataProvider = createMockDataProvider();
+        dataProvider.getTrackInfo.mockResolvedValue(undefined);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        fs.writeFileSync(urlFilePath, `URL=${trackUrl.href}\n`);
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TrackDataFetchFailed,
+        );
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledWith(trackUrl);
+      });
+
+      it('returns TrackDataRequestFailed when retrieving metadata throws an error', async () => {
+        const trackPath = createSourceAudioFile('url-file-track.mp3');
+        const trackUrl = new URL('https://example.com/tracks/request-error');
+        const urlFilePath = path.join(sourceDirectory, 'url-file-track.url');
+        const providerError = new Error('Metadata request failed');
+        const dataProvider = createMockDataProvider();
+        dataProvider.getTrackInfo.mockRejectedValue(providerError);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        fs.writeFileSync(urlFilePath, `URL=${trackUrl.href}\n`);
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        const failure = expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TrackDataRequestFailed,
+        );
+        expect(failure.error.cause).toBe(providerError);
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledWith(trackUrl);
+      });
+    });
+
+    describe('weak track matches', () => {
+      function createWeakMatchCandidate(): TrackInfo {
+        return createTrackInfo({
+          artists: ['Different Artist'],
+          title: 'Example Track',
+        });
+      }
+
+      it('accepts a weak match when the user confirms it', async () => {
+        const trackPath = createSourceAudioFile('Example.mp3');
+        const candidate = createWeakMatchCandidate();
+        const remoteTrackInfo = createTrackInfo();
+        const dataProvider = createMockDataProvider();
+
+        dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+        taggerToolMocks.prompt.mockResolvedValue('yes');
+
+        const tagger = new BearTunesTagger({ dataProvider });
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(taggerToolMocks.prompt).toHaveBeenCalledOnce();
+        expect(taggerToolMocks.prompt).toHaveBeenCalledWith(
+          'Proceed with the found track? (y/n) ',
+        );
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledWith(candidate.url);
+      });
+
+      it('returns TrackMatchRejected when the user rejects a weak match', async () => {
+        const trackPath = createSourceAudioFile('Example.mp3');
+        const candidate = createWeakMatchCandidate();
+        const dataProvider = createMockDataProvider();
+
+        dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
+        taggerToolMocks.prompt.mockResolvedValue('no');
+
+        const tagger = new BearTunesTagger({ dataProvider });
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TrackMatchRejected,
+        );
+        expect(taggerToolMocks.prompt).toHaveBeenCalledOnce();
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('duration mismatch', () => {
+      function createMatchingCandidate(): TrackInfo {
+        return createTrackInfo({
+          artists: ['Artist One'],
+          title: 'Example Track',
+          details: { durationMs: 245_000 },
+        });
+      }
+
+      it('does not request confirmation when the duration difference equals the accepted threshold', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const candidate = createMatchingCandidate();
+        const remoteTrackInfo = createTrackInfo({
+          details: { durationMs: 248_000 },
+        });
+        const dataProvider = createMockDataProvider();
+
+        dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+
+        const tagger = new BearTunesTagger({ dataProvider });
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(taggerToolMocks.prompt).not.toHaveBeenCalled();
+      });
+
+      it('changes the title to Radio Edit when the duration mismatch is confirmed', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const candidate = createMatchingCandidate();
+        const remoteTrackInfo = createTrackInfo({
+          title: 'Example Track (Original Mix)',
+          details: { durationMs: 248_001 },
+        });
+        const dataProvider = createMockDataProvider();
+
+        dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+        taggerToolMocks.prompt.mockResolvedValue('yes');
+
+        const tagger = new BearTunesTagger({ dataProvider });
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        const success = expectTaggerSuccess(result);
+
+        expect(success.trackInfo).toMatchObject({
+          title: 'Example Track (Radio Edit)',
+        });
+        expect(success.trackInfo).not.toBe(remoteTrackInfo);
+        expect(remoteTrackInfo.title).toBe('Example Track (Original Mix)');
+        expect(taggerToolMocks.prompt).toHaveBeenCalledOnce();
+        expect(taggerToolMocks.prompt).toHaveBeenCalledWith(
+          'Change it to "Radio Edit"? (y)es/(n)o/(s)kip: ',
+        );
+      });
+
+      it('keeps the original title when the user declines the Radio Edit change', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const candidate = createMatchingCandidate();
+        const remoteTrackInfo = createTrackInfo({
+          title: 'Example Track (Original Mix)',
+          details: { durationMs: 248_001 },
+        });
+        const dataProvider = createMockDataProvider();
+
+        dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+        taggerToolMocks.prompt.mockResolvedValue('no');
+
+        const tagger = new BearTunesTagger({ dataProvider });
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(remoteTrackInfo.title).toBe('Example Track (Original Mix)');
+        expect(taggerToolMocks.prompt).toHaveBeenCalledOnce();
+      });
+
+      it('returns TrackMatchRejected when the user skips a duration mismatch', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const candidate = createMatchingCandidate();
+        const remoteTrackInfo = createTrackInfo({
+          details: { durationMs: 248_001 },
+        });
+        const dataProvider = createMockDataProvider();
+
+        dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+        taggerToolMocks.prompt.mockResolvedValue('skip');
+
+        const tagger = new BearTunesTagger({ dataProvider });
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TrackMatchRejected,
+        );
+        expect(taggerToolMocks.prompt).toHaveBeenCalledOnce();
+      });
+
+      it('does not request confirmation when the remote duration is unavailable', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const candidate = createMatchingCandidate();
+        const remoteTrackInfo = createTrackInfo({
+          details: undefined,
+        });
+        const dataProvider = createMockDataProvider();
+
+        dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+
+        const tagger = new BearTunesTagger({ dataProvider });
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(taggerToolMocks.prompt).not.toHaveBeenCalled();
+      });
+
+      it('does not request confirmation when the local duration is unavailable', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const candidate = createMatchingCandidate();
+        const remoteTrackInfo = createTrackInfo({
+          details: { durationMs: 300_000 },
+        });
+        const dataProvider = createMockDataProvider();
+
+        dataProvider.findTrackCandidates.mockResolvedValue([candidate]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+
+        const tagger = new BearTunesTagger({ dataProvider });
+        mockSuccessfulMp3TagRead(
+          createLocalTrackInfo({ details: undefined }),
+        );
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(taggerToolMocks.prompt).not.toHaveBeenCalled();
       });
     });
   });
