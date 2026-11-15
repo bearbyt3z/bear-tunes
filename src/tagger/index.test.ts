@@ -638,6 +638,99 @@ describe('BearTunesTagger', () => {
           expect(spawnSyncMock).toHaveBeenCalledTimes(2);
           expectFlacReadCommands(spawnSyncMock, trackPath);
         });
+
+        it('ignores malformed FLAC tag lines and reads the remaining metadata', async () => {
+          const trackPath = createSourceAudioFile('malformed-tags-track.flac');
+          const tagger = new BearTunesTagger();
+          const malformedTagOutput = [
+            'ARTIST=Artist One',
+            'malformed line without a separator',
+            '=EMPTY_TAG_NAME',
+            'ARTIST=Artist Two',
+            'TITLE=Example Track',
+            'ALBUM=Example Album',
+            'ALBUMARTIST=Album Artist',
+            'TRACKNUMBER=03',
+            'TRACKTOTAL=12',
+            'GENRE=House',
+            'DATE=2024-05-18',
+          ].join('\n');
+          const spawnSyncMock = mockSpawnSyncResults(
+            createSpawnSyncResult(malformedTagOutput),
+            createSpawnSyncResult('441000\n44100\n'),
+          );
+
+          const result = await tagger.readTag(trackPath);
+
+          expect(expectTaggerSuccess(result)).toEqual({
+            ok: true,
+            trackInfo: {
+              artists: ['Artist One', 'Artist Two'],
+              title: 'Example Track',
+              genre: 'House',
+              released: new Date('2024-05-18'),
+              year: 2024,
+              album: {
+                artists: ['Album Artist'],
+                title: 'Example Album',
+                trackNumber: 3,
+                trackTotal: 12,
+              },
+              details: { durationMs: 10000 },
+            },
+          });
+          expect(spawnSyncMock).toHaveBeenCalledTimes(2);
+          expectFlacReadCommands(spawnSyncMock, trackPath);
+        });
+
+        it('returns available metadata when optional FLAC tags are missing', async () => {
+          const trackPath = createSourceAudioFile('partial-tags-track.flac');
+          const tagger = new BearTunesTagger();
+          const partialTagOutput = [
+            'ARTIST=Artist One',
+            'TITLE=Example Track',
+            'GENRE=House',
+          ].join('\n');
+          const spawnSyncMock = mockSpawnSyncResults(
+            createSpawnSyncResult(partialTagOutput),
+            createSpawnSyncResult('441000\n44100\n'),
+          );
+
+          const result = await tagger.readTag(trackPath);
+
+          expect(expectTaggerSuccess(result)).toEqual({
+            ok: true,
+            trackInfo: {
+              artists: ['Artist One'],
+              title: 'Example Track',
+              genre: 'House',
+              details: { durationMs: 10000 },
+            },
+          });
+          expect(spawnSyncMock).toHaveBeenCalledTimes(2);
+          expectFlacReadCommands(spawnSyncMock, trackPath);
+        });
+      });
+
+      describe('invalid reader output', () => {
+        it('returns TagReadOutputInvalid when extracted FLAC metadata fails schema validation', async () => {
+          const trackPath = createSourceAudioFile('invalid-data-track.flac');
+          const tagger = new BearTunesTagger();
+          const spawnSyncMock = mockSpawnSyncResults(
+            createSpawnSyncResult('TITLE=Example Track\nDATE=0000-01-01'),
+            createSpawnSyncResult('441000\n44100\n'),
+          );
+
+          const result = await tagger.readTag(trackPath);
+
+          const failure = expectTaggerFailure(
+            result,
+            BearTunesTaggerFailureCode.TagReadOutputInvalid,
+          );
+
+          expect(failure.details).toHaveProperty('issues');
+          expect(spawnSyncMock).toHaveBeenCalledTimes(2);
+        });
       });
 
       describe('reader execution errors', () => {
