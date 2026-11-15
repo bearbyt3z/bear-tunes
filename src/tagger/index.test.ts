@@ -851,6 +851,34 @@ describe('BearTunesTagger', () => {
           );
         });
 
+        it('writes remixers and unique file identifier', async () => {
+          const trackPath = createSourceAudioFile('remixers-ufid-track.mp3');
+          const trackUrl = new URL('https://music.example.com/tracks/remixed-track');
+          const trackInfo = createTrackInfo({
+            remixers: ['Remixer One', 'Remixer Two'],
+            url: trackUrl,
+            ufid: 'BEATPORT-123456',
+          });
+          const tagger = new BearTunesTagger();
+
+          const result = await tagger.saveTag(trackPath, trackInfo);
+
+          expect(expectTaggerSuccess(result).trackInfo).toBe(trackInfo);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenNthCalledWith(
+            2,
+            EYED3_EXECUTABLE,
+            expect.arrayContaining([
+              '--v2',
+              '--to-v2.4',
+              '--text-frame',
+              'TPE4:Remixer One, Remixer Two',
+              '--unique-file-id',
+              'https\\://music.example.com:BEATPORT-123456',
+              trackPath,
+            ]),
+          );
+        });
+
         it('warns about missing basic identification data but still writes partial metadata', async () => {
           const trackPath = createSourceAudioFile('partial-metadata-track.mp3');
           const trackInfo: TrackInfo = { genre: 'House' };
@@ -1086,6 +1114,40 @@ describe('BearTunesTagger', () => {
           );
         });
 
+        it('writes remixers, publisher metadata, and unique file identifier', async () => {
+          const trackPath = createSourceAudioFile('complete-flac-metadata-track.flac');
+          const publisherUrl = new URL('https://labels.example.com/labels/example-label');
+          const trackInfo = createTrackInfo({
+            remixers: ['Remixer One', 'Remixer Two'],
+            publisher: {
+              name: 'Example Label',
+              url: publisherUrl,
+            },
+            ufid: 'BEATPORT-123456',
+          });
+          const tagger = new BearTunesTagger();
+
+          const result = await tagger.saveTag(trackPath, trackInfo);
+
+          expect(expectTaggerSuccess(result).trackInfo).toBe(trackInfo);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledWith(
+            'metaflac',
+            expect.arrayContaining([
+              '--remove-tag=REMIXED BY',
+              '--set-tag=REMIXED BY=Remixer One, Remixer Two',
+              '--remove-tag=PUBLISHER URL',
+              `--set-tag=PUBLISHER URL=${publisherUrl.toString()}`,
+              '--remove-tag=PUBLISHER',
+              '--set-tag=PUBLISHER=Example Label',
+              '--remove-tag=GROUPING',
+              '--set-tag=GROUPING=Example Label',
+              '--remove-tag=UFID',
+              '--set-tag=UFID=BEATPORT-123456',
+              trackPath,
+            ]),
+          );
+        });
+
         it('embeds FLAC front cover artwork and removes the downloaded file', async () => {
           const trackPath = createSourceAudioFile('flac-artwork-track.flac');
           const albumArtworkUrl = new URL('https://images.example.com/cover.png');
@@ -1134,6 +1196,96 @@ describe('BearTunesTagger', () => {
           );
           expect(downloadedPaths).toHaveLength(1);
           expect(fs.existsSync(downloadedPaths[0])).toBe(false);
+        });
+
+        it('embeds front cover, waveform, and publisher logotype artwork', async () => {
+          const trackPath = createSourceAudioFile('flac-multiple-artwork-track.flac');
+          const trackUrl = new URL('https://example.com/tracks/example-track');
+          const albumUrl = new URL('https://example.com/albums/example-album');
+          const publisherUrl = new URL('https://example.com/labels/example-label');
+          const albumArtworkUrl = new URL('https://images.example.com/cover.jpg');
+          const waveformUrl = new URL('https://images.example.com/waveform.png');
+          const publisherLogotypeUrl = new URL('https://images.example.com/label.png');
+          const trackInfo = createTrackInfo({
+            url: trackUrl,
+            album: {
+              title: 'Example Album',
+              url: albumUrl,
+              artwork: albumArtworkUrl,
+            },
+            publisher: {
+              name: 'Example Label',
+              url: publisherUrl,
+              logotype: publisherLogotypeUrl,
+            },
+            waveform: waveformUrl,
+          });
+          const downloadedPaths = mockSuccessfulArtworkDownloads();
+          const tagger = new BearTunesTagger();
+
+          const result = await tagger.saveTag(trackPath, trackInfo);
+
+          expect(expectTaggerSuccess(result).trackInfo).toBe(trackInfo);
+          expect(taggerToolMocks.downloadImage).toHaveBeenCalledTimes(3);
+          expect(taggerToolMocks.downloadImage).toHaveBeenNthCalledWith(
+            1,
+            publisherLogotypeUrl,
+            USER_AGENT_CACHE_FILE,
+            { referer: publisherUrl },
+          );
+          expect(taggerToolMocks.downloadImage).toHaveBeenNthCalledWith(
+            2,
+            albumArtworkUrl,
+            USER_AGENT_CACHE_FILE,
+            { referer: albumUrl },
+          );
+          expect(taggerToolMocks.downloadImage).toHaveBeenNthCalledWith(
+            3,
+            waveformUrl,
+            USER_AGENT_CACHE_FILE,
+            { referer: trackUrl },
+          );
+          expect(taggerToolMocks.isSupportedArtworkFile).toHaveBeenCalledTimes(3);
+          expect(taggerToolMocks.isSupportedArtworkFile).toHaveBeenNthCalledWith(
+            1,
+            downloadedPaths[1],
+          );
+          expect(taggerToolMocks.isSupportedArtworkFile).toHaveBeenNthCalledWith(
+            2,
+            downloadedPaths[2],
+          );
+          expect(taggerToolMocks.isSupportedArtworkFile).toHaveBeenNthCalledWith(
+            3,
+            downloadedPaths[0],
+          );
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledTimes(2);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenNthCalledWith(
+            1,
+            'metaflac',
+            expect.arrayContaining([
+              '--preserve-modtime',
+              '--dont-use-padding',
+              '--remove',
+              '--block-type=PICTURE,PADDING',
+              trackPath,
+            ]),
+          );
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenNthCalledWith(
+            2,
+            'metaflac',
+            expect.arrayContaining([
+              '--preserve-modtime',
+              '--dont-use-padding',
+              `--import-picture-from=3||Front Cover||${downloadedPaths[1]}`,
+              `--import-picture-from=17||Waveform||${downloadedPaths[2]}`,
+              `--import-picture-from=20||Publisher Logotype||${downloadedPaths[0]}`,
+              trackPath,
+            ]),
+          );
+          expect(downloadedPaths).toHaveLength(3);
+          for (const artworkPath of downloadedPaths) {
+            expect(fs.existsSync(artworkPath)).toBe(false);
+          }
         });
       });
 
