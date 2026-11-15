@@ -182,6 +182,37 @@ function mockSuccessfulMp3TagRead(trackInfo: TrackInfo): void {
   );
 }
 
+function createFlacPictureBlock(
+  metadataBlockNumber: string,
+  pictureType: number,
+  pictureTypeDescription: string,
+  mimeType?: string,
+): string {
+  const lines = [
+    `METADATA block #${metadataBlockNumber}`,
+    `  type: ${pictureType} (${pictureTypeDescription})`,
+  ];
+
+  if (mimeType !== undefined) {
+    lines.push(`  MIME type: ${mimeType}`);
+  }
+
+  return lines.join('\n');
+}
+
+function mockFlacTagTransfer(
+  tagOutput: string,
+  pictureBlocksResult: MockSpawnSyncResult,
+  ...pictureExportResults: MockSpawnSyncResult[]
+): typeof childProcessMocks.spawnSync {
+  return mockSpawnSyncResults(
+    createSpawnSyncResult(tagOutput),
+    createSpawnSyncResult('441000\n44100\n'),
+    pictureBlocksResult,
+    ...pictureExportResults,
+  );
+}
+
 function createMockDataProvider(): MockDataProvider {
   return {
     findTrackCandidates: vi
@@ -1719,6 +1750,372 @@ describe('BearTunesTagger', () => {
         expect(resolveTrackInfoSpy).toHaveBeenCalledOnce();
         expect(saveTagSpy).toHaveBeenCalledOnce();
         expect(saveTagSpy).toHaveBeenCalledWith(trackPath, trackInfo);
+      });
+    });
+  });
+
+  describe('prepareMp3TagTransferFromFlac', () => {
+    describe('metadata preparation', () => {
+      it('maps FLAC metadata to LAME tag options', () => {
+        const trackPath = createSourceAudioFile('metadata-transfer-track.flac');
+        const tagger = new BearTunesTagger();
+        const spawnSyncMock = mockFlacTagTransfer(
+          flacTagOutput,
+          createSpawnSyncResult(''),
+        );
+
+        const result = tagger.prepareMp3TagTransferFromFlac(trackPath);
+
+        expect(result).toEqual({
+          lameTagOptions: [
+            '--add-id3v2',
+            '--tt',
+            'Example Track',
+            '--ta',
+            'Artist One, Artist Two',
+            '--tg',
+            'House',
+            '--ty',
+            '2024',
+            '--tv',
+            'TORY=2024-05-18',
+            '--tl',
+            'Example Album',
+            '--tn',
+            '3/12',
+          ],
+          temporaryFiles: [],
+        });
+
+        expect(spawnSyncMock).toHaveBeenCalledTimes(3);
+        expectFlacReadCommands(spawnSyncMock, trackPath);
+        expect(spawnSyncMock).toHaveBeenNthCalledWith(
+          3,
+          'metaflac',
+          ['--list', '--block-type=PICTURE', trackPath],
+          { encoding: 'utf8' },
+        );
+      });
+
+      it('returns empty LAME options when no transferable metadata or artwork is available', () => {
+        const trackPath = createSourceAudioFile('empty-metadata-track.flac');
+        const tagger = new BearTunesTagger();
+        const spawnSyncMock = mockFlacTagTransfer(
+          '',
+          createSpawnSyncResult(''),
+        );
+
+        const result = tagger.prepareMp3TagTransferFromFlac(trackPath);
+
+        expect(result).toEqual({
+          lameTagOptions: [],
+          temporaryFiles: [],
+        });
+        expect(spawnSyncMock).toHaveBeenCalledTimes(3);
+      });
+
+      it('includes the track number without a total when the total is unavailable', () => {
+        const trackPath = createSourceAudioFile('single-track-number.flac');
+        const tagger = new BearTunesTagger();
+
+        mockFlacTagTransfer(
+          'ALBUM=Example Album\nTRACKNUMBER=03',
+          createSpawnSyncResult(''),
+        );
+
+        const result = tagger.prepareMp3TagTransferFromFlac(trackPath);
+
+        expect(result.lameTagOptions).toEqual([
+          '--add-id3v2',
+          '--tl',
+          'Example Album',
+          '--tn',
+          '3',
+        ]);
+        expect(result.temporaryFiles).toEqual([]);
+      });
+
+      it('logs prepared LAME options when verbose mode is enabled', () => {
+        const trackPath = createSourceAudioFile('verbose-transfer-track.flac');
+        const tagger = new BearTunesTagger({ verbose: true });
+
+        mockFlacTagTransfer(
+          flacTagOutput,
+          createSpawnSyncResult(''),
+        );
+
+        tagger.prepareMp3TagTransferFromFlac(trackPath);
+
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.stringContaining('Using following tag options:'),
+        );
+      });
+    });
+
+    describe('FLAC PICTURE block export', () => {
+      it('exports only front cover artwork using its metadata block number', () => {
+        const trackPath = createSourceAudioFile('picture-blocks-track.flac');
+
+        const pictureBlocksOutput = [
+          createFlacPictureBlock('2', 4, 'Cover (back)', 'image/jpeg'),
+          createFlacPictureBlock('5', 3, 'Cover (front)', 'image/jpeg'),
+          createFlacPictureBlock('7', 17, 'Bright Colored Fish', 'image/png'),
+          createFlacPictureBlock('9', 20, 'Publisher Logo', 'image/png'),
+        ].join('\n');
+
+        const tagger = new BearTunesTagger();
+        const spawnSyncMock = mockFlacTagTransfer(
+          flacTagOutput,
+          createSpawnSyncResult(pictureBlocksOutput),
+          createSpawnSyncResult(''),
+        );
+
+        const result = tagger.prepareMp3TagTransferFromFlac(trackPath);
+
+        expect(result.temporaryFiles).toHaveLength(1);
+
+        const imagePath = result.temporaryFiles[0];
+
+        if (imagePath === undefined) {
+          throw new Error('Expected exported front cover image path.');
+        }
+
+        expect(result.lameTagOptions).toEqual([
+          '--add-id3v2',
+          '--tt',
+          'Example Track',
+          '--ta',
+          'Artist One, Artist Two',
+          '--tg',
+          'House',
+          '--ty',
+          '2024',
+          '--tv',
+          'TORY=2024-05-18',
+          '--tl',
+          'Example Album',
+          '--tn',
+          '3/12',
+          '--ti',
+          imagePath,
+        ]);
+
+        expect(spawnSyncMock).toHaveBeenCalledTimes(4);
+        expect(spawnSyncMock).toHaveBeenNthCalledWith(
+          4,
+          'metaflac',
+          [
+            '--block-number=5',
+            `--export-picture-to=${imagePath}`,
+            trackPath,
+          ],
+        );
+      });
+
+      it('exports multiple front covers and includes all exported paths in temporary files', () => {
+        const trackPath = createSourceAudioFile('multiple-front-covers.flac');
+
+        const pictureBlocksOutput = [
+          createFlacPictureBlock('5', 3, 'Cover (front)', 'image/jpeg'),
+          createFlacPictureBlock('8', 3, 'Cover (front)', 'image/png'),
+        ].join('\n');
+
+        const tagger = new BearTunesTagger();
+        const spawnSyncMock = mockFlacTagTransfer(
+          flacTagOutput,
+          createSpawnSyncResult(pictureBlocksOutput),
+          createSpawnSyncResult(''),
+          createSpawnSyncResult(''),
+        );
+
+        const result = tagger.prepareMp3TagTransferFromFlac(trackPath);
+
+        expect(result.temporaryFiles).toHaveLength(2);
+
+        const firstImagePath = result.temporaryFiles[0];
+        const secondImagePath = result.temporaryFiles[1];
+
+        if (firstImagePath === undefined || secondImagePath === undefined) {
+          throw new Error('Expected both front cover image paths.');
+        }
+
+        expect(result.lameTagOptions.slice(-2)).toEqual([
+          '--ti',
+          firstImagePath,
+        ]);
+
+        expect(spawnSyncMock).toHaveBeenNthCalledWith(
+          4,
+          'metaflac',
+          [
+            '--block-number=5',
+            `--export-picture-to=${firstImagePath}`,
+            trackPath,
+          ],
+        );
+
+        expect(spawnSyncMock).toHaveBeenNthCalledWith(
+          5,
+          'metaflac',
+          [
+            '--block-number=8',
+            `--export-picture-to=${secondImagePath}`,
+            trackPath,
+          ],
+        );
+      });
+
+      describe('invalid PICTURE block metadata', () => {
+        const invalidPictureBlockCases: [string, string][] = [
+          [
+            'an invalid metadata block number',
+            createFlacPictureBlock(
+              'invalid',
+              3,
+              'Cover (front)',
+              'image/jpeg',
+            ),
+          ],
+          [
+            'an unsupported PICTURE type',
+            createFlacPictureBlock(
+              '5',
+              99,
+              'Unknown',
+              'image/jpeg',
+            ),
+          ],
+          [
+            'a missing MIME type',
+            createFlacPictureBlock(
+              '5',
+              3,
+              'Cover (front)',
+            ),
+          ],
+        ];
+
+        it.each(invalidPictureBlockCases)(
+          'skips PICTURE blocks with %s',
+          (_scenario, pictureBlockOutput) => {
+            const trackPath = createSourceAudioFile('invalid-picture-block.flac');
+            const tagger = new BearTunesTagger();
+            const spawnSyncMock = mockFlacTagTransfer(
+              flacTagOutput,
+              createSpawnSyncResult(pictureBlockOutput),
+            );
+
+            const result = tagger.prepareMp3TagTransferFromFlac(trackPath);
+
+            expect(result.lameTagOptions).not.toContain('--ti');
+            expect(result.temporaryFiles).toEqual([]);
+            expect(spawnSyncMock).toHaveBeenCalledTimes(3);
+          },
+        );
+
+        it('skips a front cover with an unsupported empty MIME subtype', () => {
+          const trackPath = createSourceAudioFile('empty-mime-subtype.flac');
+          const pictureBlocksOutput = createFlacPictureBlock(
+            '5',
+            3,
+            'Cover (front)',
+            'image/',
+          );
+          const tagger = new BearTunesTagger();
+          const spawnSyncMock = mockFlacTagTransfer(
+            flacTagOutput,
+            createSpawnSyncResult(pictureBlocksOutput),
+          );
+
+          const result = tagger.prepareMp3TagTransferFromFlac(trackPath);
+
+          expect(result.lameTagOptions).not.toContain('--ti');
+          expect(result.temporaryFiles).toEqual([]);
+          expect(spawnSyncMock).toHaveBeenCalledTimes(3);
+        });
+      });
+
+      describe('PICTURE block listing errors', () => {
+        const pictureListFailureCases: [string, MockSpawnSyncResult][] = [
+          [
+            'a non-zero exit status',
+            createSpawnSyncResult(
+              createFlacPictureBlock('5', 3, 'Cover (front)', 'image/jpeg'),
+              { status: 1 },
+            ),
+          ],
+          [
+            'a process execution error',
+            createSpawnSyncResult(
+              createFlacPictureBlock('5', 3, 'Cover (front)', 'image/jpeg'),
+              {
+                status: null,
+                error: new Error('metaflac executable not found'),
+              },
+            ),
+          ],
+        ];
+
+        it.each(pictureListFailureCases)(
+          'continues without artwork when PICTURE block listing fails with %s',
+          (_scenario, pictureListResult) => {
+            const trackPath = createSourceAudioFile('picture-list-error.flac');
+            const tagger = new BearTunesTagger();
+            const spawnSyncMock = mockFlacTagTransfer(
+              flacTagOutput,
+              pictureListResult,
+            );
+
+            const result = tagger.prepareMp3TagTransferFromFlac(trackPath);
+
+            expect(result.lameTagOptions).toContain('--tt');
+            expect(result.lameTagOptions).not.toContain('--ti');
+            expect(result.temporaryFiles).toEqual([]);
+            expect(spawnSyncMock).toHaveBeenCalledTimes(3);
+          },
+        );
+      });
+
+      describe('PICTURE block export errors', () => {
+        const pictureExportFailureCases: [string, MockSpawnSyncResult][] = [
+          [
+            'a non-zero exit status',
+            createSpawnSyncResult('', { status: 2 }),
+          ],
+          [
+            'a process execution error',
+            createSpawnSyncResult('', {
+              status: null,
+              error: new Error('metaflac executable not found'),
+            }),
+          ],
+        ];
+
+        it.each(pictureExportFailureCases)(
+          'continues preparing metadata when picture export fails with %s',
+          (_scenario, pictureExportResult) => {
+            const trackPath = createSourceAudioFile('picture-export-error.flac');
+            const pictureBlocksOutput = createFlacPictureBlock(
+              '5',
+              3,
+              'Cover (front)',
+              'image/jpeg',
+            );
+            const tagger = new BearTunesTagger();
+            const spawnSyncMock = mockFlacTagTransfer(
+              flacTagOutput,
+              createSpawnSyncResult(pictureBlocksOutput),
+              pictureExportResult,
+            );
+
+            const result = tagger.prepareMp3TagTransferFromFlac(trackPath);
+
+            expect(result.lameTagOptions).toContain('--tt');
+            expect(result.lameTagOptions).not.toContain('--ti');
+            expect(result.temporaryFiles).toEqual([]);
+            expect(spawnSyncMock).toHaveBeenCalledTimes(4);
+          },
+        );
       });
     });
   });
