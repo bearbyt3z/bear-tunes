@@ -10,6 +10,7 @@ import {
   USER_AGENT_CACHE_FILE,
 } from '#config';
 import logger from '#logger';
+import { AudioFileType } from '#tools';
 
 import type { TrackInfo } from '#shared-types';
 import {
@@ -71,6 +72,9 @@ const taggerToolMocks = vi.hoisted(() => ({
   >(),
   isSupportedArtworkFile: vi.fn<(imagePath: string) => Promise<boolean>>(),
   prompt: vi.fn<(question: string) => Promise<string>>(),
+  tryGetAudioFileTypeFromFile: vi.fn<
+    typeof import('#tools').tryGetAudioFileTypeFromFile
+  >(),
 }));
 
 vi.mock('node:child_process', async (importOriginal) => {
@@ -85,12 +89,17 @@ vi.mock('node:child_process', async (importOriginal) => {
 vi.mock('#tools', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#tools')>();
 
+  taggerToolMocks.tryGetAudioFileTypeFromFile.mockImplementation(
+    actual.tryGetAudioFileTypeFromFile,
+  );
+
   return {
     ...actual,
     executeCommandSync: taggerToolMocks.executeCommandSync,
     downloadImage: taggerToolMocks.downloadImage,
     isSupportedArtworkFile: taggerToolMocks.isSupportedArtworkFile,
     prompt: taggerToolMocks.prompt,
+    tryGetAudioFileTypeFromFile: taggerToolMocks.tryGetAudioFileTypeFromFile,
   };
 });
 
@@ -380,6 +389,7 @@ describe('BearTunesTagger', () => {
     taggerToolMocks.executeCommandSync.mockImplementation(() =>
       createMockCommandOutput(),
     );
+    taggerToolMocks.tryGetAudioFileTypeFromFile.mockClear();
     taggerToolMocks.downloadImage.mockReset();
     taggerToolMocks.isSupportedArtworkFile.mockReset();
     taggerToolMocks.prompt.mockReset();
@@ -463,6 +473,27 @@ describe('BearTunesTagger', () => {
           result,
           BearTunesTaggerFailureCode.UnsupportedAudioFileType,
         );
+        expect(childProcessMocks.spawnSync).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('unexpected errors', () => {
+      it('returns UnexpectedPreparationError when audio format detection throws', async () => {
+        const trackPath = createSourceAudioFile('format-detection-error.mp3');
+        const detectionError = new Error('Audio format detection failed');
+        const tagger = new BearTunesTagger();
+        taggerToolMocks.tryGetAudioFileTypeFromFile.mockRejectedValueOnce(
+          detectionError,
+        );
+
+        const result = await tagger.readTag(trackPath);
+
+        const failure = expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.UnexpectedPreparationError,
+        );
+        expect(failure.error.message).toContain(detectionError.message);
+        expect(taggerToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledOnce();
         expect(childProcessMocks.spawnSync).not.toHaveBeenCalled();
       });
     });
@@ -900,6 +931,51 @@ describe('BearTunesTagger', () => {
       );
     });
 
+    describe('format detection errors', () => {
+      it('returns UnexpectedExecutionError when audio format detection throws', async () => {
+        const trackPath = createSourceAudioFile('format-detection-error.mp3');
+        const detectionError = new Error('Audio format detection failed');
+        const tagger = new BearTunesTagger();
+        taggerToolMocks.tryGetAudioFileTypeFromFile.mockRejectedValueOnce(
+          detectionError,
+        );
+
+        const result = await tagger.saveTag(trackPath, createTrackInfo());
+
+        const failure = expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.UnexpectedExecutionError,
+        );
+        expect(failure.error.message).toContain(detectionError.message);
+        expect(taggerToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledOnce();
+        expect(taggerToolMocks.downloadImage).not.toHaveBeenCalled();
+        expect(taggerToolMocks.executeCommandSync).not.toHaveBeenCalled();
+      });
+
+      it('returns TagWriteInputFileTypeMismatch when the file format changes before tag writing', async () => {
+        const trackPath = createSourceAudioFile('changed-format-track.mp3');
+        const tagger = new BearTunesTagger();
+        taggerToolMocks.tryGetAudioFileTypeFromFile
+          .mockResolvedValueOnce(AudioFileType.Mp3)
+          .mockResolvedValueOnce(AudioFileType.Flac);
+
+        const result = await tagger.saveTag(trackPath, createTrackInfo());
+
+        const failure = expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TagWriteInputFileTypeMismatch,
+        );
+        expect(failure.details).toEqual({
+          expectedAudioFileType: AudioFileType.Mp3,
+          actualAudioFileType: AudioFileType.Flac,
+          trackPath,
+        });
+        expect(taggerToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledTimes(2);
+        expect(taggerToolMocks.downloadImage).not.toHaveBeenCalled();
+        expect(taggerToolMocks.executeCommandSync).not.toHaveBeenCalled();
+      });
+    });
+
     describe('MP3 files', () => {
       describe('successful writing', () => {
         it('writes ID3v2 and ID3v1 tags and returns the supplied track metadata', async () => {
@@ -946,6 +1022,25 @@ describe('BearTunesTagger', () => {
               trackPath,
             ]),
           );
+        });
+
+        it('logs eyeD3 command output when eyed3Verbose is enabled', async () => {
+          const trackPath = createSourceAudioFile('verbose-eyed3-track.mp3');
+          const tagger = new BearTunesTagger({ eyed3Verbose: true });
+          const commandOutput = Buffer.from('eyeD3 verbose output');
+          taggerToolMocks.executeCommandSync.mockImplementation(() => ({
+            ...createMockCommandOutput(),
+            stdout: commandOutput,
+          }));
+
+          const result = await tagger.saveTag(trackPath, createTrackInfo());
+
+          expectTaggerSuccess(result);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledTimes(3);
+          expect(logger.info).toHaveBeenCalledTimes(3);
+          expect(logger.info).toHaveBeenNthCalledWith(1, commandOutput);
+          expect(logger.info).toHaveBeenNthCalledWith(2, commandOutput);
+          expect(logger.info).toHaveBeenNthCalledWith(3, commandOutput);
         });
 
         it('writes remixers and unique file identifier', async () => {
@@ -1103,6 +1198,65 @@ describe('BearTunesTagger', () => {
         );
       });
 
+      describe('artwork cleanup', () => {
+        it('preserves the tag writing result when temporary artwork cleanup fails', async () => {
+          const trackPath = createSourceAudioFile('artwork-cleanup-error.mp3');
+          const artworkUrl = new URL('https://images.example.com/cover.jpg');
+          const downloadedPaths = mockSuccessfulArtworkDownloads();
+          const tagger = new BearTunesTagger();
+          let commandCount = 0;
+
+          taggerToolMocks.executeCommandSync.mockImplementation(() => {
+            commandCount += 1;
+            const artworkPath = downloadedPaths[0];
+
+            if (commandCount === 3 && artworkPath !== undefined) {
+              fs.unlinkSync(artworkPath);
+            }
+
+            return createMockCommandOutput();
+          });
+
+          const result = await tagger.saveTag(
+            trackPath,
+            createTrackInfo({
+              album: { title: 'Example Album', artwork: artworkUrl },
+            }),
+          );
+
+          expectTaggerSuccess(result);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledTimes(3);
+          expect(downloadedPaths).toHaveLength(1);
+          expect(fs.existsSync(downloadedPaths[0])).toBe(false);
+
+          const warningCalls: readonly (readonly unknown[])[] =
+            vi.mocked(logger.warn).mock.calls;
+
+          const cleanupWarning = warningCalls.find(
+            ([message]) =>
+              message === `Failed to remove temporary artwork file: ${downloadedPaths[0]}`,
+          );
+
+          expect(cleanupWarning).toBeDefined();
+
+          if (cleanupWarning === undefined) {
+            throw new Error('Expected cleanup warning to be logged.');
+          }
+
+          const warningContext: unknown = cleanupWarning[1];
+
+          if (
+            typeof warningContext !== 'object'
+            || warningContext === null
+            || !('error' in warningContext)
+          ) {
+            throw new Error('Expected cleanup warning to include the error context.');
+          }
+
+          expect(warningContext.error).toBeInstanceOf(Error);
+        });
+      });
+
       describe('artwork errors', () => {
         it('returns ArtworkDownloadFailed when an artwork URL cannot be downloaded', async () => {
           const trackPath = createSourceAudioFile('artwork-download-error.mp3');
@@ -1150,6 +1304,35 @@ describe('BearTunesTagger', () => {
           expect(failure.error.message).toContain(
             'Unsupported front cover artwork',
           );
+          expect(taggerToolMocks.executeCommandSync).not.toHaveBeenCalled();
+          expect(fs.existsSync(artworkPath)).toBe(false);
+        });
+
+        it('returns ArtworkValidationFailed when artwork validation throws', async () => {
+          const trackPath = createSourceAudioFile('artwork-validation-throws.mp3');
+          const artworkPath = path.join(temporaryDirectory, 'validation-error-cover.jpg');
+          fs.writeFileSync(artworkPath, 'Temporary artwork content');
+          const artworkUrl = new URL('https://images.example.com/cover.jpg');
+          const validationError = new Error('Artwork validator failed');
+          const tagger = new BearTunesTagger();
+          taggerToolMocks.downloadImage.mockResolvedValue(artworkPath);
+          taggerToolMocks.isSupportedArtworkFile.mockRejectedValue(validationError);
+
+          const result = await tagger.saveTag(
+            trackPath,
+            createTrackInfo({
+              album: { title: 'Example Album', artwork: artworkUrl },
+            }),
+          );
+
+          const failure = expectTaggerFailure(
+            result,
+            BearTunesTaggerFailureCode.ArtworkValidationFailed,
+          );
+          expect(failure.error.message).toContain(
+            'Cannot validate front cover artwork file',
+          );
+          expect(failure.error.cause).toBe(validationError);
           expect(taggerToolMocks.executeCommandSync).not.toHaveBeenCalled();
           expect(fs.existsSync(artworkPath)).toBe(false);
         });
@@ -1209,6 +1392,23 @@ describe('BearTunesTagger', () => {
               trackPath,
             ]),
           );
+        });
+
+        it('logs metaflac command output when metaflacVerbose is enabled', async () => {
+          const trackPath = createSourceAudioFile('verbose-metaflac-track.flac');
+          const tagger = new BearTunesTagger({ metaflacVerbose: true });
+          const commandOutput = Buffer.from('metaflac verbose output');
+          taggerToolMocks.executeCommandSync.mockImplementation(() => ({
+            ...createMockCommandOutput(),
+            stdout: commandOutput,
+          }));
+
+          const result = await tagger.saveTag(trackPath, createTrackInfo());
+
+          expectTaggerSuccess(result);
+          expect(taggerToolMocks.executeCommandSync).toHaveBeenCalledOnce();
+          expect(logger.info).toHaveBeenCalledOnce();
+          expect(logger.info).toHaveBeenCalledWith(commandOutput);
         });
 
         it('writes remixers, publisher metadata, and unique file identifier', async () => {
@@ -1425,6 +1625,26 @@ describe('BearTunesTagger', () => {
           BearTunesTaggerFailureCode.InputFileAccessError,
         );
         expect(childProcessMocks.spawnSync).not.toHaveBeenCalled();
+        expect(dataProvider.findTrackCandidates).not.toHaveBeenCalled();
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
+      });
+
+      it('returns UnexpectedExecutionError when local tag reading unexpectedly throws', async () => {
+        const trackPath = createSourceAudioFile('unexpected-reader-error-track.mp3');
+        const readError = new Error('Unexpected local tag reader failure');
+        const dataProvider = createMockDataProvider();
+        const tagger = new BearTunesTagger({ dataProvider });
+        const readTagSpy = vi.spyOn(tagger, 'readTag').mockRejectedValue(readError);
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        const failure = expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.UnexpectedExecutionError,
+        );
+        expect(failure.error.message).toContain(readError.message);
+        expect(readTagSpy).toHaveBeenCalledOnce();
+        expect(readTagSpy).toHaveBeenCalledWith(trackPath);
         expect(dataProvider.findTrackCandidates).not.toHaveBeenCalled();
         expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
       });
