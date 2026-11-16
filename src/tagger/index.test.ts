@@ -1590,6 +1590,112 @@ describe('BearTunesTagger', () => {
         expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
       });
 
+      it('returns TrackMatchFailed when the provider returns an empty candidate list', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const dataProvider = createMockDataProvider();
+        dataProvider.findTrackCandidates.mockResolvedValue([]);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expectTaggerFailure(
+          result,
+          BearTunesTaggerFailureCode.TrackMatchFailed,
+        );
+        expect(dataProvider.findTrackCandidates).toHaveBeenCalledOnce();
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalled();
+      });
+
+      it('ignores candidates without a title', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const incompleteCandidateUrl = new URL(
+          'https://example.com/tracks/missing-title',
+        );
+        const validCandidateUrl = new URL(
+          'https://example.com/tracks/valid-candidate',
+        );
+        const incompleteCandidate = createTrackInfo({
+          title: undefined,
+          url: incompleteCandidateUrl,
+        });
+        const validCandidate = createTrackInfo({
+          artists: ['Artist One'],
+          title: 'Example Track',
+          url: validCandidateUrl,
+        });
+        const remoteTrackInfo = createTrackInfo({
+          details: { durationMs: 245_000 },
+        });
+        const dataProvider = createMockDataProvider();
+        dataProvider.findTrackCandidates.mockResolvedValue([
+          incompleteCandidate,
+          validCandidate,
+        ]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledOnce();
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledWith(validCandidateUrl);
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalledWith(
+          incompleteCandidateUrl,
+        );
+        expect(taggerToolMocks.prompt).not.toHaveBeenCalled();
+      });
+
+      it('ignores candidates without artists', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const incompleteCandidateUrl = new URL(
+          'https://example.com/tracks/missing-artists',
+        );
+        const validCandidateUrl = new URL(
+          'https://example.com/tracks/valid-candidate',
+        );
+        const incompleteCandidate = createTrackInfo({
+          artists: [],
+          url: incompleteCandidateUrl,
+        });
+        const validCandidate = createTrackInfo({
+          artists: ['Artist One'],
+          title: 'Example Track',
+          url: validCandidateUrl,
+        });
+        const remoteTrackInfo = createTrackInfo({
+          details: { durationMs: 245_000 },
+        });
+        const dataProvider = createMockDataProvider();
+        dataProvider.findTrackCandidates.mockResolvedValue([
+          incompleteCandidate,
+          validCandidate,
+        ]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledOnce();
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledWith(validCandidateUrl);
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalledWith(
+          incompleteCandidateUrl,
+        );
+        expect(taggerToolMocks.prompt).not.toHaveBeenCalled();
+      });
+
       it('ignores candidates without duration metadata', async () => {
         const trackPath = createSourceAudioFile(
           'Artist One Example Track.mp3',
@@ -1701,6 +1807,146 @@ describe('BearTunesTagger', () => {
         );
         expect(failure.error.cause).toBe(providerError);
         expect(dataProvider.getTrackInfo).toHaveBeenCalledWith(trackUrl);
+      });
+    });
+
+    describe('candidate ranking', () => {
+      function createRankableCandidate(
+        url: URL,
+        overrides: Partial<TrackInfo> = {},
+      ): TrackInfo {
+        return createTrackInfo({
+          artists: ['Artist One'],
+          title: 'Example Track',
+          url,
+          ...overrides,
+        });
+      }
+
+      it('prefers the candidate with an earlier release date when scores are equal', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const laterReleaseUrl = new URL(
+          'https://example.com/tracks/later-release',
+        );
+        const earlierReleaseUrl = new URL(
+          'https://example.com/tracks/earlier-release',
+        );
+        const laterReleaseCandidate = createRankableCandidate(
+          laterReleaseUrl,
+          { released: new Date('2024-05-19') },
+        );
+        const earlierReleaseCandidate = createRankableCandidate(
+          earlierReleaseUrl,
+          { released: new Date('2024-05-17') },
+        );
+        const remoteTrackInfo = createTrackInfo({
+          details: { durationMs: 245_000 },
+        });
+        const dataProvider = createMockDataProvider();
+        dataProvider.findTrackCandidates.mockResolvedValue([
+          laterReleaseCandidate,
+          earlierReleaseCandidate,
+        ]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledOnce();
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledWith(earlierReleaseUrl);
+        expect(taggerToolMocks.prompt).not.toHaveBeenCalled();
+      });
+
+      it('prefers the candidate with a closer duration when scores are equal', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const fartherDurationUrl = new URL(
+          'https://example.com/tracks/farther-duration',
+        );
+        const closerDurationUrl = new URL(
+          'https://example.com/tracks/closer-duration',
+        );
+        const fartherDurationCandidate = createRankableCandidate(
+          fartherDurationUrl,
+          {
+            released: new Date('2024-05-18'),
+            details: { durationMs: 260_000 },
+          },
+        );
+        const closerDurationCandidate = createRankableCandidate(
+          closerDurationUrl,
+          {
+            released: new Date('2024-05-18'),
+            details: { durationMs: 248_000 },
+          },
+        );
+        const remoteTrackInfo = createTrackInfo({
+          details: { durationMs: 245_000 },
+        });
+        const dataProvider = createMockDataProvider();
+        dataProvider.findTrackCandidates.mockResolvedValue([
+          fartherDurationCandidate,
+          closerDurationCandidate,
+        ]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledOnce();
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledWith(closerDurationUrl);
+        expect(taggerToolMocks.prompt).not.toHaveBeenCalled();
+      });
+
+      it('keeps the first candidate when score, release date, and duration are equal', async () => {
+        const trackPath = createSourceAudioFile(
+          'Artist One Example Track.mp3',
+        );
+        const firstCandidateUrl = new URL(
+          'https://example.com/tracks/first-candidate',
+        );
+        const secondCandidateUrl = new URL(
+          'https://example.com/tracks/second-candidate',
+        );
+        const firstCandidate = createRankableCandidate(firstCandidateUrl, {
+          released: new Date('2024-05-18'),
+          details: { durationMs: 248_000 },
+        });
+        const secondCandidate = createRankableCandidate(secondCandidateUrl, {
+          released: new Date('2024-05-18'),
+          details: { durationMs: 248_000 },
+        });
+        const remoteTrackInfo = createTrackInfo({
+          details: { durationMs: 245_000 },
+        });
+        const dataProvider = createMockDataProvider();
+        dataProvider.findTrackCandidates.mockResolvedValue([
+          firstCandidate,
+          secondCandidate,
+        ]);
+        dataProvider.getTrackInfo.mockResolvedValue(remoteTrackInfo);
+        const tagger = new BearTunesTagger({ dataProvider });
+
+        mockSuccessfulMp3TagRead(createLocalTrackInfo());
+
+        const result = await tagger.resolveTrackInfo(trackPath);
+
+        expect(expectTaggerSuccess(result).trackInfo).toBe(remoteTrackInfo);
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledOnce();
+        expect(dataProvider.getTrackInfo).toHaveBeenCalledWith(firstCandidateUrl);
+        expect(dataProvider.getTrackInfo).not.toHaveBeenCalledWith(
+          secondCandidateUrl,
+        );
+        expect(taggerToolMocks.prompt).not.toHaveBeenCalled();
       });
     });
 
