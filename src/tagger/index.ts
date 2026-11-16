@@ -269,11 +269,11 @@ export class BearTunesTagger {
 
       switch (audioFileType) {
         case AudioFileType.Mp3:
-          await this.saveTagToMp3File(trackPath, trackInfo);
+          await this.saveTagToMp3File(trackPath, trackInfo, { verbose: this.options.verbose });
           break;
 
         case AudioFileType.Flac:
-          await this.saveTagToFlacFile(trackPath, trackInfo);
+          await this.saveTagToFlacFile(trackPath, trackInfo, { verbose: this.options.verbose });
           break;
 
         case AudioFileType.Aiff:
