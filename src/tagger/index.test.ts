@@ -1024,6 +1024,24 @@ describe('BearTunesTagger', () => {
           );
         });
 
+        it('logs downloaded artwork paths when verbose mode is enabled', async () => {
+          const trackPath = createSourceAudioFile('verbose-artwork-track.mp3');
+          const trackInfo = createTrackInfo();
+          trackInfo.album = {
+            title: 'Example Album',
+            artwork: new URL('https://images.example.com/example-album.jpg'),
+          };
+          const downloadedPaths = mockSuccessfulArtworkDownloads();
+          const tagger = new BearTunesTagger({ verbose: true });
+
+          const result = await tagger.saveTag(trackPath, trackInfo);
+
+          expectTaggerSuccess(result);
+          expect(logger.debug).toHaveBeenCalledWith(
+            `Album artwork written to: ${downloadedPaths[0]}`,
+          );
+        });
+
         it('logs eyeD3 command output when eyed3Verbose is enabled', async () => {
           const trackPath = createSourceAudioFile('verbose-eyed3-track.mp3');
           const tagger = new BearTunesTagger({ eyed3Verbose: true });
@@ -1391,6 +1409,24 @@ describe('BearTunesTagger', () => {
               '--set-tag=TRACKNUMBER=3',
               trackPath,
             ]),
+          );
+        });
+
+        it('logs downloaded artwork paths when verbose mode is enabled', async () => {
+          const trackPath = createSourceAudioFile('verbose-artwork-track.flac');
+          const trackInfo = createTrackInfo();
+          trackInfo.album = {
+            title: 'Example Album',
+            artwork: new URL('https://images.example.com/example-album.jpg'),
+          };
+          const downloadedPaths = mockSuccessfulArtworkDownloads();
+          const tagger = new BearTunesTagger({ verbose: true });
+
+          const result = await tagger.saveTag(trackPath, trackInfo);
+
+          expectTaggerSuccess(result);
+          expect(logger.debug).toHaveBeenCalledWith(
+            `Album artwork written to: ${downloadedPaths[0]}`,
           );
         });
 
