@@ -1284,15 +1284,11 @@ export class BearTunesTagger {
 
   private static isBetterMatchingTrack(
     inputTrackInfo: TrackInfo,
-    winner: MatchingTrack | undefined,
+    winner: MatchingTrack,
     candidateReleased: Date | undefined,
     candidateDurationMs: number,
     score: number,
   ): boolean {
-    if (!winner) {
-      return true;
-    }
-
     const hasBetterScore = score > winner.score;
 
     const hasSameScoreButEarlierRelease = (
