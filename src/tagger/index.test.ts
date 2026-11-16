@@ -714,10 +714,11 @@ describe('BearTunesTagger', () => {
 
       describe('invalid reader output', () => {
         it('returns TagReadOutputInvalid when extracted FLAC metadata fails schema validation', async () => {
-          const trackPath = createSourceAudioFile('invalid-data-track.flac');
+          const trackPath = createSourceAudioFile('invalid-flac-metadata-track.flac');
           const tagger = new BearTunesTagger();
+          const invalidTagOutput = 'TITLE=Example Track\nDATE=0000-01-01';
           const spawnSyncMock = mockSpawnSyncResults(
-            createSpawnSyncResult('TITLE=Example Track\nDATE=0000-01-01'),
+            createSpawnSyncResult(invalidTagOutput),
             createSpawnSyncResult('441000\n44100\n'),
           );
 
@@ -727,9 +728,12 @@ describe('BearTunesTagger', () => {
             result,
             BearTunesTaggerFailureCode.TagReadOutputInvalid,
           );
-
+          expect(failure.error.message).toContain(
+            'Cannot validate FLAC tag output',
+          );
           expect(failure.details).toHaveProperty('issues');
           expect(spawnSyncMock).toHaveBeenCalledTimes(2);
+          expectFlacReadCommands(spawnSyncMock, trackPath);
         });
       });
 
