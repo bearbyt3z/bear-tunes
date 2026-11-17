@@ -6,9 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BearTunesConverter } from '#converter';
 import logger from '#logger';
-import { BearTunesRenamer } from '#renamer';
+import {
+  BearTunesRenamer,
+  BearTunesRenamerFailureCode,
+} from '#renamer';
 import type { TrackInfo } from '#shared-types';
-import { BearTunesTagger } from '#tagger';
+import {
+  BearTunesTagger,
+  BearTunesTaggerFailureCode,
+} from '#tagger';
+import { AudioFileType } from '#tools';
 
 import {
   BearTunesProcessor,
@@ -294,6 +301,224 @@ describe('BearTunesProcessor', () => {
       );
       expect(processorDependencyMocks.tagger.processTrack).not.toHaveBeenCalled();
       expect(processorDependencyMocks.renamer.rename).not.toHaveBeenCalled();
+    });
+
+    describe('MP3 processing', () => {
+      it('processes MP3 files through tagging, renaming, and artwork download', async () => {
+        const trackPath = createSourceAudioFile('example-track.mp3');
+        const artworkUrl = new URL('https://images.example.com/example-album.jpg');
+        const albumUrl = new URL('https://example.com/albums/example-album');
+        const trackInfo = createTrackInfo({
+          album: {
+            title: 'Example Album',
+            artists: ['Album Artist'],
+            trackNumber: 3,
+            trackTotal: 12,
+            catalogNumber: 'CAT-001',
+            artwork: artworkUrl,
+            url: albumUrl,
+          },
+        });
+        const processingSteps: string[] = [];
+
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
+          AudioFileType.Mp3,
+        );
+
+        processorDependencyMocks.tagger.processTrack.mockImplementation(() => {
+          processingSteps.push('tagger');
+
+          return Promise.resolve({
+            ok: true,
+            trackInfo,
+          });
+        });
+
+        processorDependencyMocks.renamer.rename.mockImplementation(
+          (filePath) => {
+            processingSteps.push('renamer');
+
+            return {
+              ok: true,
+              targetPath: filePath,
+            };
+          },
+        );
+
+        processorToolMocks.downloadAndSaveArtwork.mockImplementation(() => {
+          processingSteps.push('artwork');
+
+          return Promise.resolve(undefined);
+        });
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledOnce();
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
+          trackPath,
+        );
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          trackPath,
+        );
+
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledWith(
+          trackPath,
+          trackInfo,
+          undefined,
+        );
+
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledOnce();
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
+          trackPath,
+          artworkUrl,
+          albumUrl,
+          expect.any(String),
+        );
+
+        expect(processingSteps).toEqual([
+          'tagger',
+          'renamer',
+          'artwork',
+        ]);
+
+        expect(processorDependencyMocks.converter.flacToMp3).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.converter.aiffToFlac).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.saveTag).not.toHaveBeenCalled();
+      });
+
+      it('passes output directory to renamer and downloads artwork to renamed path', async () => {
+        const trackPath = createSourceAudioFile('example-track.mp3');
+        const outputDirectory = path.join(temporaryDirectory, 'output');
+        const expectedOutputPath = path.join(
+          outputDirectory,
+          path.basename(trackPath),
+        );
+        const artworkUrl = new URL('https://images.example.com/example-album.jpg');
+        const albumUrl = new URL('https://example.com/albums/example-album');
+        const trackInfo = createTrackInfo({
+          album: {
+            title: 'Example Album',
+            artists: ['Album Artist'],
+            trackNumber: 3,
+            trackTotal: 12,
+            catalogNumber: 'CAT-001',
+            artwork: artworkUrl,
+            url: albumUrl,
+          },
+        });
+
+        fs.mkdirSync(outputDirectory);
+
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
+          AudioFileType.Mp3,
+        );
+
+        processorDependencyMocks.tagger.processTrack.mockResolvedValue({
+          ok: true,
+          trackInfo,
+        });
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(
+          sourceDirectory,
+          outputDirectory,
+        );
+
+        expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledWith(
+          trackPath,
+          trackInfo,
+          outputDirectory,
+        );
+
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledOnce();
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
+          expectedOutputPath,
+          artworkUrl,
+          albumUrl,
+          expect.any(String),
+        );
+      });
+
+      it('does not rename or download artwork when track tagging fails', async () => {
+        const trackPath = createSourceAudioFile('tagging-failure-track.mp3');
+        const taggingError = new Error('Track matching failed');
+
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
+          AudioFileType.Mp3,
+        );
+
+        processorDependencyMocks.tagger.processTrack.mockResolvedValue({
+          ok: false,
+          failureCode: BearTunesTaggerFailureCode.TrackMatchFailed,
+          error: taggingError,
+        });
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.NoSupportedFilesFound);
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          trackPath,
+        );
+
+        expect(processorDependencyMocks.renamer.rename).not.toHaveBeenCalled();
+        expect(processorToolMocks.downloadAndSaveArtwork).not.toHaveBeenCalled();
+
+        expect(logger.warn).toHaveBeenCalledWith(
+          `Processing track ${trackPath} failed with code ${BearTunesTaggerFailureCode.TrackMatchFailed} and message:\n${taggingError.message}`,
+          { error: taggingError },
+        );
+      });
+
+      it('does not download artwork when file renaming fails', async () => {
+        const trackPath = createSourceAudioFile('renaming-failure-track.mp3');
+        const trackInfo = createTrackInfo();
+        const renamingError = new Error('File renaming failed');
+
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
+          AudioFileType.Mp3,
+        );
+
+        processorDependencyMocks.tagger.processTrack.mockResolvedValue({
+          ok: true,
+          trackInfo,
+        });
+
+        processorDependencyMocks.renamer.rename.mockReturnValue({
+          ok: false,
+          failureCode: BearTunesRenamerFailureCode.RenameOperationFailed,
+          error: renamingError,
+        });
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.NoSupportedFilesFound);
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledOnce();
+
+        expect(processorToolMocks.downloadAndSaveArtwork).not.toHaveBeenCalled();
+
+        expect(logger.warn).toHaveBeenCalledWith(
+          `Renaming file ${trackPath} failed with code ${BearTunesRenamerFailureCode.RenameOperationFailed} and message:\n${renamingError.message}`,
+        );
+      });
     });
   });
 });
