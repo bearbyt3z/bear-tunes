@@ -1929,6 +1929,67 @@ describe('BearTunesProcessor', () => {
         expect(processorDependencyMocks.tagger.processTrack).not.toHaveBeenCalled();
       });
 
+      it('propagates PathDoesNotExist when a nested directory disappears before it can be inspected', async () => {
+        const nestedDirectory = path.join(sourceDirectory, 'nested');
+
+        createSourceAudioFile('nested/track.mp3');
+
+        const originalStat = fs.promises.stat.bind(fs.promises);
+        const rootStats = await originalStat(sourceDirectory);
+
+        vi.spyOn(fs.promises, 'stat')
+          .mockResolvedValueOnce(rootStats)
+          .mockImplementationOnce(() => {
+            fs.rmSync(nestedDirectory, { recursive: true, force: true });
+
+            return originalStat(nestedDirectory);
+          });
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.PathDoesNotExist);
+
+        expect(logger.error).toHaveBeenCalledWith(
+          `Path specified doesn't exist: ${nestedDirectory}`,
+        );
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.processTrack).not.toHaveBeenCalled();
+      });
+
+      it('propagates PathIsNotDirectory when a nested directory is replaced by a file before it can be inspected', async () => {
+        const nestedDirectory = path.join(sourceDirectory, 'nested');
+
+        createSourceAudioFile('nested/track.mp3');
+
+        const originalStat = fs.promises.stat.bind(fs.promises);
+        const rootStats = await originalStat(sourceDirectory);
+
+        vi.spyOn(fs.promises, 'stat')
+          .mockResolvedValueOnce(rootStats)
+          .mockImplementationOnce(() => {
+            fs.rmSync(nestedDirectory, { recursive: true, force: true });
+            fs.writeFileSync(nestedDirectory, sourceFileContent);
+
+            return originalStat(nestedDirectory);
+          });
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.PathIsNotDirectory);
+
+        expect(logger.error).toHaveBeenCalledWith(
+          `Path specified isn't a directory: ${nestedDirectory}`,
+        );
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.processTrack).not.toHaveBeenCalled();
+      });
+
       it('skips files that become inaccessible before processing', async () => {
         const trackPath = createSourceAudioFile('inaccessible-track.mp3');
         const accessError = new Error('File is no longer accessible');
