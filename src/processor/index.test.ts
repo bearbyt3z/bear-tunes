@@ -1132,5 +1132,271 @@ describe('BearTunesProcessor', () => {
         );
       });
     });
+
+    describe('AIFF processing', () => {
+      it('converts AIFF to FLAC and processes the generated FLAC through the existing pipeline', async () => {
+        const aiffFilePath = createSourceAudioFile('example-track.aiff');
+        const convertedFlacPath = path.join(
+          sourceDirectory,
+          'converted',
+          'example-track.flac',
+        );
+        const convertedMp3Path = path.join(
+          path.dirname(convertedFlacPath),
+          'example-track.mp3',
+        );
+        const outputDirectory = path.join(temporaryDirectory, 'output');
+        const expectedMp3OutputPath = path.join(
+          outputDirectory,
+          path.basename(convertedMp3Path),
+        );
+        const expectedFlacOutputPath = path.join(
+          outputDirectory,
+          path.basename(convertedFlacPath),
+        );
+        const trackInfo = createTrackInfoWithArtwork();
+        const processingSteps: string[] = [];
+
+        fs.mkdirSync(outputDirectory);
+
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
+          AudioFileType.Aiff,
+        );
+
+        processorDependencyMocks.converter.aiffToFlac.mockImplementation(
+          () => {
+            processingSteps.push('aiffToFlac');
+
+            return {
+              ok: true,
+              outputPath: convertedFlacPath,
+            };
+          },
+        );
+
+        processorDependencyMocks.converter.flacToMp3.mockImplementation(
+          () => {
+            processingSteps.push('flacToMp3');
+
+            return Promise.resolve({
+              ok: true,
+              outputPath: convertedMp3Path,
+            });
+          },
+        );
+
+        processorDependencyMocks.tagger.processTrack.mockImplementation(() => {
+          processingSteps.push('processTrack');
+
+          return Promise.resolve({
+            ok: true,
+            trackInfo,
+          });
+        });
+
+        processorDependencyMocks.renamer.rename.mockImplementation(
+          (filePath, _trackInfo, targetBaseDirectory) => {
+            processingSteps.push(
+              filePath === convertedMp3Path ? 'renameMp3' : 'renameFlac',
+            );
+
+            return {
+              ok: true,
+              targetPath: targetBaseDirectory === undefined
+                ? filePath
+                : path.join(targetBaseDirectory, path.basename(filePath)),
+            };
+          },
+        );
+
+        processorDependencyMocks.tagger.saveTag.mockImplementation(() => {
+          processingSteps.push('saveTag');
+
+          return Promise.resolve({
+            ok: true,
+            trackInfo,
+          });
+        });
+
+        processorToolMocks.downloadAndSaveArtwork.mockImplementation(() => {
+          processingSteps.push('artwork');
+
+          return Promise.resolve(undefined);
+        });
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(
+          sourceDirectory,
+          outputDirectory,
+        );
+
+        expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledOnce();
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
+          aiffFilePath,
+        );
+
+        expect(processorDependencyMocks.converter.aiffToFlac).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.converter.aiffToFlac).toHaveBeenCalledWith(
+          aiffFilePath,
+          undefined,
+          true,
+        );
+
+        expect(processorDependencyMocks.converter.flacToMp3).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.converter.flacToMp3).toHaveBeenCalledWith(
+          convertedFlacPath,
+        );
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          convertedMp3Path,
+        );
+
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledTimes(2);
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenNthCalledWith(
+          1,
+          convertedMp3Path,
+          trackInfo,
+          outputDirectory,
+        );
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenNthCalledWith(
+          2,
+          convertedFlacPath,
+          trackInfo,
+          outputDirectory,
+        );
+
+        expect(processorDependencyMocks.tagger.saveTag).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.tagger.saveTag).toHaveBeenCalledWith(
+          convertedFlacPath,
+          trackInfo,
+        );
+
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledOnce();
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
+          expectedFlacOutputPath,
+          exampleArtworkUrl,
+          exampleAlbumUrl,
+          expect.any(String),
+        );
+
+        expect(processingSteps).toEqual([
+          'aiffToFlac',
+          'flacToMp3',
+          'processTrack',
+          'renameMp3',
+          'saveTag',
+          'renameFlac',
+          'artwork',
+        ]);
+
+        expect(expectedMp3OutputPath).not.toBe(convertedMp3Path);
+      });
+
+      it('processes the generated FLAC directly when MP3 conversion is disabled', async () => {
+        const aiffFilePath = createSourceAudioFile('direct-track.aiff');
+        const convertedFlacPath = path.join(
+          sourceDirectory,
+          'direct-track.flac',
+        );
+        const trackInfo = createTrackInfoWithArtwork();
+
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
+          AudioFileType.Aiff,
+        );
+
+        processorDependencyMocks.converter.aiffToFlac.mockReturnValue({
+          ok: true,
+          outputPath: convertedFlacPath,
+        });
+
+        processorDependencyMocks.tagger.processTrack.mockResolvedValue({
+          ok: true,
+          trackInfo,
+        });
+
+        const processor = new BearTunesProcessor({
+          convertFlacToMp3: false,
+        });
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        expect(processorDependencyMocks.converter.aiffToFlac).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.converter.aiffToFlac).toHaveBeenCalledWith(
+          aiffFilePath,
+          undefined,
+          true,
+        );
+
+        expect(processorDependencyMocks.converter.flacToMp3).not.toHaveBeenCalled();
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          convertedFlacPath,
+        );
+
+        expect(processorDependencyMocks.tagger.saveTag).not.toHaveBeenCalled();
+
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledWith(
+          convertedFlacPath,
+          trackInfo,
+          undefined,
+        );
+
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledOnce();
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
+          convertedFlacPath,
+          exampleArtworkUrl,
+          exampleAlbumUrl,
+          expect.any(String),
+        );
+      });
+
+      it('does not continue processing when AIFF-to-FLAC conversion fails', async () => {
+        const aiffFilePath = createSourceAudioFile('conversion-failure.aiff');
+        const conversionError = new Error('FLAC encoder failed');
+        const encoderStderr = 'FLAC encoder returned a non-zero exit code';
+
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
+          AudioFileType.Aiff,
+        );
+
+        processorDependencyMocks.converter.aiffToFlac.mockReturnValue({
+          ok: false,
+          failureCode: BearTunesConverterFailureCode.EncoderProcessFailed,
+          error: conversionError,
+          encoderStderr,
+        });
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.NoSupportedFilesFound);
+
+        expect(processorDependencyMocks.converter.aiffToFlac).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.converter.aiffToFlac).toHaveBeenCalledWith(
+          aiffFilePath,
+          undefined,
+          true,
+        );
+
+        expect(processorDependencyMocks.converter.flacToMp3).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.processTrack).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.saveTag).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.renamer.rename).not.toHaveBeenCalled();
+        expect(processorToolMocks.downloadAndSaveArtwork).not.toHaveBeenCalled();
+
+        expect(logger.warn).toHaveBeenCalledWith(
+          `Converting file ${aiffFilePath} failed with code ${BearTunesConverterFailureCode.EncoderProcessFailed} and message:\n${conversionError.message}:\nflac stderr: ${encoderStderr}`,
+        );
+      });
+    });
   });
 });
