@@ -136,6 +136,26 @@ function createSourceAudioFile(filename: string): string {
   return filePath;
 }
 
+async function getFilePathsInTraversalOrder(
+  directoryPath: string,
+): Promise<string[]> {
+  const entries = await fs.promises.readdir(directoryPath, {
+    withFileTypes: true,
+  });
+
+  const nestedFilePaths = await Promise.all(
+    entries.map((entry) => {
+      const entryPath = path.join(directoryPath, entry.name);
+
+      return entry.isDirectory()
+        ? getFilePathsInTraversalOrder(entryPath)
+        : Promise.resolve([entryPath]);
+    }),
+  );
+
+  return nestedFilePaths.flat();
+}
+
 function createTrackInfo(overrides: Partial<TrackInfo> = {}): TrackInfo {
   return {
     artists: ['Artist One', 'Artist Two'],
@@ -1395,6 +1415,381 @@ describe('BearTunesProcessor', () => {
 
         expect(logger.warn).toHaveBeenCalledWith(
           `Converting file ${aiffFilePath} failed with code ${BearTunesConverterFailureCode.EncoderProcessFailed} and message:\n${conversionError.message}:\nflac stderr: ${encoderStderr}`,
+        );
+      });
+    });
+
+    describe('directory traversal', () => {
+      it('recursively processes MP3 files from nested directories and forwards output directory', async () => {
+        const firstTrackPath = createSourceAudioFile(
+          'artist-one/album-a/track-one.mp3',
+        );
+        const secondTrackPath = createSourceAudioFile(
+          'artist-two/album-b/disc-one/track-two.mp3',
+        );
+
+        const outputDirectory = path.join(temporaryDirectory, 'output');
+        fs.mkdirSync(outputDirectory);
+
+        const trackInfo = createTrackInfoWithArtwork();
+
+        processorToolMocks.tryGetAudioFileTypeFromFile
+          .mockResolvedValueOnce(AudioFileType.Mp3)
+          .mockResolvedValueOnce(AudioFileType.Mp3);
+
+        processorDependencyMocks.tagger.processTrack.mockResolvedValue({
+          ok: true,
+          trackInfo,
+        });
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(
+          sourceDirectory,
+          outputDirectory,
+        );
+
+        expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledTimes(2);
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
+          firstTrackPath,
+        );
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
+          secondTrackPath,
+        );
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledTimes(2);
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          firstTrackPath,
+        );
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          secondTrackPath,
+        );
+
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledTimes(2);
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledWith(
+          firstTrackPath,
+          trackInfo,
+          outputDirectory,
+        );
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledWith(
+          secondTrackPath,
+          trackInfo,
+          outputDirectory,
+        );
+
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledTimes(2);
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
+          path.join(outputDirectory, 'track-one.mp3'),
+          exampleArtworkUrl,
+          exampleAlbumUrl,
+          expect.any(String),
+        );
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
+          path.join(outputDirectory, 'track-two.mp3'),
+          exampleArtworkUrl,
+          exampleAlbumUrl,
+          expect.any(String),
+        );
+
+        expect(processorDependencyMocks.converter.flacToMp3).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.converter.aiffToFlac).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.saveTag).not.toHaveBeenCalled();
+      });
+
+      it('recursively processes mixed supported and unsupported file types', async () => {
+        const mp3FilePath = createSourceAudioFile('mp3/track.mp3');
+        const flacFilePath = createSourceAudioFile('flac/track.flac');
+        const aiffFilePath = createSourceAudioFile('aiff/deep/track.aiff');
+        const unsupportedFilePath = createSourceAudioFile(
+          'documents/deep/notes.txt',
+        );
+
+        const convertedFlacPath = path.join(
+          path.dirname(aiffFilePath),
+          'track.flac',
+        );
+        const convertedFlacMp3Path = path.join(
+          path.dirname(flacFilePath),
+          'track.mp3',
+        );
+        const convertedAiffMp3Path = path.join(
+          path.dirname(convertedFlacPath),
+          'track.mp3',
+        );
+
+        const trackInfo = createTrackInfoWithArtwork();
+
+        const filePaths = await getFilePathsInTraversalOrder(sourceDirectory);
+
+        for (const filePath of filePaths) {
+          let audioFileType: AudioFileType | undefined;
+
+          switch (path.extname(filePath)) {
+            case '.mp3':
+              audioFileType = AudioFileType.Mp3;
+              break;
+
+            case '.flac':
+              audioFileType = AudioFileType.Flac;
+              break;
+
+            case '.aiff':
+              audioFileType = AudioFileType.Aiff;
+              break;
+
+            default:
+              audioFileType = undefined;
+          }
+
+          processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
+            audioFileType,
+          );
+        }
+
+        processorDependencyMocks.tagger.processTrack.mockResolvedValue({
+          ok: true,
+          trackInfo,
+        });
+
+        processorDependencyMocks.tagger.saveTag.mockResolvedValue({
+          ok: true,
+          trackInfo,
+        });
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledTimes(
+          filePaths.length,
+        );
+
+        for (const filePath of filePaths) {
+          expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
+            filePath,
+          );
+        }
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
+          unsupportedFilePath,
+        );
+
+        expect(processorDependencyMocks.converter.aiffToFlac).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.converter.aiffToFlac).toHaveBeenCalledWith(
+          aiffFilePath,
+          undefined,
+          true,
+        );
+
+        expect(processorDependencyMocks.converter.flacToMp3).toHaveBeenCalledTimes(2);
+        expect(processorDependencyMocks.converter.flacToMp3).toHaveBeenCalledWith(
+          flacFilePath,
+        );
+        expect(processorDependencyMocks.converter.flacToMp3).toHaveBeenCalledWith(
+          convertedFlacPath,
+        );
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledTimes(3);
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          mp3FilePath,
+        );
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          convertedFlacMp3Path,
+        );
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          convertedAiffMp3Path,
+        );
+
+        expect(processorDependencyMocks.tagger.saveTag).toHaveBeenCalledTimes(2);
+        expect(processorDependencyMocks.tagger.saveTag).toHaveBeenCalledWith(
+          flacFilePath,
+          trackInfo,
+        );
+        expect(processorDependencyMocks.tagger.saveTag).toHaveBeenCalledWith(
+          convertedFlacPath,
+          trackInfo,
+        );
+
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledTimes(5);
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledWith(
+          mp3FilePath,
+          trackInfo,
+          undefined,
+        );
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledWith(
+          convertedFlacMp3Path,
+          trackInfo,
+          undefined,
+        );
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledWith(
+          flacFilePath,
+          trackInfo,
+          undefined,
+        );
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledWith(
+          convertedAiffMp3Path,
+          trackInfo,
+          undefined,
+        );
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledWith(
+          convertedFlacPath,
+          trackInfo,
+          undefined,
+        );
+
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledTimes(3);
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
+          mp3FilePath,
+          exampleArtworkUrl,
+          exampleAlbumUrl,
+          expect.any(String),
+        );
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
+          flacFilePath,
+          exampleArtworkUrl,
+          exampleAlbumUrl,
+          expect.any(String),
+        );
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
+          convertedFlacPath,
+          exampleArtworkUrl,
+          exampleAlbumUrl,
+          expect.any(String),
+        );
+      });
+
+      it('returns NoSupportedFilesFound when nested directories contain no supported files', async () => {
+        const emptyDirectory = path.join(
+          sourceDirectory,
+          'empty',
+          'nested',
+          'directory',
+        );
+
+        fs.mkdirSync(emptyDirectory, { recursive: true });
+
+        const unsupportedFilePath = createSourceAudioFile(
+          'unsupported/nested/readme.txt',
+        );
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.NoSupportedFilesFound);
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledOnce();
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
+          unsupportedFilePath,
+        );
+
+        expect(processorDependencyMocks.converter.aiffToFlac).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.converter.flacToMp3).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.processTrack).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.saveTag).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.renamer.rename).not.toHaveBeenCalled();
+        expect(processorToolMocks.downloadAndSaveArtwork).not.toHaveBeenCalled();
+      });
+
+      it('clears converted MP3 paths between separate processing runs', async () => {
+        const flacFilePath = createSourceAudioFile(
+          'album/source-track.flac',
+        );
+        const generatedMp3Path = path.join(
+          path.dirname(flacFilePath),
+          'generated-track.mp3',
+        );
+        const trackInfo = createTrackInfoWithArtwork();
+
+        processorToolMocks.tryGetAudioFileTypeFromFile
+          .mockResolvedValueOnce(AudioFileType.Flac)
+          .mockResolvedValueOnce(AudioFileType.Mp3);
+
+        processorDependencyMocks.converter.flacToMp3.mockResolvedValueOnce({
+          ok: true,
+          outputPath: generatedMp3Path,
+        });
+
+        processorDependencyMocks.tagger.processTrack.mockResolvedValue({
+          ok: true,
+          trackInfo,
+        });
+
+        processorDependencyMocks.tagger.saveTag.mockResolvedValue({
+          ok: true,
+          trackInfo,
+        });
+
+        const processor = new BearTunesProcessor();
+
+        const firstResult = await processor.processAllFilesInDirectory(
+          sourceDirectory,
+        );
+
+        expect(firstResult).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        expect(processorDependencyMocks.converter.flacToMp3).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          generatedMp3Path,
+        );
+
+        // Simulate the generated MP3 being present in a subsequent processing run.
+        fs.rmSync(flacFilePath);
+        fs.writeFileSync(generatedMp3Path, sourceFileContent);
+
+        const secondResult = await processor.processAllFilesInDirectory(
+          sourceDirectory,
+        );
+
+        expect(secondResult).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        // The MP3 must be processed as a standalone input in the new run.
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledTimes(2);
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenNthCalledWith(
+          1,
+          flacFilePath,
+        );
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenNthCalledWith(
+          2,
+          generatedMp3Path,
+        );
+
+        expect(processorDependencyMocks.converter.flacToMp3).toHaveBeenCalledOnce();
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledTimes(2);
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenNthCalledWith(
+          1,
+          generatedMp3Path,
+        );
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenNthCalledWith(
+          2,
+          generatedMp3Path,
+        );
+
+        expect(processorDependencyMocks.tagger.saveTag).toHaveBeenCalledOnce();
+
+        // First run: generated MP3 and original FLAC. Second run: standalone MP3.
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledTimes(3);
+
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledTimes(2);
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenNthCalledWith(
+          1,
+          flacFilePath,
+          exampleArtworkUrl,
+          exampleAlbumUrl,
+          expect.any(String),
+        );
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenNthCalledWith(
+          2,
+          generatedMp3Path,
+          exampleArtworkUrl,
+          exampleAlbumUrl,
+          expect.any(String),
         );
       });
     });
