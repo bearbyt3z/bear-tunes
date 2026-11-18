@@ -350,19 +350,7 @@ describe('BearTunesProcessor', () => {
     describe('MP3 processing', () => {
       it('processes MP3 files through tagging, renaming, and artwork download', async () => {
         const trackPath = createSourceAudioFile('example-track.mp3');
-        const artworkUrl = new URL('https://images.example.com/example-album.jpg');
-        const albumUrl = new URL('https://example.com/albums/example-album');
-        const trackInfo = createTrackInfo({
-          album: {
-            title: 'Example Album',
-            artists: ['Album Artist'],
-            trackNumber: 3,
-            trackTotal: 12,
-            catalogNumber: 'CAT-001',
-            artwork: artworkUrl,
-            url: albumUrl,
-          },
-        });
+        const trackInfo = createTrackInfoWithArtwork();
         const processingSteps: string[] = [];
 
         processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
@@ -421,8 +409,8 @@ describe('BearTunesProcessor', () => {
         expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledOnce();
         expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
           trackPath,
-          artworkUrl,
-          albumUrl,
+          exampleArtworkUrl,
+          exampleAlbumUrl,
           expect.any(String),
         );
 
@@ -444,19 +432,7 @@ describe('BearTunesProcessor', () => {
           outputDirectory,
           path.basename(trackPath),
         );
-        const artworkUrl = new URL('https://images.example.com/example-album.jpg');
-        const albumUrl = new URL('https://example.com/albums/example-album');
-        const trackInfo = createTrackInfo({
-          album: {
-            title: 'Example Album',
-            artists: ['Album Artist'],
-            trackNumber: 3,
-            trackTotal: 12,
-            catalogNumber: 'CAT-001',
-            artwork: artworkUrl,
-            url: albumUrl,
-          },
-        });
+        const trackInfo = createTrackInfoWithArtwork();
 
         fs.mkdirSync(outputDirectory);
 
@@ -488,8 +464,8 @@ describe('BearTunesProcessor', () => {
         expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledOnce();
         expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
           expectedOutputPath,
-          artworkUrl,
-          albumUrl,
+          exampleArtworkUrl,
+          exampleAlbumUrl,
           expect.any(String),
         );
       });
@@ -692,10 +668,6 @@ describe('BearTunesProcessor', () => {
           'output-directory-track.mp3',
         );
         const outputDirectory = path.join(temporaryDirectory, 'output');
-        const expectedMp3Path = path.join(
-          outputDirectory,
-          path.basename(convertedMp3Path),
-        );
         const expectedFlacPath = path.join(
           outputDirectory,
           path.basename(flacFilePath),
@@ -753,8 +725,6 @@ describe('BearTunesProcessor', () => {
           flacFilePath,
           trackInfo,
         );
-
-        expect(expectedMp3Path).not.toBe(convertedMp3Path);
       });
 
       it('processes FLAC directly when MP3 conversion is disabled', async () => {
@@ -1166,10 +1136,6 @@ describe('BearTunesProcessor', () => {
           'example-track.mp3',
         );
         const outputDirectory = path.join(temporaryDirectory, 'output');
-        const expectedMp3OutputPath = path.join(
-          outputDirectory,
-          path.basename(convertedMp3Path),
-        );
         const expectedFlacOutputPath = path.join(
           outputDirectory,
           path.basename(convertedFlacPath),
@@ -1312,8 +1278,6 @@ describe('BearTunesProcessor', () => {
           'renameFlac',
           'artwork',
         ]);
-
-        expect(expectedMp3OutputPath).not.toBe(convertedMp3Path);
       });
 
       it('processes the generated FLAC directly when MP3 conversion is disabled', async () => {
