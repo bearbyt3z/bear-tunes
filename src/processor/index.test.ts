@@ -1793,5 +1793,312 @@ describe('BearTunesProcessor', () => {
         );
       });
     });
+
+    describe('filesystem and resilience', () => {
+      it('returns PathDoesNotExist when the input directory does not exist', async () => {
+        const missingDirectory = path.join(temporaryDirectory, 'missing');
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(
+          missingDirectory,
+        );
+
+        expect(result).toBe(DirectoryProcessingStatus.PathDoesNotExist);
+
+        expect(logger.error).toHaveBeenCalledWith(
+          `Path specified doesn't exist: ${missingDirectory}`,
+        );
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.processTrack).not.toHaveBeenCalled();
+      });
+
+      it('returns PathIsNotDirectory when the input path points to a file', async () => {
+        const filePath = createSourceAudioFile('not-a-directory.txt');
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(filePath);
+
+        expect(result).toBe(DirectoryProcessingStatus.PathIsNotDirectory);
+
+        expect(logger.error).toHaveBeenCalledWith(
+          `Path specified isn't a directory: ${filePath}`,
+        );
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.processTrack).not.toHaveBeenCalled();
+      });
+
+      it('returns CannotReadDirectory when stat fails with a non-ENOENT error', async () => {
+        const statError = new Error('Permission denied');
+
+        vi.spyOn(fs.promises, 'stat').mockRejectedValueOnce(statError);
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.CannotReadDirectory);
+
+        expect(logger.error).toHaveBeenCalledWith(
+          `Couldn't stat path: ${sourceDirectory}`,
+          { error: statError },
+        );
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).not.toHaveBeenCalled();
+      });
+
+      it('returns CannotReadDirectory when the input directory cannot be read', async () => {
+        const readError = new Error('Directory access denied');
+
+        vi.spyOn(fs.promises, 'readdir').mockRejectedValueOnce(readError);
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.CannotReadDirectory);
+
+        expect(logger.error).toHaveBeenCalledWith(
+          `Couldn't read directory: ${sourceDirectory}`,
+          { error: readError },
+        );
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).not.toHaveBeenCalled();
+      });
+
+      it('propagates CannotReadDirectory when a nested directory disappears before it can be read', async () => {
+        const nestedDirectory = path.join(sourceDirectory, 'nested');
+
+        createSourceAudioFile('nested/track.mp3');
+
+        const rootStats = await fs.promises.stat(sourceDirectory);
+        const nestedStats = await fs.promises.stat(nestedDirectory);
+
+        vi.spyOn(fs.promises, 'stat')
+          .mockResolvedValueOnce(rootStats)
+          .mockImplementationOnce(() => {
+            fs.rmSync(nestedDirectory, { recursive: true, force: true });
+
+            return Promise.resolve(nestedStats);
+          });
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.CannotReadDirectory);
+
+        const errorCalls: readonly (readonly unknown[])[] =
+          vi.mocked(logger.error).mock.calls;
+
+        const directoryReadErrorCall = errorCalls.find(
+          ([message]) =>
+            message === `Couldn't read directory: ${nestedDirectory}`,
+        );
+
+        expect(directoryReadErrorCall).toBeDefined();
+
+        if (directoryReadErrorCall === undefined) {
+          throw new Error('Expected directory read error to be logged.');
+        }
+
+        const errorContext: unknown = directoryReadErrorCall[1];
+
+        if (
+          typeof errorContext !== 'object'
+          || errorContext === null
+          || !('error' in errorContext)
+        ) {
+          throw new Error('Expected directory read error context to be logged.');
+        }
+
+        const readError: unknown = errorContext.error;
+
+        if (
+          typeof readError !== 'object'
+          || readError === null
+          || !('code' in readError)
+        ) {
+          throw new Error('Expected directory read error to include an error code.');
+        }
+
+        expect(readError.code).toBe('ENOENT');
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.processTrack).not.toHaveBeenCalled();
+      });
+
+      it('skips files that become inaccessible before processing', async () => {
+        const trackPath = createSourceAudioFile('inaccessible-track.mp3');
+        const accessError = new Error('File is no longer accessible');
+
+        vi.spyOn(fs.promises, 'access').mockRejectedValueOnce(accessError);
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.NoSupportedFilesFound);
+
+        expect(logger.warn).toHaveBeenCalledWith(
+          `Path does not exist or is not accessible: ${trackPath}`,
+        );
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.tagger.processTrack).not.toHaveBeenCalled();
+      });
+
+      it('returns FilesProcessed when some files succeed and others fail', async () => {
+        const successfulTrackPath = createSourceAudioFile('successful-track.mp3');
+        const failedTrackPath = createSourceAudioFile('failed-track.mp3');
+        const trackInfo = createTrackInfo();
+        const taggingError = new Error('Track matching failed');
+
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockImplementation(
+          () => Promise.resolve(AudioFileType.Mp3),
+        );
+
+        processorDependencyMocks.tagger.processTrack.mockImplementation(
+          (filePath) => {
+            if (filePath === successfulTrackPath) {
+              return Promise.resolve({
+                ok: true,
+                trackInfo,
+              });
+            }
+
+            return Promise.resolve({
+              ok: false,
+              failureCode: BearTunesTaggerFailureCode.TrackMatchFailed,
+              error: taggingError,
+            });
+          },
+        );
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledTimes(2);
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          successfulTrackPath,
+        );
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          failedTrackPath,
+        );
+
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledOnce();
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledOnce();
+
+        expect(logger.warn).toHaveBeenCalledWith(
+          `Processing track ${failedTrackPath} failed with code ${BearTunesTaggerFailureCode.TrackMatchFailed} and message:\n${taggingError.message}`,
+          { error: taggingError },
+        );
+      });
+
+      it('keeps a file successfully processed when artwork download fails', async () => {
+        const trackPath = createSourceAudioFile('artwork-failure-track.mp3');
+        const trackInfo = createTrackInfoWithArtwork();
+        const artworkError = new Error('Artwork server unavailable');
+
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
+          AudioFileType.Mp3,
+        );
+
+        processorDependencyMocks.tagger.processTrack.mockResolvedValue({
+          ok: true,
+          trackInfo,
+        });
+
+        processorToolMocks.downloadAndSaveArtwork.mockRejectedValueOnce(
+          artworkError,
+        );
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledOnce();
+
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledOnce();
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
+          trackPath,
+          exampleArtworkUrl,
+          exampleAlbumUrl,
+          expect.any(String),
+        );
+
+        expect(logger.error).toHaveBeenCalledWith(
+          'Artwork download failed',
+          { error: artworkError },
+        );
+      });
+
+      it('propagates unexpected dependency errors and clears converted MP3 paths in finally', async () => {
+        const flacFilePath = createSourceAudioFile('source-track.flac');
+        const generatedMp3Path = path.join(
+          sourceDirectory,
+          'generated-track.mp3',
+        );
+        const unexpectedError = new Error('Unexpected tagger failure');
+        const trackInfo = createTrackInfo();
+
+        processorToolMocks.tryGetAudioFileTypeFromFile
+          .mockResolvedValueOnce(AudioFileType.Flac)
+          .mockResolvedValueOnce(AudioFileType.Mp3);
+
+        processorDependencyMocks.converter.flacToMp3.mockResolvedValueOnce({
+          ok: true,
+          outputPath: generatedMp3Path,
+        });
+
+        processorDependencyMocks.tagger.processTrack.mockRejectedValueOnce(
+          unexpectedError,
+        );
+
+        const processor = new BearTunesProcessor();
+
+        await expect(
+          processor.processAllFilesInDirectory(sourceDirectory),
+        ).rejects.toBe(unexpectedError);
+
+        // Isolate the generated MP3 as the only input for the next run.
+        // The converter is mocked, so create its output file explicitly.
+        fs.rmSync(flacFilePath);
+        fs.writeFileSync(generatedMp3Path, sourceFileContent);
+
+        processorDependencyMocks.tagger.processTrack.mockResolvedValue({
+          ok: true,
+          trackInfo,
+        });
+
+        const secondResult = await processor.processAllFilesInDirectory(
+          sourceDirectory,
+        );
+
+        expect(secondResult).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        expect(processorDependencyMocks.converter.flacToMp3).toHaveBeenCalledOnce();
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledTimes(2);
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenNthCalledWith(
+          1,
+          generatedMp3Path,
+        );
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenNthCalledWith(
+          2,
+          generatedMp3Path,
+        );
+
+        expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledOnce();
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledOnce();
+      });
+    });
   });
 });
