@@ -1999,6 +1999,94 @@ describe('BearTunesProcessor', () => {
         );
       });
 
+      it('logs FLAC-specific warning when track tagging fails without MP3 conversion', async () => {
+        const flacFilePath = createSourceAudioFile(
+          'direct-flac-tagging-failure.flac',
+        );
+        const taggingError = new Error('Track matching failed');
+
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
+          AudioFileType.Flac,
+        );
+
+        processorDependencyMocks.tagger.processTrack.mockResolvedValue({
+          ok: false,
+          failureCode: BearTunesTaggerFailureCode.TrackMatchFailed,
+          error: taggingError,
+        });
+
+        const processor = new BearTunesProcessor({
+          convertFlacToMp3: false,
+        });
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.NoSupportedFilesFound);
+
+        expect(processorDependencyMocks.converter.flacToMp3).not.toHaveBeenCalled();
+
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledOnce();
+        expect(processorDependencyMocks.tagger.processTrack).toHaveBeenCalledWith(
+          flacFilePath,
+        );
+
+        expect(processorDependencyMocks.tagger.saveTag).not.toHaveBeenCalled();
+        expect(processorDependencyMocks.renamer.rename).not.toHaveBeenCalled();
+        expect(processorToolMocks.downloadAndSaveArtwork).not.toHaveBeenCalled();
+
+        expect(logger.warn).toHaveBeenNthCalledWith(
+          1,
+          `No track info found for FLAC file: ${flacFilePath}`,
+        );
+
+        expect(logger.warn).toHaveBeenNthCalledWith(
+          2,
+          `Processing track ${flacFilePath} failed with code ${BearTunesTaggerFailureCode.TrackMatchFailed} and message:\n${taggingError.message}`,
+          { error: taggingError },
+        );
+      });
+
+      it('logs artwork path when artwork is successfully downloaded', async () => {
+        const trackPath = createSourceAudioFile('artwork-success-track.mp3');
+        const trackInfo = createTrackInfoWithArtwork();
+        const artworkPath = path.join(
+          temporaryDirectory,
+          'artwork',
+          'cover.jpg',
+        );
+
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
+          AudioFileType.Mp3,
+        );
+
+        processorDependencyMocks.tagger.processTrack.mockResolvedValue({
+          ok: true,
+          trackInfo,
+        });
+
+        processorToolMocks.downloadAndSaveArtwork.mockResolvedValueOnce(
+          artworkPath,
+        );
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+
+        expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
+
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledOnce();
+        expect(processorToolMocks.downloadAndSaveArtwork).toHaveBeenCalledWith(
+          trackPath,
+          exampleArtworkUrl,
+          exampleAlbumUrl,
+          expect.any(String),
+        );
+
+        expect(logger.info).toHaveBeenCalledWith(
+          `Artwork written to: "${artworkPath}"`,
+        );
+      });
+
       it('keeps a file successfully processed when artwork download fails', async () => {
         const trackPath = createSourceAudioFile('artwork-failure-track.mp3');
         const trackInfo = createTrackInfoWithArtwork();
