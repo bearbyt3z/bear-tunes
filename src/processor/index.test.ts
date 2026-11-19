@@ -111,10 +111,6 @@ vi.mock('#renamer', async (importOriginal) => {
 vi.mock('#tools', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#tools')>();
 
-  processorToolMocks.tryGetAudioFileTypeFromFile.mockImplementation(
-    actual.tryGetAudioFileTypeFromFile,
-  );
-
   return {
     ...actual,
     downloadAndSaveArtwork: processorToolMocks.downloadAndSaveArtwork,
@@ -240,7 +236,7 @@ function muteProcessorLogs(): void {
 
 describe('BearTunesProcessor', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
 
     temporaryDirectory = fs.mkdtempSync(
       path.join(os.tmpdir(), 'bear-tunes-processor-'),
@@ -250,7 +246,9 @@ describe('BearTunesProcessor', () => {
     fs.mkdirSync(sourceDirectory);
 
     mockSuccessfulProcessorDependencies();
+
     processorToolMocks.downloadAndSaveArtwork.mockResolvedValue(undefined);
+    processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValue(undefined);
 
     muteProcessorLogs();
   });
@@ -1475,11 +1473,7 @@ describe('BearTunesProcessor', () => {
           trackInfo,
         });
 
-        const processor = new BearTunesProcessor();
-
-        let result: DirectoryProcessingStatus | undefined;
-
-        await processorToolMocks.tryGetAudioFileTypeFromFile.withImplementation(
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockImplementation(
           (filePath) => {
             switch (path.extname(filePath)) {
               case '.mp3':
@@ -1495,10 +1489,11 @@ describe('BearTunesProcessor', () => {
                 return Promise.resolve(undefined);
             }
           },
-          async () => {
-            result = await processor.processAllFilesInDirectory(sourceDirectory);
-          },
         );
+
+        const processor = new BearTunesProcessor();
+
+        const result = await processor.processAllFilesInDirectory(sourceDirectory);
 
         expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
 
