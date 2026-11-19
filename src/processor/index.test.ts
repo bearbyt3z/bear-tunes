@@ -985,56 +985,42 @@ describe('BearTunesProcessor', () => {
       });
 
       it('skips an MP3 file generated from FLAC when it is encountered later during traversal', async () => {
-        const flacFilePath = createSourceAudioFile('000-source.flac');
+        // Create two placeholder files.
+        // Their actual formats are assigned by the mocked format detector below.
+        createSourceAudioFile('first-placeholder.audio');
+        createSourceAudioFile('second-placeholder.audio');
 
-        const candidateMp3Paths = Array.from(
-          { length: 32 },
-          (_, index) =>
-            createSourceAudioFile(
-              `zzz-generated-${index.toString().padStart(2, '0')}.mp3`,
-            ),
-        );
+        // Read the actual directory order.
+        const fileNames = await fs.promises.readdir(sourceDirectory);
 
-        const directoryEntries = await fs.promises.readdir(sourceDirectory, {
-          withFileTypes: true,
-        });
-
-        const flacEntryIndex = directoryEntries.findIndex(
-          (entry) => path.join(sourceDirectory, entry.name) === flacFilePath,
-        );
-
-        const generatedMp3Path = candidateMp3Paths.find((candidatePath) => {
-          const candidateEntryIndex = directoryEntries.findIndex(
-            (entry) => path.join(sourceDirectory, entry.name) === candidatePath,
-          );
-
-          return candidateEntryIndex > flacEntryIndex;
-        });
-
-        if (flacEntryIndex === -1 || generatedMp3Path === undefined) {
-          throw new Error(
-            'Expected to find an MP3 directory entry after the FLAC entry.',
-          );
+        if (fileNames.length !== 2) {
+          throw new Error('Expected exactly two files in the source directory.');
         }
 
-        // Queue format detection results in the same order as the actual directory entries.
-        for (const entry of directoryEntries) {
-          const entryPath = path.join(sourceDirectory, entry.name);
+        const [firstFileName, secondFileName] = fileNames;
 
-          if (entryPath === flacFilePath) {
-            processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
-              AudioFileType.Flac,
-            );
-          } else if (entryPath === generatedMp3Path) {
-            processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
-              AudioFileType.Mp3,
-            );
-          } else {
-            processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
-              undefined,
-            );
-          }
+        if (firstFileName === undefined || secondFileName === undefined) {
+          throw new Error('Expected both directory entries to be present.');
         }
+
+        // Assign the first file as the source FLAC and the second as generated MP3.
+        const flacFilePath = path.join(sourceDirectory, firstFileName);
+        const generatedMp3Path = path.join(sourceDirectory, secondFileName);
+
+        // Return the audio file type based on the assigned file paths.
+        processorToolMocks.tryGetAudioFileTypeFromFile.mockImplementation(
+          (filePath) => {
+            if (filePath === flacFilePath) {
+              return Promise.resolve(AudioFileType.Flac);
+            }
+
+            if (filePath === generatedMp3Path) {
+              return Promise.resolve(AudioFileType.Mp3);
+            }
+
+            return Promise.resolve(undefined);
+          },
+        );
 
         const trackInfo = createTrackInfoWithArtwork();
 
@@ -1059,6 +1045,19 @@ describe('BearTunesProcessor', () => {
 
         expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
 
+        // Both files are detected in traversal order.
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledTimes(2);
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenNthCalledWith(
+          1,
+          flacFilePath,
+        );
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenNthCalledWith(
+          2,
+          generatedMp3Path,
+        );
+
         expect(processorDependencyMocks.converter.flacToMp3).toHaveBeenCalledOnce();
         expect(processorDependencyMocks.converter.flacToMp3).toHaveBeenCalledWith(
           flacFilePath,
@@ -1072,12 +1071,14 @@ describe('BearTunesProcessor', () => {
 
         // The generated MP3 and original FLAC are each renamed only once.
         expect(processorDependencyMocks.renamer.rename).toHaveBeenCalledTimes(2);
+
         expect(processorDependencyMocks.renamer.rename).toHaveBeenNthCalledWith(
           1,
           generatedMp3Path,
           trackInfo,
           undefined,
         );
+
         expect(processorDependencyMocks.renamer.rename).toHaveBeenNthCalledWith(
           2,
           flacFilePath,
