@@ -136,26 +136,6 @@ function createSourceAudioFile(filename: string): string {
   return filePath;
 }
 
-async function getFilePathsInTraversalOrder(
-  directoryPath: string,
-): Promise<string[]> {
-  const entries = await fs.promises.readdir(directoryPath, {
-    withFileTypes: true,
-  });
-
-  const nestedFilePaths = await Promise.all(
-    entries.map((entry) => {
-      const entryPath = path.join(directoryPath, entry.name);
-
-      return entry.isDirectory()
-        ? getFilePathsInTraversalOrder(entryPath)
-        : Promise.resolve([entryPath]);
-    }),
-  );
-
-  return nestedFilePaths.flat();
-}
-
 function createTrackInfo(overrides: Partial<TrackInfo> = {}): TrackInfo {
   return {
     artists: ['Artist One', 'Artist Two'],
@@ -1485,33 +1465,6 @@ describe('BearTunesProcessor', () => {
 
         const trackInfo = createTrackInfoWithArtwork();
 
-        const filePaths = await getFilePathsInTraversalOrder(sourceDirectory);
-
-        for (const filePath of filePaths) {
-          let audioFileType: AudioFileType | undefined;
-
-          switch (path.extname(filePath)) {
-            case '.mp3':
-              audioFileType = AudioFileType.Mp3;
-              break;
-
-            case '.flac':
-              audioFileType = AudioFileType.Flac;
-              break;
-
-            case '.aiff':
-              audioFileType = AudioFileType.Aiff;
-              break;
-
-            default:
-              audioFileType = undefined;
-          }
-
-          processorToolMocks.tryGetAudioFileTypeFromFile.mockResolvedValueOnce(
-            audioFileType,
-          );
-        }
-
         processorDependencyMocks.tagger.processTrack.mockResolvedValue({
           ok: true,
           trackInfo,
@@ -1524,20 +1477,42 @@ describe('BearTunesProcessor', () => {
 
         const processor = new BearTunesProcessor();
 
-        const result = await processor.processAllFilesInDirectory(sourceDirectory);
+        let result: DirectoryProcessingStatus | undefined;
+
+        await processorToolMocks.tryGetAudioFileTypeFromFile.withImplementation(
+          (filePath) => {
+            switch (path.extname(filePath)) {
+              case '.mp3':
+                return Promise.resolve(AudioFileType.Mp3);
+
+              case '.flac':
+                return Promise.resolve(AudioFileType.Flac);
+
+              case '.aiff':
+                return Promise.resolve(AudioFileType.Aiff);
+
+              default:
+                return Promise.resolve(undefined);
+            }
+          },
+          async () => {
+            result = await processor.processAllFilesInDirectory(sourceDirectory);
+          },
+        );
 
         expect(result).toBe(DirectoryProcessingStatus.FilesProcessed);
 
-        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledTimes(
-          filePaths.length,
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledTimes(4);
+
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
+          mp3FilePath,
         );
-
-        for (const filePath of filePaths) {
-          expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
-            filePath,
-          );
-        }
-
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
+          flacFilePath,
+        );
+        expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
+          aiffFilePath,
+        );
         expect(processorToolMocks.tryGetAudioFileTypeFromFile).toHaveBeenCalledWith(
           unsupportedFilePath,
         );
