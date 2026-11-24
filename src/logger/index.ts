@@ -22,8 +22,11 @@ const level = process.env.LOG_LEVEL ?? 'debug';
 /**
  * Serializes a log value into a readable string for console and file output.
  *
- * `Error` values prefer stack traces, strings are returned as-is, and all
- * remaining values are serialized via `JSON.stringify()` when possible.
+ * Error values prefer stack traces, strings are returned as-is, and bigint
+ * and symbol values are converted to strings. All remaining values are
+ * serialized via JSON.stringify() when possible. If serialization returns
+ * undefined, the literal string 'undefined' is returned. If serialization
+ * throws, a fallback message is returned.
  *
  * @param value - Value attached to the log record.
  * @returns Human-readable string representation.
@@ -46,7 +49,7 @@ function stringifyLogValue(value: LoggerValue): string {
   }
 
   try {
-    return JSON.stringify(value);
+    return JSON.stringify(value) ?? 'undefined';
   } catch {
     return '[Unserializable value]';
   }
