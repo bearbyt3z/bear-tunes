@@ -17,7 +17,7 @@ import type {
   LoggerValue,
 } from './types.js';
 
-const level = process.env.LOG_LEVEL ?? 'debug';
+const consoleLevel = process.env.LOG_LEVEL ?? 'silly';
 
 /**
  * Serializes a log value into a readable string for console and file output.
@@ -426,13 +426,13 @@ const fileFormat = winston.format.combine(
  * - Exception handler writes uncaught exceptions into a dedicated file.
  */
 const options = {
-  level,
   transports: [
     new winston.transports.Console({
-      level: 'silly',
+      level: consoleLevel,
       format: consoleFormat,
     }),
     new winston.transports.File({
+      level: 'debug',
       filename: './logs/combined.log',
       format: fileFormat,
     }),
@@ -444,6 +444,7 @@ const options = {
   ],
   exceptionHandlers: [
     new winston.transports.File({
+      level: 'error',
       filename: './logs/exceptions.log',
       format: fileFormat,
     }),
