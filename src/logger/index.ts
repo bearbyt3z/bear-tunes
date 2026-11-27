@@ -420,8 +420,8 @@ const fileFormat = winston.format.combine(
 /**
  * Shared Winston logger configuration.
  *
- * - Console transport is verbose and colorized for CLI usage.
- * - Combined file stores all messages.
+ * - Console transport is colorized and filtered using LOG_LEVEL.
+ * - Combined file stores debug-level messages and more severe messages.
  * - Error file stores error-level logs only.
  * - Exception handler writes uncaught exceptions into a dedicated file.
  */
