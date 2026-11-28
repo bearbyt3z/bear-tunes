@@ -17,7 +17,14 @@ import type {
   LoggerValue,
 } from './types.js';
 
+const supportedConsoleLevels = Object.keys(winston.config.npm.levels);
 const consoleLevel = process.env.LOG_LEVEL ?? 'silly';
+
+if (!supportedConsoleLevels.includes(consoleLevel)) {
+  throw new Error(
+    `Invalid LOG_LEVEL "${consoleLevel}". Supported values: ${supportedConsoleLevels.join(', ')}.`,
+  );
+}
 
 /**
  * Serializes a log value into a readable string for console and file output.
